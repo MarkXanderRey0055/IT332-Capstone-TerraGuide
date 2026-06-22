@@ -90,4 +90,30 @@ On the Admin Portal, administrators manage property listings, buyer profiles, an
 As buyers and administrators interact with the system, data is collected and stored in the database. The Business Analytics module processes this information to generate buyer preference summaries, property success rate scores, monthly revenue reports, and other analytics that support decision-making.
 
 Through these processes, TerraGuide provides a centralized platform for property management, property discovery, and business analytics for Smart Works Batangas.
+## Flowchart for Buyer Portal
+![TerraGuide System Flowchart](images/Buyer_portal.jpg) 
+*Description*
+The diagram shows the workflow of a buyer using a property recommendation and inquiry system. It begins when the buyer accesses the portal, searches and views properties based on their preferences, and ends when the buyer either continues browsing, submits an inquiry or site visit request, and receives a response from the administrator.
+
+## Flowchart for Admin Portal
+![TerraGuide System Flowchart](images/Admin_portal.jpg)
+*Description*
+The diagram illustrates the workflow of the Admin Portal, where the administrator logs in, verifies credentials, and accesses the dashboard to manage properties, buyers, transactions, and system notifications. It also allows the administrator to view analytics, respond to buyer inquiries and site visit requests, update records in the database, and securely log out of the system.
+
+
+## Frontend Installation & Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/MarkXanderRey0895/IT332-Capstone-TerraGuide.git
+   cd TerraGuide/frontend
+
+
+2. **Install dependencies**
+    ```bash
+    npm install
+
+3. **Run development server**
+    ```bash
+    npm run dev
 
