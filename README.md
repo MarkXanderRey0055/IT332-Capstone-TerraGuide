@@ -78,3 +78,22 @@ For the development, we will use:
 For deployment, we will use:
 
 *Vercel → We will deploy the frontend and backend using Vercel’s serverless platform. Its auto‑scaling, caching, and resource allocation features will ensure that TerraGuide remains responsive under varying traffic loads while minimizing infrastructure overhead.
+
+
+
+## Frontend Installation & Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/MarkXanderRey0895/IT332-Capstone-TerraGuide.git
+   cd TerraGuide/frontend
+
+
+2. **Install dependencies**
+    ```bash
+    npm install
+
+3. **Run development server**
+    ```bash
+    npm run dev
+
