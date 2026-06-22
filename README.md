@@ -89,3 +89,20 @@ The diagram shows the workflow of a buyer using a property recommendation and in
 *Description*
 The diagram illustrates the workflow of the Admin Portal, where the administrator logs in, verifies credentials, and accesses the dashboard to manage properties, buyers, transactions, and system notifications. It also allows the administrator to view analytics, respond to buyer inquiries and site visit requests, update records in the database, and securely log out of the system.
 
+
+## Frontend Installation & Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/MarkXanderRey0895/IT332-Capstone-TerraGuide.git
+   cd TerraGuide/frontend
+
+
+2. **Install dependencies**
+    ```bash
+    npm install
+
+3. **Run development server**
+    ```bash
+    npm run dev
+
