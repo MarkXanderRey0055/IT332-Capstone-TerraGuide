@@ -78,3 +78,16 @@ For the development, we will use:
 For deployment, we will use:
 
 *Vercel → We will deploy the frontend and backend using Vercel’s serverless platform. Its auto‑scaling, caching, and resource allocation features will ensure that TerraGuide remains responsive under varying traffic loads while minimizing infrastructure overhead.
+
+*Flow of the System*
+
+The TerraGuide system starts when a buyer accesses the Buyer Portal. During the first visit, the buyer completes a Welcome Modal that collects preferences such as budget range, preferred location, land type, intended use, and minimum lot size. The system stores this information and uses it to generate personalized property recommendations through the "Suggested For You" feature.
+
+The buyer can browse available properties using the map-based view and apply search filters such as location, land type, and property size. Buyers can view detailed property information, monitor market trends, generate property-related documents, and submit inquiries or site visit requests.
+
+On the Admin Portal, administrators manage property listings, buyer profiles, and transaction records through a centralized system. They can add, update, delete, and organize records while monitoring property statuses such as Available, Reserved, and Sold. Dashboard summary cards provide a quick overview of the system's records and activities.
+
+As buyers and administrators interact with the system, data is collected and stored in the database. The Business Analytics module processes this information to generate buyer preference summaries, property success rate scores, monthly revenue reports, and other analytics that support decision-making.
+
+Through these processes, TerraGuide provides a centralized platform for property management, property discovery, and business analytics for Smart Works Batangas.
+
