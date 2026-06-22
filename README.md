@@ -20,6 +20,28 @@ Title: TERRAGUIDE: A WEB-BASED PROPERTY INFORMATION MANAGEMENT
 SYSTEM WITH INTELLIGENT DATA FILTERING AND SEARCH OPTIMIZATION
 FOR SMARTWORKS BATANGAS.
 
+*System Modules Overview*
+
+TerraGuide is composed of several modules that work together to support property management and property discovery.
+
+Buyer Portal
+Allows buyers to browse properties, apply filters, view property details, receive recommendations, and submit inquiries.
+
+Admin Portal
+Allows administrators to manage property listings, buyer records, transaction records, and property statuses.
+
+Analytics Dashboard
+Provides reports and visualizations such as buyer preferences, property performance, and monthly revenue trends.
+
+Authentication Module
+Handles user login, access control, and account security for administrators.
+
+Database System
+Stores property listings, buyer information, transaction records, and analytics data in a centralized database.
+
+API Integration Layer
+Connects the frontend, backend, and database to ensure smooth data exchange throughout the system.
+
 *Planning of FeatureS*
 
 During the planning stage of TerraGuide, the team identified the main features that will be included in the system based on the approved objectives. These planned features are divided into three main modules: Buyer Portal, Admin Portal, and Business Analytics.
