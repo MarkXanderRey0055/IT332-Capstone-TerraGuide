@@ -78,3 +78,14 @@ For the development, we will use:
 For deployment, we will use:
 
 *Vercel → We will deploy the frontend and backend using Vercel’s serverless platform. Its auto‑scaling, caching, and resource allocation features will ensure that TerraGuide remains responsive under varying traffic loads while minimizing infrastructure overhead.
+
+## Flowchart for Buyer Portal
+![TerraGuide System Flowchart](images/Buyer_portal.jpg) 
+*Description*
+The diagram shows the workflow of a buyer using a property recommendation and inquiry system. It begins when the buyer accesses the portal, searches and views properties based on their preferences, and ends when the buyer either continues browsing, submits an inquiry or site visit request, and receives a response from the administrator.
+
+## Flowchart for Admin Portal
+![TerraGuide System Flowchart](images/Admin_portal.jpg)
+*Description*
+The diagram illustrates the workflow of the Admin Portal, where the administrator logs in, verifies credentials, and accesses the dashboard to manage properties, buyers, transactions, and system notifications. It also allows the administrator to view analytics, respond to buyer inquiries and site visit requests, update records in the database, and securely log out of the system.
+
