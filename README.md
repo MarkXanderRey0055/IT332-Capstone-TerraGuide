@@ -117,3 +117,39 @@ The diagram illustrates the workflow of the Admin Portal, where the administrato
     ```bash
     npm run dev
 
+*Planned Features*
+
+*Buyer Portal*
+
+-Map‑based property view
+
+-Search and filter options (budget, location, land type, lot size)
+
+-Personalized property recommendations
+
+-Market trends visualization
+
+-Property details page
+
+-Document template generation
+
+
+*Admin Portal*
+
+-Manage property listings, buyer profiles, and transaction records
+
+-Dashboard summaries 
+
+-Document verification tracking
+
+-Filtering tools for property type, location, and status
+
+*Business Analytics*
+
+-Buyer preference summaries 
+
+-Property success rate visualization
+
+-Revenue trend Summary
+
+-Property performance ranking
