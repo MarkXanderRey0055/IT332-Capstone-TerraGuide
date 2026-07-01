@@ -1,0 +1,19 @@
+import React from 'react';
+
+interface LoginProps {
+  onBack: () => void;
+}
+
+const BuyerLogin: React.FC<LoginProps> = ({ onBack }) => {
+  return (
+    <div className="w-full max-w-md p-8 rounded-2xl bg-white/[0.04] border border-white/[0.05] backdrop-blur-md text-center text-white">
+      <button onClick={onBack} className="text-xs text-emerald-400 hover:underline mb-4 block text-left">
+        ← Back to selection
+      </button>
+      <h2 className="text-2xl font-semibold mb-2 text-emerald-400">Buyer Portal</h2>
+      <p className="text-gray-400 text-sm">para sayo to rene</p>
+    </div>
+  );
+};
+
+export default BuyerLogin;
