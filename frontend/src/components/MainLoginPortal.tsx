@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import BuyerLogin from './BuyerLogin.tsx';
-import AdminLogin from './AdminLogin.tsx';
+import BuyerLogin from './BuyerLogin';
+import AdminLogin from './AdminLogin';
+import BuyerPortal from './BuyerPortal';
 
 const MainLoginPortal: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'selection' | 'buyer' | 'admin'>('selection');
+  const [currentView, setCurrentView] = useState<'selection' | 'buyer' | 'admin' | 'browse'>('selection');
 
   if (currentView === 'buyer') {
     return <BuyerLogin onBack={() => setCurrentView('selection')} />;
+  }
+
+  if (currentView === 'browse') {
+    return <BuyerPortal />;
   }
 
   if (currentView === 'admin') {
@@ -84,7 +89,10 @@ const MainLoginPortal: React.FC = () => {
         {/* Footer Link Divider */}
         <div className="mt-8 pt-6 border-t border-white/[0.05] text-center text-sm text-gray-400">
           <span>Just looking? </span>
-          <span className="text-emerald-400 font-medium underline underline-offset-4 cursor-not-allowed">
+          <span
+            onClick={() => setCurrentView('browse')}
+            className="text-emerald-400 font-medium underline underline-offset-4 cursor-pointer hover:text-emerald-300 transition"
+          >
             Browse without signing in
           </span>
         </div>
