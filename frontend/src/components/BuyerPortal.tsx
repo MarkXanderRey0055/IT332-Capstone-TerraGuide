@@ -11,11 +11,13 @@ import {
 } from 'lucide-react';
 import { mockProperties } from './data';
 
-export const BuyerPortal: React.FC = () => {
-  // Navigation active state matching the top bar items
+type BuyerPortalProps = {
+  onSignIn?: () => void;
+  isAuthenticated?: boolean;
+};
+
+export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthenticated = false }) => {
   const [activeTab, setActiveTab] = useState('Home');
-  
-  // Filter states matching the floating pill selectors
   const [location, setLocation] = useState('All Locations');
   const [propertyType, setPropertyType] = useState('All Types');
   const [priceRange, setPriceRange] = useState<number>(5000000);
@@ -23,9 +25,7 @@ export const BuyerPortal: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F4F9F6] text-[#1E2E24] font-sans antialiased selection:bg-[#1C3A27] selection:text-white">
       
-      {/* ─── HEADER NAVIGATION BAR ─── */}
       <header className="bg-white border-b border-neutral-100 px-8 py-3 flex items-center justify-between sticky top-0 z-50 shadow-xs">
-        {/* Brand Logo */}
         <div className="flex items-center gap-2">
           <div className="bg-[#1C3A27] text-white w-8 h-8 rounded-lg flex items-center justify-center font-serif text-lg font-bold">
             T
@@ -33,7 +33,6 @@ export const BuyerPortal: React.FC = () => {
           <span className="font-serif font-black text-xl tracking-tight text-[#1C3A27]">TerraGuide</span>
         </div>
 
-        {/* Center Navigation Links */}
         <nav className="hidden lg:flex items-center gap-1 bg-[#F5F7F6] p-1 rounded-full border border-neutral-200/60">
           {[
             { id: 'Home', label: 'Home', icon: Home },
@@ -62,28 +61,27 @@ export const BuyerPortal: React.FC = () => {
           })}
         </nav>
 
-        {/* Right CTA / Portal Switchers */}
         <div className="flex items-center gap-4">
           <button className="text-xs font-semibold text-neutral-500 hover:text-[#1C3A27] cursor-pointer underline decoration-dotted underline-offset-4">
             Staff Portal
           </button>
-          <button className="flex items-center gap-1.5 bg-[#1C3A27] text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-[#152C1E] transition-colors cursor-pointer shadow-xs">
-            <LogOut className="w-3.5 h-3.5 rotate-180" />
-            Sign In
+          <button
+            onClick={onSignIn}
+            className="flex items-center gap-1.5 bg-[#1C3A27] text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-[#152C1E] transition-colors cursor-pointer shadow-xs"
+          >
+            <LogOut className={`w-3.5 h-3.5 ${isAuthenticated ? '' : 'rotate-180'}`} />
+            {isAuthenticated ? 'Logout' : 'Sign In'}
           </button>
         </div>
       </header>
 
-      {/* ─── HERO GRADIENT BANNER SECTION ─── */}
       <section className="px-6 pt-4 pb-2">
         <div className="max-w-[1500px] mx-auto bg-gradient-to-b from-[#0F291B] via-[#143523] to-[#1C462E] rounded-[32px] pt-24 pb-28 px-6 text-center text-white relative overflow-hidden shadow-lg">
           
-          {/* Subtle Ambient Subtitle */}
           <span className="text-[10px] font-bold tracking-[0.25em] text-emerald-400/80 uppercase block mb-3">
             Find Where Life Happens
           </span>
 
-          {/* Editorial Display Heading */}
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-normal tracking-tight leading-tight max-w-3xl mx-auto">
             Discover Your <span className="italic font-light text-emerald-300">Perfect</span> Property
           </h1>
@@ -92,7 +90,6 @@ export const BuyerPortal: React.FC = () => {
             Browse premium residential lots, agriculture farmland, and industrial developments curated for your preferences.
           </p>
 
-          {/* Central Omnibar Search */}
           <div className="max-w-2xl mx-auto mt-10 bg-white/10 backdrop-blur-md p-1.5 rounded-full border border-white/10 flex items-center shadow-2xl">
             <div className="pl-4 pr-2 text-white/60">
               <Search className="w-4 h-4" />
@@ -109,11 +106,9 @@ export const BuyerPortal: React.FC = () => {
         </div>
       </section>
 
-      {/* ─── FLOATING QUICK FILTERS ROW ─── */}
       <section className="px-6 -mt-14 relative z-20">
         <div className="max-w-5xl mx-auto bg-white border border-neutral-200/60 rounded-2xl p-4 shadow-xl shadow-neutral-900/5 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           
-          {/* Location Selector */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] uppercase tracking-wider font-bold text-neutral-400">Location Sector</label>
             <select 
@@ -127,7 +122,6 @@ export const BuyerPortal: React.FC = () => {
             </select>
           </div>
 
-          {/* Property Type Selector */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] uppercase tracking-wider font-bold text-neutral-400">Property Type</label>
             <select
@@ -142,7 +136,6 @@ export const BuyerPortal: React.FC = () => {
             </select>
           </div>
 
-          {/* Budget Slider */}
           <div className="flex flex-col gap-1.5 px-1">
             <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-neutral-400">
               <span>Price Range</span>
@@ -159,14 +152,12 @@ export const BuyerPortal: React.FC = () => {
             />
           </div>
 
-          {/* Action Trigger Button */}
           <button className="w-full bg-[#1C3A27] hover:bg-[#254F35] text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-xs cursor-pointer h-[38px]">
             Apply Quick Filters
           </button>
         </div>
       </section>
 
-      {/* ─── FEATURED CONTENT CONTAINER ─── */}
       <section className="max-w-[1500px] mx-auto px-8 pt-16 pb-20">
         <div className="flex items-center justify-between mb-8 border-b border-neutral-200/60 pb-4">
           <h2 className="font-serif text-2xl md:text-3xl font-normal text-[#1C3A27]">
@@ -181,14 +172,12 @@ export const BuyerPortal: React.FC = () => {
           </a>
         </div>
 
-        {/* Dynamic Cards Grid Matrix */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {mockProperties.slice(0, 4).map((property) => (
             <div 
               key={property.id} 
               className="bg-white rounded-2xl overflow-hidden border border-neutral-200/50 hover:shadow-md transition-all duration-300 flex flex-col group cursor-pointer"
             >
-              {/* Image Box */}
               <div className="h-48 w-full bg-neutral-100 overflow-hidden relative">
                 {property.images?.[0] ? (
                   <img 
@@ -204,7 +193,6 @@ export const BuyerPortal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Text Metrics Content */}
               <div className="p-4 flex-1 flex flex-col justify-between">
                 <div>
                   <h3 className="font-serif font-bold text-base text-[#1C3A27] line-clamp-1 group-hover:text-emerald-800 transition-colors">
@@ -229,10 +217,8 @@ export const BuyerPortal: React.FC = () => {
         </div>
       </section>
 
-      {/* ─── MAP & DOCUMENT TRACKING SPLIT SECTION ─── */}
       <section className="max-w-[1500px] mx-auto px-8 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Left Column: Interactive Map (8 Cols) */}
         <div className="lg:col-span-8 flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-neutral-200/60 pb-4">
             <div>
@@ -255,7 +241,6 @@ export const BuyerPortal: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Active Documents (4 Cols) */}
         <div className="lg:col-span-4 flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-neutral-200/60 pb-4">
             <div>
