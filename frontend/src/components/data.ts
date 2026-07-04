@@ -4,7 +4,7 @@ import type { Property, Document, Analytics } from './types';
 export const mockProperties: Property[] = [
   {
     id: 1,
-    name: "Golden Hills Agricultural Farmland",
+    name: "Para sayo to Rene",
     type: "Agricultural",
     location: "Balayan, Batangas",
     price: 18500000,
@@ -18,7 +18,7 @@ export const mockProperties: Property[] = [
   },
   {
     id: 2,
-    name: "Seaview Horizon Residential Subdivision",
+    name: "Bahay ni Xander",
     type: "Residential",
     location: "Calabarzon Sector 4",
     price: 6200000,
@@ -32,7 +32,7 @@ export const mockProperties: Property[] = [
   },
   {
     id: 3,
-    name: "Balayan Commercial Hub Expansion Lot",
+    name: "Bahay ni Clyde",
     type: "Commercial",
     location: "Poblacion, Balayan",
     price: 45000000,
@@ -46,7 +46,7 @@ export const mockProperties: Property[] = [
   },
   {
     id: 4,
-    name: "Emerald Fields Rice Land Greenfield",
+    name: "Mat Rice Fields",
     type: "Agricultural",
     location: "Balayan Outskirts",
     price: 12000000,
