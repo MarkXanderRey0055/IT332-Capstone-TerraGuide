@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Home, 
   Search, 
@@ -10,6 +10,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { mockProperties } from './data';
+import { WelcomeModal } from './WelcomeModal';
 
 type BuyerPortalProps = {
   onSignIn?: () => void;
@@ -18,12 +19,56 @@ type BuyerPortalProps = {
 
 export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthenticated = false }) => {
   const [activeTab, setActiveTab] = useState('Home');
-  const [location, setLocation] = useState('All Locations');
+  const [location, setLocation] = useState('All Settings');
   const [propertyType, setPropertyType] = useState('All Types');
   const [priceRange, setPriceRange] = useState<number>(5000000);
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+  const [buyerName, setBuyerName] = useState('Valued Buyer');
+  const [welcomeCompletionKey, setWelcomeCompletionKey] = useState('terraguide_welcomeCompleted');
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsWelcomeModalOpen(false);
+      return;
+    }
+
+    let currentBuyerName = 'Valued Buyer';
+    try {
+      const currentBuyer = window.localStorage.getItem('terraguide_currentBuyer');
+      if (currentBuyer) {
+        const parsedBuyer = JSON.parse(currentBuyer) as { username?: string; email?: string };
+        currentBuyerName = parsedBuyer.username || parsedBuyer.email || currentBuyerName;
+      }
+    } catch {
+      currentBuyerName = 'Valued Buyer';
+    }
+
+    setBuyerName(currentBuyerName);
+
+    const currentUserKey = currentBuyerName.trim()
+      ? `terraguide_welcomeCompleted:${currentBuyerName}`
+      : 'terraguide_welcomeCompleted';
+    const hasCompletedWelcomeModal = window.localStorage.getItem(currentUserKey) === 'true';
+
+    setWelcomeCompletionKey(currentUserKey);
+
+    if (!hasCompletedWelcomeModal) {
+      setIsWelcomeModalOpen(true);
+    }
+  }, [isAuthenticated]);
 
   return (
-    <div className="min-h-screen bg-[#F4F9F6] text-[#1E2E24] font-sans antialiased selection:bg-[#1C3A27] selection:text-white">
+    <>
+      <WelcomeModal
+        isOpen={isWelcomeModalOpen}
+        onClose={() => {
+          window.localStorage.setItem(welcomeCompletionKey, 'true');
+          setIsWelcomeModalOpen(false);
+        }}
+        buyerName={buyerName}
+      />
+
+      <div className="min-h-screen bg-[#F4F9F6] text-[#1E2E24] font-sans antialiased selection:bg-[#1C3A27] selection:text-white">
       
       <header className="bg-white border-b border-neutral-100 px-8 py-3 flex items-center justify-between sticky top-0 z-50 shadow-xs">
         <div className="flex items-center gap-2">
@@ -110,15 +155,20 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
         <div className="max-w-5xl mx-auto bg-white border border-neutral-200/60 rounded-2xl p-4 shadow-xl shadow-neutral-900/5 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] uppercase tracking-wider font-bold text-neutral-400">Location Sector</label>
+            <label className="text-[10px] uppercase tracking-wider font-bold text-neutral-400">Location Setting</label>
             <select 
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               className="w-full bg-[#F5F7F6] border border-neutral-200 rounded-xl px-3 py-2 text-xs font-semibold text-[#1E2E24] focus:outline-hidden focus:border-[#1C3A27]"
             >
-              <option>All Locations</option>
-              <option>Balayan, Batangas</option>
-              <option>Calabarzon</option>
+              <option>All Settings</option>
+              <option>Residential Neighborhood</option>
+              <option>Suburban Community</option>
+              <option>City Center</option>
+              <option>Quiet Outskirts</option>
+              <option>Rural or Farm Area</option>
+              <option>Commercial District</option>
+              <option>Near Schools or Workplace</option>
             </select>
           </div>
 
@@ -280,7 +330,8 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
 
       </section>
 
-    </div>
+      </div>
+    </>
   );
 };
 
