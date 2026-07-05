@@ -1,10 +1,14 @@
 export interface Property {
   id: number;
   name: string;
-  type: 'Agricultural' | 'Residential' | 'Commercial';
+  title?: string;
+  description?: string;
+  type: 'Agricultural' | 'Residential' | 'Commercial' | 'Condominium' | 'House & Lot';
   location: string;
   price: number;
   size: number;
+  lotSize?: number;
+  status?: 'Available' | 'Reserved' | 'Sold';
   pricePerSqm: number;
   lat: number;
   lng: number;

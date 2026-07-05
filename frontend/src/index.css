@@ -1,1 +1,27 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/* Optional: Ensures the map container takes up full space allocated to it */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 0.5rem;
+  z-index: 1;
+}
+
+/* Ensure leaflet controls appear above map content */
+.leaflet-control {
+  z-index: 999 !important;
+}
+
+/* Fix for modal maps */
+.leaflet-container.leaflet-touch {
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* Ensure marker icons are visible */
+.leaflet-marker-icon {
+  z-index: 499;
+}

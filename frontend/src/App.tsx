@@ -6,13 +6,17 @@ type AppView = 'login' | 'buyerPortal';
 
 export default function App() {
   const [view, setView] = useState<AppView>('login');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window === 'undefined') {
-      return false;
-    }
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    return Boolean(window.localStorage.getItem('terraguide_currentBuyer'));
-  });
+  const handleBrowse = () => {
+    setIsAuthenticated(false);
+    setView('buyerPortal');
+  };
+
+  const handleAuthSuccess = () => {
+    setIsAuthenticated(true);
+    setView('buyerPortal');
+  };
 
   const handleSignOut = () => {
     window.localStorage.removeItem('terraguide_currentBuyer');
@@ -26,12 +30,9 @@ export default function App() {
 
   return (
     <MainLoginPortal
-      onBrowse={() => setView('buyerPortal')}
+      onBrowse={handleBrowse}
       onSignIn={handleSignOut}
-      onAuthSuccess={() => {
-        setIsAuthenticated(true);
-        setView('buyerPortal');
-      }}
+      onAuthSuccess={handleAuthSuccess}
     />
   );
 }
