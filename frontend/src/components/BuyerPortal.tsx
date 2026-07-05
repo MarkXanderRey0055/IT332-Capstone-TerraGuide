@@ -10,7 +10,10 @@ import {
   LogOut
 } from 'lucide-react';
 import { mockProperties } from './data';
+import type { Property } from './types';
 import { WelcomeModal } from './WelcomeModal';
+import { PropertyMap } from './PropertyMap';
+import { PropertyDetails } from './PropertyDetails';
 
 type BuyerPortalProps = {
   onSignIn?: () => void;
@@ -25,6 +28,29 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [buyerName, setBuyerName] = useState('Valued Buyer');
   const [welcomeCompletionKey, setWelcomeCompletionKey] = useState('terraguide_welcomeCompleted');
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+
+  const handleSelectProperty = (property: Property) => {
+    setSelectedProperty(property);
+  };
+
+  const handleClosePropertyDetails = () => {
+    setSelectedProperty(null);
+  };
+
+  const handleRequestVisit = () => {
+    if (selectedProperty) {
+      console.log('Request site visit for', selectedProperty.name);
+    }
+  };
+
+  const handleSendInquiry = () => {
+    if (selectedProperty) {
+      console.log('Send inquiry for', selectedProperty.name);
+    }
+  };
+
+  const mapProperties = mockProperties;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -56,6 +82,17 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
       setIsWelcomeModalOpen(true);
     }
   }, [isAuthenticated]);
+
+  if (selectedProperty) {
+    return (
+      <PropertyDetails
+        property={selectedProperty}
+        onBack={handleClosePropertyDetails}
+        onRequestVisit={handleRequestVisit}
+        onSendInquiry={handleSendInquiry}
+      />
+    );
+  }
 
   return (
     <>
@@ -226,6 +263,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
           {mockProperties.slice(0, 4).map((property) => (
             <div 
               key={property.id} 
+              onClick={() => handleSelectProperty(property)}
               className="bg-white rounded-2xl overflow-hidden border border-neutral-200/50 hover:shadow-md transition-all duration-300 flex flex-col group cursor-pointer"
             >
               <div className="h-48 w-full bg-neutral-100 overflow-hidden relative">
@@ -279,14 +317,9 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
             </div>
           </div>
           
-          <div className="bg-white p-2 rounded-[24px] border border-neutral-200/60 shadow-xs h-[500px] w-full relative z-10">
-            {/* 
-              Placeholder for the PropertyMap component we built earlier.
-              Uncomment this when you are ready to import it:
-              <PropertyMap properties={mockProperties} selectedProperty={null} /> 
-            */}
-            <div className="w-full h-full bg-[#F5F7F6] rounded-[16px] flex items-center justify-center border border-dashed border-neutral-300">
-              <span className="text-sm font-semibold text-neutral-400">Map Component Renders Here</span>
+          <div className="bg-white p-2 rounded-[24px] border border-neutral-200/60 shadow-xs h-[500px] w-full relative z-10 overflow-hidden">
+            <div className="w-full h-full rounded-[16px] overflow-hidden border border-neutral-200/60">
+              <PropertyMap properties={mapProperties} onSelectProperty={handleSelectProperty} />
             </div>
           </div>
         </div>

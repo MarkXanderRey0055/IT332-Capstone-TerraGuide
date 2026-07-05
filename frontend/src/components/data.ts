@@ -4,28 +4,30 @@ import type { Property, Document, Analytics } from './types';
 export const mockProperties: Property[] = [
   {
     id: 1,
-    name: "Para sayo to Rene",
-    type: "Agricultural",
+    name: "tindahan ng masayang alaala",
+    type: "Commercial",
     location: "Balayan, Batangas",
     price: 18500000,
-    size: 15000, // in sqm
+    size: 15000, 
     pricePerSqm: 1233,
-    lat: 13.9450,
-    lng: 120.7300,
+    lat: 13.929725,
+    lng: 120.716338,
     images: [
-      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80"
+      "https://i.pinimg.com/736x/72/54/3e/72543e695ad3f51e05acbb7be49bc90b.jpg"
     ]
   },
   {
-    id: 2,
+    id: 109,
     name: "Bahay ni Xander",
+    title: "Bahay ni Xander",
+    description: "Premium modern residential villa located in the heart of Balayan, Batangas. Designed with spacious interiors, high-contrast aesthetics, and state-of-the-art security features perfect for family living.",
     type: "Residential",
-    location: "Calabarzon Sector 4",
-    price: 6200000,
-    size: 450, // in sqm
-    pricePerSqm: 13777,
-    lat: 13.9210,
-    lng: 120.7120,
+    location: "Balayan, Batangas",
+    price: 850000,
+    size: 1200,
+    pricePerSqm: 708,
+    lat: 13.948324,
+    lng: 120.722989,
     images: [
       "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80"
     ]
@@ -33,20 +35,21 @@ export const mockProperties: Property[] = [
   {
     id: 3,
     name: "Bahay ni Clyde",
+    description: "A distinctive commercial property located in Poblacion, Balayan, ideal for adaptive reuse or mixed-use development.",
     type: "Commercial",
-    location: "Poblacion, Balayan",
+    location: "Sambat, Balayan",
     price: 45000000,
     size: 2500, // in sqm
     pricePerSqm: 18000,
-    lat: 13.9415,
-    lng: 120.7345,
+    lat: 13.950902,
+    lng: 120.6989117,
     images: [
       "https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=800&q=80"
     ]
   },
   {
     id: 4,
-    name: "Mat Rice Fields",
+    name: "Kapitan Toti Rice Fields",
     type: "Agricultural",
     location: "Balayan Outskirts",
     price: 12000000,
@@ -56,6 +59,48 @@ export const mockProperties: Property[] = [
     lng: 120.7450,
     images: [
       "https://images.unsplash.com/photo-1599940824399-b87987ceb72a?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    id: 5,
+    name: "Avida Towers Prime Taft",
+    type: "Condominium",
+    location: "Taft Avenue, Manila",
+    price: 6200000,
+    size: 65,
+    pricePerSqm: 95385,
+    lat: 14.5637,
+    lng: 120.9946,
+    images: [
+      "https://images.unsplash.com/photo-1560185127-6b9b670fbd95?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    id: 6,
+    name: "Amaia Skies Cubao",
+    type: "Condominium",
+    location: "Cubao, Quezon City",
+    price: 5400000,
+    size: 55,
+    pricePerSqm: 98182,
+    lat: 14.6192,
+    lng: 121.0523,
+    images: [
+      "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    id: 7,
+    name: "Camella Cerritos Bacoor",
+    type: "House & Lot",
+    location: "Bacoor, Cavite",
+    price: 4200000,
+    size: 100,
+    pricePerSqm: 42000,
+    lat: 14.4137,
+    lng: 120.9725,
+    images: [
+      "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=800&q=80"
     ]
   }
 ];
