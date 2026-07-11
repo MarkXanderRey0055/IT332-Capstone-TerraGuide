@@ -1,26 +1,89 @@
-import React, { useState } from 'react';
-import BuyerLogin from './BuyerLogin.tsx';
-import AdminLogin from './AdminLogin.tsx';
+import React, { useEffect, useState } from 'react';
+import BuyerLogin from './BuyerLogin';
+import AdminLogin from './AdminLogin';
+import BuyerPortal from './BuyerPortal';
+import AdminDashboard from './AdminDashboard';
 
-const MainLoginPortal: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'selection' | 'buyer' | 'admin'>('selection');
+type MainLoginPortalProps = {
+  onBrowse?: () => void;
+  onGoToLogin?: () => void;
+  onSignOut?: () => void;
+  onAuthSuccess?: () => void;
+  onAdminLoginSuccess?: () => void;
+  initialView?: 'selection' | 'buyer' | 'admin';
+};
+
+const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
+  onBrowse,
+  onGoToLogin,
+  onSignOut,
+  onAuthSuccess,
+  onAdminLoginSuccess,
+  initialView = 'selection',
+}) => {
+  const [currentView, setCurrentView] = useState<'selection' | 'buyer' | 'admin' | 'browse' | 'adminDashboard'>(
+    initialView === 'buyer' ? 'buyer' : 'selection',
+  );
+
+  useEffect(() => {
+    if (initialView === 'buyer') {
+      setCurrentView('buyer');
+    }
+  }, [initialView]);
 
   if (currentView === 'buyer') {
-    return <BuyerLogin onBack={() => setCurrentView('selection')} />;
+    return (
+      <BuyerLogin
+        onBack={() => setCurrentView('selection')}
+        onSuccess={() => {
+          if (onAuthSuccess) {
+            onAuthSuccess();
+            return;
+          }
+          setCurrentView('browse');
+        }}
+      />
+    );
+  }
+
+  if (currentView === 'browse') {
+    return <BuyerPortal onGoToLogin={onGoToLogin} onSignOut={onSignOut} />;
   }
 
   if (currentView === 'admin') {
-    return <AdminLogin onBack={() => setCurrentView('selection')} />;
+    return (
+      <AdminLogin
+        onBack={() => setCurrentView('selection')}
+        onLogin={() => {
+          if (onAdminLoginSuccess) {
+            onAdminLoginSuccess();
+            return;
+          }
+          setCurrentView('adminDashboard');
+        }}
+      />
+    );
+  }
+
+  if (currentView === 'adminDashboard') {
+    return (
+      <AdminDashboard
+        onLogout={() => {
+          if (onSignOut) {
+            onSignOut();
+            return;
+          }
+          setCurrentView('selection');
+        }}
+      />
+    );
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#112a1d] p-4 relative overflow-hidden font-sans">
-      {/* Grid Pattern Background overlay matching image_ac8dbe.png */}
       <div className="absolute inset-0 opacity-5 pointer-events-none bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]" />
 
-      {/* Main Glassmorphic Wrapper */}
       <div className="w-full max-w-md p-10 rounded-[2rem] border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-2xl relative z-10">
-        {/* Typography Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-white font-serif mb-2">
             Welcome Back
@@ -30,9 +93,7 @@ const MainLoginPortal: React.FC = () => {
           </p>
         </div>
 
-        {/* Portal Selection Options */}
         <div className="space-y-4">
-          {/* Buyer Option Card */}
           <div
             onClick={() => setCurrentView('buyer')}
             className="flex items-center justify-between p-5 rounded-2xl bg-white/[0.04] border border-white/[0.05] cursor-pointer hover:bg-white/[0.08] transition duration-200"
@@ -58,7 +119,6 @@ const MainLoginPortal: React.FC = () => {
             </svg>
           </div>
 
-           {/* Admin Option Card */}
           <div
             onClick={() => setCurrentView('admin')}
             className="flex items-center justify-between p-5 rounded-2xl bg-white/[0.04] border border-white/[0.05] cursor-pointer hover:bg-white/[0.08] transition duration-200"
@@ -81,10 +141,18 @@ const MainLoginPortal: React.FC = () => {
  
         </div>
 
-        {/* Footer Link Divider */}
         <div className="mt-8 pt-6 border-t border-white/[0.05] text-center text-sm text-gray-400">
           <span>Just looking? </span>
-          <span className="text-emerald-400 font-medium underline underline-offset-4 cursor-not-allowed">
+          <span
+            onClick={() => {
+              if (onBrowse) {
+                onBrowse();
+                return;
+              }
+              setCurrentView('browse');
+            }}
+            className="text-emerald-400 font-medium underline underline-offset-4 cursor-pointer hover:text-emerald-300 transition"
+          >
             Browse without signing in
           </span>
         </div>
