@@ -8,6 +8,8 @@ import {
   Calendar,
   ArrowRight,
   LogOut,
+  Lock,
+  X,
 } from 'lucide-react';
 import { mockProperties } from './data';
 import type { BuyerPreferences, Property } from './types';
@@ -22,8 +24,66 @@ import {
 } from './buyerPrefs';
 
 type BuyerPortalProps = {
-  onSignIn?: () => void;
+  onGoToLogin?: () => void;
+  onSignOut?: () => void;
   isAuthenticated?: boolean;
+};
+
+const AUTH_REQUIRED_TABS = ['Suggested', 'Preferences', 'Inquiries', 'Site Visits'];
+
+const RESTRICTED_TAB_LABELS: Record<string, string> = {
+  Suggested: 'Suggested Properties',
+  Preferences: 'Preferences',
+  Inquiries: 'My Inquiries',
+  'Site Visits': 'My Site Visits',
+};
+
+const LoginRequiredModal: React.FC<{
+  isOpen: boolean;
+  featureName: string;
+  onClose: () => void;
+  onLogin: () => void;
+}> = ({ isOpen, featureName, onClose, onLogin }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 relative">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 transition-colors bg-transparent border-none cursor-pointer p-1"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="w-14 h-14 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Lock className="w-6 h-6 text-neutral-400" />
+        </div>
+        <h2 className="font-serif text-xl text-[#1C3A27] text-center">Sign In Required</h2>
+        <p className="text-sm text-neutral-500 mt-2 text-center leading-relaxed">
+          You need to log in or create an account to access {featureName.toLowerCase()}.
+        </p>
+        <div className="mt-6 flex flex-col-reverse sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-full text-xs font-bold text-neutral-600 border border-neutral-200 hover:bg-neutral-50 transition-colors cursor-pointer bg-transparent"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onLogin}
+            className="flex-1 bg-[#1C3A27] text-white px-4 py-2.5 rounded-full text-xs font-bold hover:bg-[#152C1E] transition-colors cursor-pointer shadow-xs border-none"
+          >
+            Log In
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const mapHomeTypeToFilter = (propertyType: string) => {
@@ -34,8 +94,14 @@ const mapHomeTypeToFilter = (propertyType: string) => {
   return '';
 };
 
-export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthenticated = false }) => {
+export const BuyerPortal: React.FC<BuyerPortalProps> = ({
+  onGoToLogin,
+  onSignOut,
+  isAuthenticated = false,
+}) => {
   const [activeTab, setActiveTab] = useState('Home');
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [restrictedFeatureName, setRestrictedFeatureName] = useState('');
   const [location, setLocation] = useState('');
   const [propertyType, setPropertyType] = useState('All Types');
   const [priceRange, setPriceRange] = useState<number>(5000000);
@@ -92,7 +158,24 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
     handleSearchApply('', location, mapHomeTypeToFilter(propertyType), priceRange);
   };
 
+  const isTabLocked = (tabId: string) => !isAuthenticated && AUTH_REQUIRED_TABS.includes(tabId);
+
+  const handleTabChange = (tabId: string) => {
+    if (isTabLocked(tabId)) {
+      setRestrictedFeatureName(RESTRICTED_TAB_LABELS[tabId] ?? tabId);
+      setIsLoginModalOpen(true);
+      return;
+    }
+    setActiveTab(tabId);
+  };
+
+  const handleLoginFromModal = () => {
+    setIsLoginModalOpen(false);
+    onGoToLogin?.();
+  };
+
   const persistPreferences = (prefsData: Omit<BuyerPreferences, 'userId' | 'timestamp'>) => {
+    if (!isAuthenticated) return;
     const userId = buyerUserId || buyerName || 'guest';
     const saved: BuyerPreferences = {
       userId,
@@ -104,6 +187,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
   };
 
   const handleResetPreferences = () => {
+    if (!isAuthenticated) return;
     const userId = buyerUserId || buyerName || 'guest';
     removeBuyerPreferences(userId);
     setBuyerPrefs(null);
@@ -115,6 +199,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
     if (!isAuthenticated) {
       setIsWelcomeModalOpen(false);
       setBuyerPrefs(null);
+      setActiveTab((current) => (AUTH_REQUIRED_TABS.includes(current) ? 'Home' : current));
       return;
     }
 
@@ -160,7 +245,9 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
   }
 
   const renderTabContent = () => {
-    switch (activeTab) {
+    const effectiveTab = isTabLocked(activeTab) ? 'Home' : activeTab;
+
+    switch (effectiveTab) {
       case 'Search':
         return (
           <BuyerSearch
@@ -442,6 +529,13 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
 
   return (
     <>
+      <LoginRequiredModal
+        isOpen={isLoginModalOpen}
+        featureName={restrictedFeatureName}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLogin={handleLoginFromModal}
+      />
+
       <WelcomeModal
         isOpen={isWelcomeModalOpen}
         onClose={() => {
@@ -472,18 +566,22 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
             ].map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
+              const locked = isTabLocked(item.id);
               return (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-full transition-all duration-200 cursor-pointer border-none ${
-                    isActive
-                      ? 'bg-white text-[#1C3A27] shadow-sm font-semibold'
-                      : 'text-neutral-500 hover:text-[#1C3A27] bg-transparent'
+                  onClick={() => handleTabChange(item.id)}
+                  title={locked ? 'Sign in to access this feature' : undefined}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-full transition-all duration-200 border-none ${
+                    locked
+                      ? `opacity-70 cursor-pointer ${isActive ? 'bg-neutral-100 text-neutral-500' : 'text-neutral-400 hover:text-neutral-500 bg-transparent'}`
+                      : isActive
+                        ? 'bg-white text-[#1C3A27] shadow-sm font-semibold cursor-pointer'
+                        : 'text-neutral-500 hover:text-[#1C3A27] bg-transparent cursor-pointer'
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  {locked ? <Lock className="w-3 h-3" /> : <Icon className="w-3.5 h-3.5" />}
                   {item.label}
                 </button>
               );
@@ -499,7 +597,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({ onSignIn, isAuthentica
             </button>
             <button
               type="button"
-              onClick={onSignIn}
+              onClick={isAuthenticated ? onSignOut : onGoToLogin}
               className="flex items-center gap-1.5 bg-[#1C3A27] text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-[#152C1E] transition-colors cursor-pointer shadow-xs border-none"
             >
               <LogOut className={`w-3.5 h-3.5 ${isAuthenticated ? '' : 'rotate-180'}`} />

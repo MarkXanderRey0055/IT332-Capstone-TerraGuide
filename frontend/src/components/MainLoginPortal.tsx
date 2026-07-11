@@ -1,16 +1,32 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import BuyerLogin from './BuyerLogin';
 import AdminLogin from './AdminLogin';
 import BuyerPortal from './BuyerPortal';
 
 type MainLoginPortalProps = {
   onBrowse?: () => void;
-  onSignIn?: () => void;
+  onGoToLogin?: () => void;
+  onSignOut?: () => void;
   onAuthSuccess?: () => void;
+  initialView?: 'selection' | 'buyer';
 };
 
-const MainLoginPortal: React.FC<MainLoginPortalProps> = ({ onBrowse, onSignIn, onAuthSuccess }) => {
-  const [currentView, setCurrentView] = useState<'selection' | 'buyer' | 'admin' | 'browse'>('selection');
+const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
+  onBrowse,
+  onGoToLogin,
+  onSignOut,
+  onAuthSuccess,
+  initialView = 'selection',
+}) => {
+  const [currentView, setCurrentView] = useState<'selection' | 'buyer' | 'admin' | 'browse'>(
+    initialView === 'buyer' ? 'buyer' : 'selection',
+  );
+
+  useEffect(() => {
+    if (initialView === 'buyer') {
+      setCurrentView('buyer');
+    }
+  }, [initialView]);
 
   if (currentView === 'buyer') {
     return (
@@ -28,7 +44,7 @@ const MainLoginPortal: React.FC<MainLoginPortalProps> = ({ onBrowse, onSignIn, o
   }
 
   if (currentView === 'browse') {
-    return <BuyerPortal onSignIn={onSignIn} />;
+    return <BuyerPortal onGoToLogin={onGoToLogin} onSignOut={onSignOut} />;
   }
 
   if (currentView === 'admin') {
