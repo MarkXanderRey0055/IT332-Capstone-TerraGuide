@@ -2,23 +2,40 @@ export interface Property {
   id: number;
   name: string;
   title?: string;
+  owner?: string;
   description?: string;
-  type: 'Agricultural' | 'Residential' | 'Commercial' | 'Condominium' | 'House & Lot';
+  type: 'Residential' | 'Commercial' | 'Agricultural' | 'Condominium' | 'House & Lot' | string;
   location: string;
   price: number;
-  size: number;
+  size?: number;
   lotSize?: number;
-  status?: 'Available' | 'Reserved' | 'Sold';
-  pricePerSqm: number;
+  status: 'Available' | 'Reserved' | 'Sold';
+  pricePerSqm?: number;
   lat: number;
   lng: number;
-  images: string[];
+  images?: string[];
+  documents?: {
+    tax: 'pending' | 'verified' | 'missing';
+    deed: 'pending' | 'verified' | 'missing';
+    survey: 'pending' | 'verified' | 'missing';
+  };
+}
+
+export interface BuyerPreferences {
+  userId: string;
+  budgetMin: number;
+  budgetMax: number;
+  landType: string;
+  intendedUse: string;
+  location: string;
+  minLotSize: number;
+  timestamp: number;
 }
 
 export interface Document {
   id: number;
   name: string;
-  status: 'Approved' | 'In Progress' | 'Rejected' | 'Pending Review';
+  status: string;
   updatedAt: string;
 }
 
@@ -27,14 +44,4 @@ export interface Analytics {
   avgPricePerSqm: number;
   activeDealsCount: number;
 }
-
-export interface BuyerPreferences {
-  userId: string;
-  budgetMin: number;
-  budgetMax: number;
-  landType: Property['type'] | '';
-  intendedUse: 'Primary Residence' | 'Investment' | 'Business' | 'Farming' | 'Vacation Home' | '';
-  location: string;
-  minLotSize: number;
-  timestamp: number;
-}
+ 
