@@ -47,6 +47,9 @@ const LoginRequiredModal: React.FC<{
 }> = ({ isOpen, featureName, onClose, onLogin }) => {
   if (!isOpen) return null;
 
+
+  
+
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 relative">
@@ -87,6 +90,57 @@ const LoginRequiredModal: React.FC<{
   );
 };
 
+
+
+//logout confirmtion
+const LogoutConfirmModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}> = ({ isOpen, onClose, onConfirm }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 relative">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 transition-colors bg-transparent border-none cursor-pointer p-1"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="w-14 h-14 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <LogOut className="w-6 h-6 text-neutral-400" />
+        </div>
+        <h2 className="font-serif text-xl text-[#1C3A27] text-center">Log Out?</h2>
+        <p className="text-sm text-neutral-500 mt-2 text-center leading-relaxed">
+          Are you sure you want to log out of your TerraGuide account?
+        </p>
+        <div className="mt-6 flex flex-col-reverse sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-full text-xs font-bold text-neutral-600 border border-neutral-200 hover:bg-neutral-50 transition-colors cursor-pointer bg-transparent"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 bg-red-600 text-white px-4 py-2.5 rounded-full text-xs font-bold hover:bg-red-700 transition-colors cursor-pointer shadow-xs border-none"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 const mapHomeTypeToFilter = (propertyType: string) => {
   if (propertyType === 'All Types') return '';
   if (propertyType === 'Agricultural') return 'Agricultural';
@@ -118,6 +172,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [buyerPrefs, setBuyerPrefs] = useState<BuyerPreferences | null>(null);
   const [properties, setProperties] = useState<Property[]>(() => loadProperties(mockProperties));
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const locationOptions = useMemo(
     () => [...new Set(properties.map((property) => property.location))].sort(),
@@ -175,6 +230,19 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     setIsLoginModalOpen(false);
     onGoToLogin?.();
   };
+
+  const handleHeaderAuthClick = () => {
+  if (isAuthenticated) {
+    setIsLogoutConfirmOpen(true);
+    return;
+  }
+  onGoToLogin?.();
+};
+
+const handleConfirmLogout = () => {
+  setIsLogoutConfirmOpen(false);
+  onSignOut?.();
+};
 
   const persistPreferences = (prefsData: Omit<BuyerPreferences, 'userId' | 'timestamp'>) => {
     if (!isAuthenticated) return;
@@ -546,6 +614,11 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
         onClose={() => setIsLoginModalOpen(false)}
         onLogin={handleLoginFromModal}
       />
+       <LogoutConfirmModal
+        isOpen={isLogoutConfirmOpen}
+        onClose={() => setIsLogoutConfirmOpen(false)}
+        onConfirm={handleConfirmLogout}
+      />
 
       <WelcomeModal
         isOpen={isWelcomeModalOpen}
@@ -608,7 +681,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             </button>
             <button
               type="button"
-              onClick={isAuthenticated ? onSignOut : onGoToLogin}
+              onClick={handleHeaderAuthClick}
               className="flex items-center gap-1.5 bg-[#1C3A27] text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-[#152C1E] transition-colors cursor-pointer shadow-xs border-none"
             >
               <LogOut className={`w-3.5 h-3.5 ${isAuthenticated ? '' : 'rotate-180'}`} />
