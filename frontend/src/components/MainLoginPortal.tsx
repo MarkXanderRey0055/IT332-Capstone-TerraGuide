@@ -2,13 +2,15 @@ import React, { useEffect, useState } from 'react';
 import BuyerLogin from './BuyerLogin';
 import AdminLogin from './AdminLogin';
 import BuyerPortal from './BuyerPortal';
+import AdminDashboard from './AdminDashboard';
 
 type MainLoginPortalProps = {
   onBrowse?: () => void;
   onGoToLogin?: () => void;
   onSignOut?: () => void;
   onAuthSuccess?: () => void;
-  initialView?: 'selection' | 'buyer';
+  onAdminLoginSuccess?: () => void;
+  initialView?: 'selection' | 'buyer' | 'admin';
 };
 
 const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
@@ -16,9 +18,10 @@ const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
   onGoToLogin,
   onSignOut,
   onAuthSuccess,
+  onAdminLoginSuccess,
   initialView = 'selection',
 }) => {
-  const [currentView, setCurrentView] = useState<'selection' | 'buyer' | 'admin' | 'browse'>(
+  const [currentView, setCurrentView] = useState<'selection' | 'buyer' | 'admin' | 'browse' | 'adminDashboard'>(
     initialView === 'buyer' ? 'buyer' : 'selection',
   );
 
@@ -48,7 +51,32 @@ const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
   }
 
   if (currentView === 'admin') {
-    return <AdminLogin onBack={() => setCurrentView('selection')} />;
+    return (
+      <AdminLogin
+        onBack={() => setCurrentView('selection')}
+        onLogin={() => {
+          if (onAdminLoginSuccess) {
+            onAdminLoginSuccess();
+            return;
+          }
+          setCurrentView('adminDashboard');
+        }}
+      />
+    );
+  }
+
+  if (currentView === 'adminDashboard') {
+    return (
+      <AdminDashboard
+        onLogout={() => {
+          if (onSignOut) {
+            onSignOut();
+            return;
+          }
+          setCurrentView('selection');
+        }}
+      />
+    );
   }
 
   return (
