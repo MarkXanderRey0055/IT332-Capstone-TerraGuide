@@ -13,6 +13,7 @@ import {
 import { mockProperties } from './data';
 import { loadProperties, saveProperties } from './propertyStorage';
 import { AdminProperties } from './AdminProperties';
+import { AdminBuyers } from './AdminBuyers';
 import type { Property } from './types';
 
 type NavItem = {
@@ -176,7 +177,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
               {activeNav === 'properties'
                 ? 'Create, modify, and audit real estate listings.'
-                : 'Manage listings, buyers, and transactions from one place.'}
+                : activeNav === 'buyers'
+                  ? 'View and manage buyer accounts registered through the portal.'
+                  : 'Manage listings, buyers, and transactions from one place.'}
             </p>
           </div>
           <button
@@ -229,7 +232,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               />
             )}
 
-            {activeNav !== 'dashboard' && activeNav !== 'properties' && (
+            {activeNav === 'buyers' && <AdminBuyers onToast={setToast} />}
+
+            {activeNav !== 'dashboard' && activeNav !== 'properties' && activeNav !== 'buyers' && (
               <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-8 text-center">
                 <div className="w-14 h-14 rounded-2xl bg-[#1a3d2e] flex items-center justify-center mx-auto mb-4">
                   {NAV_ITEMS.find((item) => item.id === activeNav)?.icon}
