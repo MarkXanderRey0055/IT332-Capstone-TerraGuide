@@ -50,6 +50,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [properties, setProperties] = useState<Property[]>(() => loadProperties(mockProperties));
   const [toast, setToast] = useState<string | null>(null);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   useEffect(() => {
     saveProperties(properties);
@@ -63,11 +64,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   const handleNavClick = (id: string) => {
     if (id === 'logout') {
-      onLogout?.();
+      setLogoutConfirmOpen(true);
       return;
     }
     setActiveNav(id);
     setSidebarOpen(false);
+  };
+
+  const handleConfirmLogout = () => {
+    setLogoutConfirmOpen(false);
+    onLogout?.();
+  };
+
+  const handleCancelLogout = () => {
+    setLogoutConfirmOpen(false);
   };
 
   const activeTitle = PAGE_TITLES[activeNav] ?? 'Dashboard';
@@ -249,6 +259,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           </div>
         </main>
       </div>
+
+      {logoutConfirmOpen && (
+        <div className="fixed inset-0 z-[700] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Dismiss logout confirmation"
+            className="absolute inset-0 bg-black/60 border-none cursor-pointer"
+            onClick={handleCancelLogout}
+          />
+          <div className="relative w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#112a1d] p-6 shadow-2xl">
+            <div className="w-11 h-11 rounded-xl bg-[#1a3d2e] flex items-center justify-center mb-4">
+              <LogOut className="w-5 h-5 text-emerald-300" />
+            </div>
+            <h2 className="text-white font-serif text-lg font-bold">Log out of TerraGuide?</h2>
+            <p className="text-gray-400 text-sm mt-2">
+              Are you sure you want to log out? You'll need to sign in again to access the admin
+              portal.
+            </p>
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={handleCancelLogout}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 bg-white/[0.04] hover:bg-white/[0.08] border-none cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLogout}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 border-none cursor-pointer transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className="fixed bottom-6 right-6 z-[600] px-4 py-3 bg-[#1a3d2e] border border-emerald-500/30 text-emerald-100 text-sm font-medium rounded-xl shadow-lg">
