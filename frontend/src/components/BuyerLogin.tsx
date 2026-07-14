@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
+import {
+  loadBuyerAccounts,
+  saveBuyerAccounts,
+  type BuyerAccount,
+} from './buyerAccounts';
 
 interface LoginProps {
   onBack: () => void;
   onSuccess?: () => void;
 }
-
-type Account = {
-  id: number;
-  username: string;
-  email: string;
-  password: string;
-};
 
 const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -21,21 +19,7 @@ const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
     message: '',
   });
 
-  const storageKey = 'terraguide_buyers';
   const currentUserKey = 'terraguide_currentBuyer';
-
-  const readAccounts = (): Account[] => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      return raw ? (JSON.parse(raw) as Account[]) : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const writeAccounts = (accounts: Account[]) => {
-    localStorage.setItem(storageKey, JSON.stringify(accounts));
-  };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -48,7 +32,7 @@ const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
       return;
     }
 
-    const accounts = readAccounts();
+    const accounts = loadBuyerAccounts();
 
     if (isSignUp) {
       const email = formData.email.trim();
@@ -64,14 +48,14 @@ const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
         return;
       }
 
-      const newAccount: Account = {
+      const newAccount: BuyerAccount = {
         id: Date.now(),
         username,
         email,
         password,
       };
 
-      writeAccounts([...accounts, newAccount]);
+      saveBuyerAccounts([...accounts, newAccount]);
       setFormData({ email: '', username: '', password: '' });
       setShowPassword(false);
       setIsSignUp(false);
