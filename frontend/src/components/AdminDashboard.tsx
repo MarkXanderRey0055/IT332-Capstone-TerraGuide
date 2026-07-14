@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   Home,
@@ -10,6 +10,10 @@ import {
   Menu,
   X,
 } from 'lucide-react';
+import { mockProperties } from './data';
+import { loadProperties, saveProperties } from './propertyStorage';
+import { AdminProperties } from './AdminProperties';
+import type { Property } from './types';
 
 type NavItem = {
   id: string;
@@ -43,6 +47,18 @@ const PAGE_TITLES: Record<string, string> = {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeNav, setActiveNav] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [properties, setProperties] = useState<Property[]>(() => loadProperties(mockProperties));
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    saveProperties(properties);
+  }, [properties]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const handleNavClick = (id: string) => {
     if (id === 'logout') {
@@ -158,7 +174,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           <div className="flex-1 min-w-0">
             <h1 className="text-white font-serif text-xl sm:text-2xl font-bold truncate">{activeTitle}</h1>
             <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
-              Manage listings, buyers, and transactions from one place.
+              {activeNav === 'properties'
+                ? 'Create, modify, and audit real estate listings.'
+                : 'Manage listings, buyers, and transactions from one place.'}
             </p>
           </div>
           <button
@@ -203,7 +221,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               </>
             )}
 
-            {activeNav !== 'dashboard' && (
+            {activeNav === 'properties' && (
+              <AdminProperties
+                properties={properties}
+                setProperties={setProperties}
+                onToast={setToast}
+              />
+            )}
+
+            {activeNav !== 'dashboard' && activeNav !== 'properties' && (
               <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-8 text-center">
                 <div className="w-14 h-14 rounded-2xl bg-[#1a3d2e] flex items-center justify-center mx-auto mb-4">
                   {NAV_ITEMS.find((item) => item.id === activeNav)?.icon}
@@ -218,6 +244,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           </div>
         </main>
       </div>
+
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[600] px-4 py-3 bg-[#1a3d2e] border border-emerald-500/30 text-emerald-100 text-sm font-medium rounded-xl shadow-lg">
+          {toast}
+        </div>
+      )}
     </div>
   );
 };

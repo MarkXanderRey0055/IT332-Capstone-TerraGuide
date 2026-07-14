@@ -81,11 +81,11 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Lot Size</span>
-                    <span className="text-neutral-500">{property.size.toLocaleString()} sqm</span>
+                    <span className="text-neutral-500">{(property.size ?? property.lotSize ?? 0).toLocaleString()} sqm</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Price / sqm</span>
-                    <span className="text-neutral-500">₱{property.pricePerSqm.toLocaleString()}</span>
+                    <span className="text-neutral-500">₱{(property.pricePerSqm ?? 0).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -108,7 +108,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                       </div>
                       <div className="rounded-2xl bg-[#F4F9F6] p-4">
                         <div className="text-[11px] uppercase tracking-[0.24em] text-neutral-500">Lot Size</div>
-                        <div className="mt-2 font-semibold text-[#1C3A27]">{property.size.toLocaleString()} sqm</div>
+                        <div className="mt-2 font-semibold text-[#1C3A27]">{(property.size ?? property.lotSize ?? 0).toLocaleString()} sqm</div>
                       </div>
                     </div>
                   </div>

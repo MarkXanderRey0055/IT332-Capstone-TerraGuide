@@ -2,6 +2,7 @@ import { X, MapPin } from 'lucide-react';
 import { mockProperties } from './data';
 import { PropertyMap } from './PropertyMap';
 import type { Property } from './types';
+import { loadProperties } from './propertyStorage';
 
 interface RealtimeLocationModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export const RealtimeLocationModal: React.FC<RealtimeLocationModalProps> = ({
   if (!isOpen || !property) {
     return null;
   }
+
+  const properties = loadProperties(mockProperties);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
@@ -45,7 +48,7 @@ export const RealtimeLocationModal: React.FC<RealtimeLocationModalProps> = ({
 
         <div className="flex-1 relative min-h-0 w-full h-full">
           <PropertyMap
-            properties={mockProperties}
+            properties={properties}
             focusProperty={property}
             initialMapStyle="satellite"
             mapTitle="Google Satellite Feeds"

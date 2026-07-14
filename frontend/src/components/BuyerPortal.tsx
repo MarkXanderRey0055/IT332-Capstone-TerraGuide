@@ -22,6 +22,7 @@ import {
   removeBuyerPreferences,
   saveBuyerPreferences,
 } from './buyerPrefs';
+import { loadProperties } from './propertyStorage';
 
 type BuyerPortalProps = {
   onGoToLogin?: () => void;
@@ -116,10 +117,11 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [welcomeCompletionKey, setWelcomeCompletionKey] = useState('terraguide_welcomeCompleted');
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [buyerPrefs, setBuyerPrefs] = useState<BuyerPreferences | null>(null);
+  const [properties, setProperties] = useState<Property[]>(() => loadProperties(mockProperties));
 
   const locationOptions = useMemo(
-    () => [...new Set(mockProperties.map((property) => property.location))].sort(),
-    [],
+    () => [...new Set(properties.map((property) => property.location))].sort(),
+    [properties],
   );
 
   const handleSelectProperty = (property: Property) => {
@@ -193,7 +195,16 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     setBuyerPrefs(null);
   };
 
-  const mapProperties = mockProperties;
+  useEffect(() => {
+    const syncProperties = () => {
+      setProperties(loadProperties(mockProperties));
+    };
+
+    syncProperties();
+    window.addEventListener('storage', syncProperties);
+
+    return () => window.removeEventListener('storage', syncProperties);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -251,7 +262,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
       case 'Search':
         return (
           <BuyerSearch
-            properties={mapProperties}
+            properties={properties}
             onSelectProperty={handleSelectProperty}
             initialKeyword={searchKeyword}
             initialLocation={searchLocation}
@@ -262,7 +273,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
       case 'Suggested':
         return (
           <BuyerSuggestions
-            properties={mapProperties}
+            properties={properties}
             buyerPrefs={buyerPrefs}
             onSelectProperty={handleSelectProperty}
           />
@@ -412,7 +423,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {mockProperties.slice(0, 4).map((property) => (
+                {properties.slice(0, 4).map((property) => (
                   <div
                     key={property.id}
                     onClick={() => handleSelectProperty(property)}
@@ -447,7 +458,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
 
                       <div className="mt-4 pt-3 border-t border-neutral-100 flex items-center justify-between">
                         <span className="text-[11px] text-neutral-400 font-medium">
-                          {property.size.toLocaleString()} sqm
+                          {(property.size ?? property.lotSize ?? 0).toLocaleString()} sqm
                         </span>
                         <span className="text-sm font-black text-[#1C3A27]">
                           ₱{property.price.toLocaleString()}
@@ -472,7 +483,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
 
                 <div className="bg-white p-2 rounded-[24px] border border-neutral-200/60 shadow-xs h-[500px] w-full relative z-10 overflow-hidden">
                   <div className="w-full h-full rounded-[16px] overflow-hidden border border-neutral-200/60">
-                    <PropertyMap properties={mapProperties} onSelectProperty={handleSelectProperty} />
+                    <PropertyMap properties={properties} onSelectProperty={handleSelectProperty} />
                   </div>
                 </div>
               </div>
