@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Search,
   Trash2,
@@ -44,6 +44,17 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
   const refreshBuyers = () => {
     setBuyers(loadBuyerAccounts());
   };
+
+  useEffect(() => {
+    const syncBuyers = (event: StorageEvent) => {
+      if (event.key === 'terraguide_buyers' || event.key === null) {
+        refreshBuyers();
+      }
+    };
+
+    window.addEventListener('storage', syncBuyers);
+    return () => window.removeEventListener('storage', syncBuyers);
+  }, []);
 
   const filteredBuyers = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
