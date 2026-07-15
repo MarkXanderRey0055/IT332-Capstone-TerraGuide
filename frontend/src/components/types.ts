@@ -44,4 +44,17 @@ export interface Analytics {
   avgPricePerSqm: number;
   activeDealsCount: number;
 }
+
+export interface NotificationLog {
+  id: number;
+  type: 'visit' | 'inquiry' | 'signup';
+  title: string;
+  sub: string;
+  time: string;
+  read: boolean;
+  inquiryId?: number;
+  visitId?: number;
+  buyer?: string;
+  property?: string;
+}
  

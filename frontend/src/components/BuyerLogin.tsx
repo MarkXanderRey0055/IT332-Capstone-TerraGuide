@@ -4,6 +4,7 @@ import {
   saveBuyerAccounts,
   type BuyerAccount,
 } from './buyerAccounts';
+import { notifyBuyerSignup } from './notificationStorage';
 
 interface LoginProps {
   onBack: () => void;
@@ -56,6 +57,7 @@ const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
       };
 
       saveBuyerAccounts([...accounts, newAccount]);
+      notifyBuyerSignup(username);
       setFormData({ email: '', username: '', password: '' });
       setShowPassword(false);
       setIsSignUp(false);
