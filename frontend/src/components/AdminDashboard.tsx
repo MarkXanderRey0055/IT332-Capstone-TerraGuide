@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   LayoutDashboard,
   Home,
@@ -9,12 +9,19 @@ import {
   LogOut,
   Menu,
   X,
+  Bell,
 } from 'lucide-react';
 import { mockProperties } from './data';
 import { loadProperties, saveProperties } from './propertyStorage';
+import {
+  loadNotifications,
+  markAllNotificationsRead,
+  NOTIFICATIONS_STORAGE_KEY,
+  NOTIFICATIONS_UPDATED_EVENT,
+} from './notificationStorage';
 import { AdminProperties } from './AdminProperties';
 import { AdminBuyers } from './AdminBuyers';
-import type { Property } from './types';
+import type { NotificationLog, Property } from './types';
 
 type NavItem = {
   id: string;
@@ -27,8 +34,8 @@ type AdminDashboardProps = {
   onLogout?: () => void;
 };
 
-const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, badge: 2 },
+const NAV_ITEMS: Omit<NavItem, 'badge'>[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
   { id: 'properties', label: 'Properties', icon: <Home className="w-5 h-5" /> },
   { id: 'buyers', label: 'Buyers', icon: <Users className="w-5 h-5" /> },
   { id: 'transactions', label: 'Transactions', icon: <Landmark className="w-5 h-5" /> },
@@ -49,18 +56,78 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeNav, setActiveNav] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [properties, setProperties] = useState<Property[]>(() => loadProperties(mockProperties));
+  const [notifications, setNotifications] = useState<NotificationLog[]>(() => loadNotifications());
   const [toast, setToast] = useState<string | null>(null);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+
+  const unreadNotifications = useMemo(
+    () => notifications.filter((notification) => !notification.read).length,
+    [notifications],
+  );
+
+  const navItems = useMemo<NavItem[]>(
+    () =>
+      NAV_ITEMS.map((item) =>
+        item.id === 'dashboard' && unreadNotifications > 0
+          ? { ...item, badge: unreadNotifications }
+          : item,
+      ),
+    [unreadNotifications],
+  );
+
+  const activityNotifications = useMemo(
+    () =>
+      [...notifications].sort(
+        (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime(),
+      ),
+    [notifications],
+  );
+
+  const notificationStyle = (type: NotificationLog['type'], read: boolean) => {
+    if (read) return 'border-white/[0.06] bg-white/[0.02] opacity-70';
+    if (type === 'signup') return 'border-amber-500/20 bg-amber-500/5';
+    if (type === 'inquiry') return 'border-sky-500/20 bg-sky-500/5';
+    return 'border-emerald-500/20 bg-emerald-500/5';
+  };
+
+  const notificationLabel = (type: NotificationLog['type']) => {
+    if (type === 'signup') return 'Account';
+    if (type === 'inquiry') return 'Inquiry';
+    return 'Site Visit';
+  };
 
   useEffect(() => {
     saveProperties(properties);
   }, [properties]);
 
   useEffect(() => {
+    const syncNotifications = () => setNotifications(loadNotifications());
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === NOTIFICATIONS_STORAGE_KEY || event.key === null) {
+        syncNotifications();
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, syncNotifications);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, syncNotifications);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(null), 3000);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  const handleMarkAllNotificationsRead = () => {
+    markAllNotificationsRead();
+    setNotifications(loadNotifications());
+    setToast('All notifications marked as read.');
+  };
 
   const handleNavClick = (id: string) => {
     if (id === 'logout') {
@@ -112,7 +179,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const isActive = activeNav === item.id;
             return (
               <button
@@ -225,11 +292,57 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 </div>
 
                 <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6">
-                  <h2 className="text-white font-semibold text-base">Recent Activity</h2>
-                  <p className="text-gray-500 text-sm mt-2">
-                    Welcome to the TerraGuide admin dashboard. Use the sidebar to manage properties,
-                    buyers, transactions, and analytics.
-                  </p>
+                  <div className="flex items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-amber-400" />
+                      <h2 className="text-white font-semibold text-base">Activity Notifications</h2>
+                    </div>
+                    {unreadNotifications > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleMarkAllNotificationsRead}
+                        className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold bg-transparent border-none cursor-pointer"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  {activityNotifications.length === 0 ? (
+                    <p className="text-gray-500 text-sm mt-4">
+                      No activity yet. Notifications will appear here when buyers register, send
+                      inquiries, or request site visits.
+                    </p>
+                  ) : (
+                    <div className="space-y-3 mt-4 max-h-[320px] overflow-y-auto pr-1">
+                      {activityNotifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`p-4 rounded-xl border flex items-start gap-3 ${notificationStyle(notification.type, notification.read)}`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 shrink-0">
+                                  {notificationLabel(notification.type)}
+                                </span>
+                                <p className="text-white text-sm font-semibold truncate">{notification.title}</p>
+                              </div>
+                              <span className="text-[10px] text-gray-500 shrink-0">
+                                {new Date(notification.time).toLocaleString('en-PH', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            </div>
+                            <p className="text-gray-400 text-xs mt-1">{notification.sub}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -247,7 +360,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             {activeNav !== 'dashboard' && activeNav !== 'properties' && activeNav !== 'buyers' && (
               <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-8 text-center">
                 <div className="w-14 h-14 rounded-2xl bg-[#1a3d2e] flex items-center justify-center mx-auto mb-4">
-                  {NAV_ITEMS.find((item) => item.id === activeNav)?.icon}
+                  {navItems.find((item) => item.id === activeNav)?.icon}
                 </div>
                 <h2 className="text-white font-serif text-xl font-bold">{activeTitle}</h2>
                 <p className="text-gray-500 text-sm mt-2 max-w-md mx-auto">
