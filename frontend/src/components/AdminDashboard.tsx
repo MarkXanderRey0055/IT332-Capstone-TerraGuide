@@ -17,6 +17,7 @@ import {
   loadNotifications,
   markAllNotificationsRead,
   NOTIFICATIONS_STORAGE_KEY,
+  NOTIFICATIONS_UPDATED_EVENT,
 } from './notificationStorage';
 import { AdminProperties } from './AdminProperties';
 import { AdminBuyers } from './AdminBuyers';
@@ -74,24 +75,46 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     [unreadNotifications],
   );
 
-  const signupNotifications = useMemo(
-    () => notifications.filter((notification) => notification.type === 'signup'),
+  const activityNotifications = useMemo(
+    () =>
+      [...notifications].sort(
+        (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime(),
+      ),
     [notifications],
   );
+
+  const notificationStyle = (type: NotificationLog['type'], read: boolean) => {
+    if (read) return 'border-white/[0.06] bg-white/[0.02] opacity-70';
+    if (type === 'signup') return 'border-amber-500/20 bg-amber-500/5';
+    if (type === 'inquiry') return 'border-sky-500/20 bg-sky-500/5';
+    return 'border-emerald-500/20 bg-emerald-500/5';
+  };
+
+  const notificationLabel = (type: NotificationLog['type']) => {
+    if (type === 'signup') return 'Account';
+    if (type === 'inquiry') return 'Inquiry';
+    return 'Site Visit';
+  };
 
   useEffect(() => {
     saveProperties(properties);
   }, [properties]);
 
   useEffect(() => {
-    const syncNotifications = (event: StorageEvent) => {
+    const syncNotifications = () => setNotifications(loadNotifications());
+
+    const handleStorage = (event: StorageEvent) => {
       if (event.key === NOTIFICATIONS_STORAGE_KEY || event.key === null) {
-        setNotifications(loadNotifications());
+        syncNotifications();
       }
     };
 
-    window.addEventListener('storage', syncNotifications);
-    return () => window.removeEventListener('storage', syncNotifications);
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, syncNotifications);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, syncNotifications);
+    };
   }, []);
 
   useEffect(() => {
@@ -272,7 +295,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <div className="flex items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
                     <div className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-amber-400" />
-                      <h2 className="text-white font-semibold text-base">New Account Notifications</h2>
+                      <h2 className="text-white font-semibold text-base">Activity Notifications</h2>
                     </div>
                     {unreadNotifications > 0 && (
                       <button
@@ -285,25 +308,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     )}
                   </div>
 
-                  {signupNotifications.length === 0 ? (
+                  {activityNotifications.length === 0 ? (
                     <p className="text-gray-500 text-sm mt-4">
-                      No new buyer accounts yet. Notifications will appear here when someone registers
-                      through the buyer portal.
+                      No activity yet. Notifications will appear here when buyers register, send
+                      inquiries, or request site visits.
                     </p>
                   ) : (
                     <div className="space-y-3 mt-4 max-h-[320px] overflow-y-auto pr-1">
-                      {signupNotifications.map((notification) => (
+                      {activityNotifications.map((notification) => (
                         <div
                           key={notification.id}
-                          className={`p-4 rounded-xl border flex items-start gap-3 ${
-                            notification.read
-                              ? 'border-white/[0.06] bg-white/[0.02] opacity-70'
-                              : 'border-amber-500/20 bg-amber-500/5'
-                          }`}
+                          className={`p-4 rounded-xl border flex items-start gap-3 ${notificationStyle(notification.type, notification.read)}`}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-3">
-                              <p className="text-white text-sm font-semibold">{notification.title}</p>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 shrink-0">
+                                  {notificationLabel(notification.type)}
+                                </span>
+                                <p className="text-white text-sm font-semibold truncate">{notification.title}</p>
+                              </div>
                               <span className="text-[10px] text-gray-500 shrink-0">
                                 {new Date(notification.time).toLocaleString('en-PH', {
                                   month: 'short',

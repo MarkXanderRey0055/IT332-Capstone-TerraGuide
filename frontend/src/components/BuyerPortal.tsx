@@ -23,6 +23,16 @@ import {
   saveBuyerPreferences,
 } from './buyerPrefs';
 import { loadProperties } from './propertyStorage';
+import {
+  addInquiry,
+  addSiteVisitRequest,
+  getInquiriesForBuyer,
+  getSiteVisitsForBuyer,
+  INQUIRIES_STORAGE_KEY,
+  SITE_VISITS_STORAGE_KEY,
+} from './buyerActivityStorage';
+import { notifyInquiry, notifySiteVisitRequest } from './notificationStorage';
+import type { BuyerInquiry, SiteVisitRequest } from './types';
 
 type BuyerPortalProps = {
   onGoToLogin?: () => void;
@@ -140,6 +150,161 @@ const LogoutConfirmModal: React.FC<{
   );
 };
 
+const SiteVisitModal: React.FC<{
+  isOpen: boolean;
+  propertyName: string;
+  preferredDate: string;
+  notes: string;
+  onPreferredDateChange: (value: string) => void;
+  onNotesChange: (value: string) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}> = ({
+  isOpen,
+  propertyName,
+  preferredDate,
+  notes,
+  onPreferredDateChange,
+  onNotesChange,
+  onClose,
+  onSubmit,
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 relative">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 transition-colors bg-transparent border-none cursor-pointer p-1"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="w-14 h-14 bg-[#F4F9F6] rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Calendar className="w-6 h-6 text-[#1C3A27]" />
+        </div>
+        <h2 className="font-serif text-xl text-[#1C3A27] text-center">Request Site Visit</h2>
+        <p className="text-sm text-neutral-500 mt-2 text-center leading-relaxed">
+          Schedule a visit for <span className="font-semibold text-[#1C3A27]">{propertyName}</span>.
+        </p>
+
+        <div className="mt-5 space-y-4">
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider font-bold text-neutral-400 mb-1.5">
+              Preferred Date
+            </label>
+            <input
+              type="date"
+              value={preferredDate}
+              onChange={(e) => onPreferredDateChange(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full bg-[#F5F7F6] border border-neutral-200 rounded-xl px-3 py-2.5 text-sm text-[#1E2E24] focus:outline-hidden focus:border-[#1C3A27]"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider font-bold text-neutral-400 mb-1.5">
+              Notes (optional)
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => onNotesChange(e.target.value)}
+              rows={3}
+              placeholder="Any special requests or questions..."
+              className="w-full bg-[#F5F7F6] border border-neutral-200 rounded-xl px-3 py-2.5 text-sm text-[#1E2E24] focus:outline-hidden focus:border-[#1C3A27] resize-none"
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-full text-xs font-bold text-neutral-600 border border-neutral-200 hover:bg-neutral-50 transition-colors cursor-pointer bg-transparent"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={!preferredDate}
+            className="flex-1 bg-[#1C3A27] text-white px-4 py-2.5 rounded-full text-xs font-bold hover:bg-[#152C1E] transition-colors cursor-pointer shadow-xs border-none disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Submit Request
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const InquiryModal: React.FC<{
+  isOpen: boolean;
+  propertyName: string;
+  message: string;
+  onMessageChange: (value: string) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}> = ({ isOpen, propertyName, message, onMessageChange, onClose, onSubmit }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 relative">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 transition-colors bg-transparent border-none cursor-pointer p-1"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="w-14 h-14 bg-[#F4F9F6] rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Mail className="w-6 h-6 text-[#1C3A27]" />
+        </div>
+        <h2 className="font-serif text-xl text-[#1C3A27] text-center">Send Inquiry</h2>
+        <p className="text-sm text-neutral-500 mt-2 text-center leading-relaxed">
+          Ask about <span className="font-semibold text-[#1C3A27]">{propertyName}</span>.
+        </p>
+
+        <div className="mt-5">
+          <label className="block text-[10px] uppercase tracking-wider font-bold text-neutral-400 mb-1.5">
+            Your Message
+          </label>
+          <textarea
+            value={message}
+            onChange={(e) => onMessageChange(e.target.value)}
+            rows={4}
+            placeholder="I'm interested in this property and would like to know more about..."
+            className="w-full bg-[#F5F7F6] border border-neutral-200 rounded-xl px-3 py-2.5 text-sm text-[#1E2E24] focus:outline-hidden focus:border-[#1C3A27] resize-none"
+          />
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-full text-xs font-bold text-neutral-600 border border-neutral-200 hover:bg-neutral-50 transition-colors cursor-pointer bg-transparent"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={!message.trim()}
+            className="flex-1 bg-[#1C3A27] text-white px-4 py-2.5 rounded-full text-xs font-bold hover:bg-[#152C1E] transition-colors cursor-pointer shadow-xs border-none disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Send Inquiry
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 const mapHomeTypeToFilter = (propertyType: string) => {
   if (propertyType === 'All Types') return '';
@@ -173,6 +338,14 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [buyerPrefs, setBuyerPrefs] = useState<BuyerPreferences | null>(null);
   const [properties, setProperties] = useState<Property[]>(() => loadProperties(mockProperties));
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [visitPreferredDate, setVisitPreferredDate] = useState('');
+  const [visitNotes, setVisitNotes] = useState('');
+  const [inquiryMessage, setInquiryMessage] = useState('');
+  const [buyerInquiries, setBuyerInquiries] = useState<BuyerInquiry[]>([]);
+  const [buyerSiteVisits, setBuyerSiteVisits] = useState<SiteVisitRequest[]>([]);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
   const locationOptions = useMemo(
     () => [...new Set(properties.map((property) => property.location))].sort(),
@@ -188,15 +361,63 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   };
 
   const handleRequestVisit = () => {
-    if (selectedProperty) {
-      console.log('Request site visit for', selectedProperty.name);
+    if (!selectedProperty) return;
+    if (!isAuthenticated) {
+      setRestrictedFeatureName('Request Site Visit');
+      setIsLoginModalOpen(true);
+      return;
     }
+    setVisitPreferredDate('');
+    setVisitNotes('');
+    setIsVisitModalOpen(true);
   };
 
   const handleSendInquiry = () => {
-    if (selectedProperty) {
-      console.log('Send inquiry for', selectedProperty.name);
+    if (!selectedProperty) return;
+    if (!isAuthenticated) {
+      setRestrictedFeatureName('Send Inquiry');
+      setIsLoginModalOpen(true);
+      return;
     }
+    setInquiryMessage('');
+    setIsInquiryModalOpen(true);
+  };
+
+  const handleSubmitSiteVisit = () => {
+    if (!selectedProperty || !visitPreferredDate) return;
+
+    const buyer = buyerUserId || buyerName || 'guest';
+    const propertyName = selectedProperty.title ?? selectedProperty.name;
+    const visit = addSiteVisitRequest({
+      propertyId: selectedProperty.id,
+      propertyName,
+      buyer,
+      preferredDate: visitPreferredDate,
+      notes: visitNotes.trim(),
+    });
+
+    notifySiteVisitRequest(buyer, propertyName, visit.id);
+    setBuyerSiteVisits(getSiteVisitsForBuyer(buyer));
+    setIsVisitModalOpen(false);
+    setActionFeedback('Site visit request submitted. An admin will contact you soon.');
+  };
+
+  const handleSubmitInquiry = () => {
+    if (!selectedProperty || !inquiryMessage.trim()) return;
+
+    const buyer = buyerUserId || buyerName || 'guest';
+    const propertyName = selectedProperty.title ?? selectedProperty.name;
+    const inquiry = addInquiry({
+      propertyId: selectedProperty.id,
+      propertyName,
+      buyer,
+      message: inquiryMessage.trim(),
+    });
+
+    notifyInquiry(buyer, propertyName, inquiry.id);
+    setBuyerInquiries(getInquiriesForBuyer(buyer));
+    setIsInquiryModalOpen(false);
+    setActionFeedback('Inquiry sent successfully. Check My Inquiries for updates.');
   };
 
   const handleSearchApply = (query: string, loc: string, type: string, maxPrice: number) => {
@@ -264,6 +485,40 @@ const handleConfirmLogout = () => {
   };
 
   useEffect(() => {
+    if (!actionFeedback) return;
+    const timer = window.setTimeout(() => setActionFeedback(null), 3500);
+    return () => window.clearTimeout(timer);
+  }, [actionFeedback]);
+
+  useEffect(() => {
+    const syncBuyerActivity = () => {
+      if (!isAuthenticated) {
+        setBuyerInquiries([]);
+        setBuyerSiteVisits([]);
+        return;
+      }
+      const buyer = buyerUserId || buyerName || 'guest';
+      setBuyerInquiries(getInquiriesForBuyer(buyer));
+      setBuyerSiteVisits(getSiteVisitsForBuyer(buyer));
+    };
+
+    syncBuyerActivity();
+
+    const handleStorage = (event: StorageEvent) => {
+      if (
+        event.key === INQUIRIES_STORAGE_KEY ||
+        event.key === SITE_VISITS_STORAGE_KEY ||
+        event.key === null
+      ) {
+        syncBuyerActivity();
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [isAuthenticated, buyerUserId, buyerName]);
+
+  useEffect(() => {
     const syncProperties = () => {
       setProperties(loadProperties(mockProperties));
     };
@@ -313,13 +568,45 @@ const handleConfirmLogout = () => {
   }, [isAuthenticated]);
 
   if (selectedProperty) {
+    const propertyName = selectedProperty.title ?? selectedProperty.name;
     return (
-      <PropertyDetails
-        property={selectedProperty}
-        onBack={handleClosePropertyDetails}
-        onRequestVisit={handleRequestVisit}
-        onSendInquiry={handleSendInquiry}
-      />
+      <>
+        <LoginRequiredModal
+          isOpen={isLoginModalOpen}
+          featureName={restrictedFeatureName}
+          onClose={() => setIsLoginModalOpen(false)}
+          onLogin={handleLoginFromModal}
+        />
+        <SiteVisitModal
+          isOpen={isVisitModalOpen}
+          propertyName={propertyName}
+          preferredDate={visitPreferredDate}
+          notes={visitNotes}
+          onPreferredDateChange={setVisitPreferredDate}
+          onNotesChange={setVisitNotes}
+          onClose={() => setIsVisitModalOpen(false)}
+          onSubmit={handleSubmitSiteVisit}
+        />
+        <InquiryModal
+          isOpen={isInquiryModalOpen}
+          propertyName={propertyName}
+          message={inquiryMessage}
+          onMessageChange={setInquiryMessage}
+          onClose={() => setIsInquiryModalOpen(false)}
+          onSubmit={handleSubmitInquiry}
+        />
+        {actionFeedback && (
+          <div className="fixed bottom-6 right-6 z-[70] px-4 py-3 bg-[#1C3A27] text-white text-sm font-medium rounded-xl shadow-lg">
+            {actionFeedback}
+          </div>
+        )}
+        <PropertyDetails
+          property={selectedProperty}
+          onBack={handleClosePropertyDetails}
+          onRequestVisit={handleRequestVisit}
+          onSendInquiry={handleSendInquiry}
+        />
+      </>
     );
   }
 
@@ -356,18 +643,95 @@ const handleConfirmLogout = () => {
         );
       case 'Inquiries':
         return (
-          <div className="max-w-4xl mx-auto px-8 py-20 text-center">
-            <Mail className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-            <h2 className="font-serif text-2xl text-[#1C3A27]">My Inquiries</h2>
-            <p className="text-xs text-neutral-500 mt-2">No inquiries submitted yet.</p>
+          <div className="max-w-4xl mx-auto px-8 py-20">
+            <div className="text-center mb-8">
+              <Mail className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+              <h2 className="font-serif text-2xl text-[#1C3A27]">My Inquiries</h2>
+            </div>
+            {buyerInquiries.length === 0 ? (
+              <p className="text-xs text-neutral-500 text-center">No inquiries submitted yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {buyerInquiries.map((inquiry) => (
+                  <div
+                    key={inquiry.id}
+                    className="bg-white rounded-2xl border border-neutral-200/60 p-5 shadow-xs"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-serif font-bold text-[#1C3A27]">{inquiry.propertyName}</h3>
+                        <p className="text-xs text-neutral-400 mt-1">
+                          {new Date(inquiry.createdAt).toLocaleString('en-PH', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                        {inquiry.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-neutral-600 mt-3">{inquiry.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       case 'Site Visits':
         return (
-          <div className="max-w-4xl mx-auto px-8 py-20 text-center">
-            <Calendar className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-            <h2 className="font-serif text-2xl text-[#1C3A27]">My Site Visits</h2>
-            <p className="text-xs text-neutral-500 mt-2">No site visits requested yet.</p>
+          <div className="max-w-4xl mx-auto px-8 py-20">
+            <div className="text-center mb-8">
+              <Calendar className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+              <h2 className="font-serif text-2xl text-[#1C3A27]">My Site Visits</h2>
+            </div>
+            {buyerSiteVisits.length === 0 ? (
+              <p className="text-xs text-neutral-500 text-center">No site visits requested yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {buyerSiteVisits.map((visit) => (
+                  <div
+                    key={visit.id}
+                    className="bg-white rounded-2xl border border-neutral-200/60 p-5 shadow-xs"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-serif font-bold text-[#1C3A27]">{visit.propertyName}</h3>
+                        <p className="text-xs text-neutral-400 mt-1">
+                          Requested{' '}
+                          {new Date(visit.createdAt).toLocaleString('en-PH', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                        {visit.status}
+                      </span>
+                    </div>
+                    <div className="mt-3 text-sm text-neutral-600 space-y-1">
+                      <p>
+                        <span className="font-semibold text-[#1C3A27]">Preferred date:</span>{' '}
+                        {new Date(visit.preferredDate).toLocaleDateString('en-PH', {
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </p>
+                      {visit.notes && (
+                        <p>
+                          <span className="font-semibold text-[#1C3A27]">Notes:</span> {visit.notes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       default:
