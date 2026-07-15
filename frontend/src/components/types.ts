@@ -45,6 +45,27 @@ export interface Analytics {
   activeDealsCount: number;
 }
 
+export interface BuyerInquiry {
+  id: number;
+  propertyId: number;
+  propertyName: string;
+  buyer: string;
+  message: string;
+  status: 'Pending' | 'Responded';
+  createdAt: string;
+}
+
+export interface SiteVisitRequest {
+  id: number;
+  propertyId: number;
+  propertyName: string;
+  buyer: string;
+  preferredDate: string;
+  notes: string;
+  status: 'Pending' | 'Scheduled' | 'Completed';
+  createdAt: string;
+}
+
 export interface NotificationLog {
   id: number;
   type: 'visit' | 'inquiry' | 'signup';
