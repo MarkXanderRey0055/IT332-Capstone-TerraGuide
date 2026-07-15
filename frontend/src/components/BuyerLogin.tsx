@@ -43,7 +43,8 @@ const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
         return;
       }
 
-      const usernameExists = accounts.some((account) => account.username.toLowerCase() === username.toLowerCase());
+      const normalizedUsername = username.toLowerCase();
+      const usernameExists = accounts.some((account) => account.username.toLowerCase() === normalizedUsername);
       if (usernameExists) {
         setFeedback({ type: 'error', message: 'That username is already taken. Please choose another one.' });
         return;
