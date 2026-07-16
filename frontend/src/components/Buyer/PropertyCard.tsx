@@ -1,6 +1,6 @@
 import React from 'react';
 import { MapPin, Square } from 'lucide-react';
-import type { Property } from './types';
+import type { Property } from '../../types/types';
 
 interface PropertyCardProps {
   property: Property;

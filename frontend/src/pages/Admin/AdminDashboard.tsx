@@ -11,17 +11,17 @@ import {
   X,
   Bell,
 } from 'lucide-react';
-import { mockProperties } from './data';
-import { loadProperties, saveProperties } from './propertyStorage';
+import { mockProperties } from '../../utils/data';
+import { loadProperties, saveProperties } from '../../services/propertyStorage';
 import {
   loadNotifications,
   markAllNotificationsRead,
   NOTIFICATIONS_STORAGE_KEY,
   NOTIFICATIONS_UPDATED_EVENT,
-} from './notificationStorage';
+} from '../../services/notificationStorage';
 import { AdminProperties } from './AdminProperties';
 import { AdminBuyers } from './AdminBuyers';
-import type { NotificationLog, Property } from './types';
+import type { NotificationLog, Property } from '../../types/types';
 
 type NavItem = {
   id: string;

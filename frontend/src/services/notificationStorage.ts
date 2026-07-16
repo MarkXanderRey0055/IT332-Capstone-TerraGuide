@@ -1,4 +1,4 @@
-import type { NotificationLog } from './types';
+import type { NotificationLog } from '../types/types';
 
 const NOTIFICATIONS_STORAGE_KEY = 'terraguide_notifications';
 export const NOTIFICATIONS_UPDATED_EVENT = 'terraguide-notifications-updated';

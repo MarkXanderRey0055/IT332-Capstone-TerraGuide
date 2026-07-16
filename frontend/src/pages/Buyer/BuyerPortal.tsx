@@ -11,18 +11,18 @@ import {
   Lock,
   X,
 } from 'lucide-react';
-import { mockProperties } from './data';
-import type { BuyerPreferences, Property } from './types';
-import { WelcomeModal } from './WelcomeModal';
-import { PropertyMap } from './PropertyMap';
-import { PropertyDetails } from './PropertyDetails';
+import { mockProperties } from '../../utils/data';
+import type { BuyerPreferences, Property } from '../../types/types';
+import { WelcomeModal } from '../../components/Buyer/WelcomeModal';
+import { PropertyMap } from '../../components/Buyer/PropertyMap';
+import { PropertyDetails } from '../../components/Buyer/PropertyDetails';
 import { BuyerSearch, BuyerSuggestions, BuyerPreferencesView } from './BuyerPages';
 import {
   loadBuyerPreferences,
   removeBuyerPreferences,
   saveBuyerPreferences,
-} from './buyerPrefs';
-import { loadProperties } from './propertyStorage';
+} from '../../services/buyerPrefs';
+import { loadProperties } from '../../services/propertyStorage';
 import {
   addInquiry,
   addSiteVisitRequest,
@@ -30,9 +30,9 @@ import {
   getSiteVisitsForBuyer,
   INQUIRIES_STORAGE_KEY,
   SITE_VISITS_STORAGE_KEY,
-} from './buyerActivityStorage';
-import { notifyInquiry, notifySiteVisitRequest } from './notificationStorage';
-import type { BuyerInquiry, SiteVisitRequest } from './types';
+} from '../../services/buyerActivityStorage';
+import { notifyInquiry, notifySiteVisitRequest } from '../../services/notificationStorage';
+import type { BuyerInquiry, SiteVisitRequest } from '../../types/types';
 
 type BuyerPortalProps = {
   onGoToLogin?: () => void;

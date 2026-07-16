@@ -3,8 +3,8 @@ import {
   loadBuyerAccounts,
   saveBuyerAccounts,
   type BuyerAccount,
-} from './buyerAccounts';
-import { notifyBuyerSignup } from './notificationStorage';
+} from '../../services/buyerAccounts';
+import { notifyBuyerSignup } from '../../services/notificationStorage';
 
 interface LoginProps {
   onBack: () => void;

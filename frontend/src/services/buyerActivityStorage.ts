@@ -1,4 +1,4 @@
-import type { BuyerInquiry, SiteVisitRequest } from './types';
+import type { BuyerInquiry, SiteVisitRequest } from '../types/types';
 
 const INQUIRIES_STORAGE_KEY = 'terraguide_inquiries';
 const SITE_VISITS_STORAGE_KEY = 'terraguide_site_visits';
