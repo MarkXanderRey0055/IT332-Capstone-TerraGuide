@@ -1,4 +1,4 @@
-import type { BuyerPreferences } from './types';
+import type { BuyerPreferences } from '../types/types';
 
 const PREFS_STORAGE_KEY = 'terraguide_buyerPreferences';
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { Compass, Eye, MapPin, Maximize, X, Locate, Navigation } from 'lucide-react';
-import type { Property } from './types';
+import type { Property } from '../../types/types';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';

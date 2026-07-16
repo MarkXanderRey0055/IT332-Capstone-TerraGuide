@@ -1,4 +1,4 @@
-import type { Property, Document, Analytics } from './types';
+import type { Property, Document, Analytics } from '../types/types';
 
 // Mock real estate listings centered around Balayan, Batangas / Calabarzon region
 export const mockProperties: Property[] = [

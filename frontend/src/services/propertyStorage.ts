@@ -1,4 +1,4 @@
-import type { Property } from './types';
+import type { Property } from '../types/types';
 
 const STORAGE_KEY = 'terraguide_properties';
 

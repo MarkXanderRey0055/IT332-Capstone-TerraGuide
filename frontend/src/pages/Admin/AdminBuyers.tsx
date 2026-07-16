@@ -10,10 +10,10 @@ import {
   Mail,
   User,
 } from 'lucide-react';
-import type { BuyerAccount } from './buyerAccounts';
-import { loadBuyerAccounts, removeBuyerAccount } from './buyerAccounts';
-import { loadBuyerPreferences, loadAllBuyerPreferences, removeBuyerPreferences } from './buyerPrefs';
-import type { BuyerPreferences } from './types';
+import type { BuyerAccount } from '../../services/buyerAccounts';
+import { loadBuyerAccounts, removeBuyerAccount } from '../../services/buyerAccounts';
+import { loadBuyerPreferences, loadAllBuyerPreferences, removeBuyerPreferences } from '../../services/buyerPrefs';
+import type { BuyerPreferences } from '../../types/types';
 
 interface AdminBuyersProps {
   onToast?: (message: string) => void;

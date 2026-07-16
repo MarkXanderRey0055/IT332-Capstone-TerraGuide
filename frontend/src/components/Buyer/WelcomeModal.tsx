@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent } from 'react';
-import type { BuyerPreferences, Property } from './types';
+import type { BuyerPreferences, Property } from '../../types/types';
 
 export interface WelcomeModalProps {
   isOpen: boolean;

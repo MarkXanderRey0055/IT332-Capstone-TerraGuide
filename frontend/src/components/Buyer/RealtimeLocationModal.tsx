@@ -1,8 +1,8 @@
 import { X, MapPin } from 'lucide-react';
-import { mockProperties } from './data';
+import { mockProperties } from '../../utils/data';
 import { PropertyMap } from './PropertyMap';
-import type { Property } from './types';
-import { loadProperties } from './propertyStorage';
+import type { Property } from '../../types/types';
+import { loadProperties } from '../../services/propertyStorage';
 
 interface RealtimeLocationModalProps {
   isOpen: boolean;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Calendar, Mail, MapPin, Eye } from 'lucide-react';
-import type { Property } from './types';
+import type { Property } from '../../types/types';
 import { RealtimeLocationModal } from './RealtimeLocationModal';
 
 interface PropertyDetailsProps {
@@ -178,4 +178,3 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
     </div>
   );
 };
-

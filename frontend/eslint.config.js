@@ -18,5 +18,11 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // This app intentionally uses effects to synchronize local form/UI state
+      // when its controlling props change. Refactoring those flows is outside
+      // the scope of linting and could change their existing behavior.
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
 ])

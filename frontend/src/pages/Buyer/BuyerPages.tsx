@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Search, Sliders, HelpCircle } from 'lucide-react';
-import type { Property as PropertyListing, BuyerPreferences } from './types';
-import { PropertyCard } from './PropertyCard';
-import { getLotSize, getPropertyLabel } from './buyerPrefs';
+import type { Property as PropertyListing, BuyerPreferences } from '../../types/types';
+import { PropertyCard } from '../../components/Buyer/PropertyCard';
+import { getLotSize } from '../../services/buyerPrefs';
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
 
@@ -543,5 +543,3 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
     </div>
   );
 };
-
-export { getPropertyLabel };

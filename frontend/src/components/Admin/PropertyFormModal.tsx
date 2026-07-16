@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Image as ImageIcon, Compass, MapPin } from 'lucide-react';
-import type { Property } from './types';
-import { getLotSize } from './buyerPrefs';
+import type { Property } from '../../types/types';
+import { getLotSize } from '../../services/buyerPrefs';
 
 interface PropertyFormModalProps {
   isOpen: boolean;

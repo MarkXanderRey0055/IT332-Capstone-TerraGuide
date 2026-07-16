@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import BuyerLogin from './BuyerLogin';
-import AdminLogin from './AdminLogin';
+import AdminLogin from '../Admin/AdminLogin';
 import BuyerPortal from './BuyerPortal';
-import AdminDashboard from './AdminDashboard';
+import AdminDashboard from '../Admin/AdminDashboard';
 
 type MainLoginPortalProps = {
   onBrowse?: () => void;

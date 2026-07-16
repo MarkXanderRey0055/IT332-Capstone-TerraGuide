@@ -8,9 +8,9 @@ import {
   XCircle,
   Clock,
 } from 'lucide-react';
-import type { Property } from './types';
-import { PropertyFormModal } from './PropertyFormModal';
-import { getLotSize } from './buyerPrefs';
+import type { Property } from '../../types/types';
+import { PropertyFormModal } from '../../components/Admin/PropertyFormModal';
+import { getLotSize } from '../../services/buyerPrefs';
 
 interface AdminPropertiesProps {
   properties: Property[];

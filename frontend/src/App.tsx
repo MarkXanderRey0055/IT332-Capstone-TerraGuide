@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import MainLoginPortal from './components/MainLoginPortal';
-import BuyerPortal from './components/BuyerPortal';
+import MainLoginPortal from './pages/Buyer/MainLoginPortal';
+import BuyerPortal from './pages/Buyer/BuyerPortal';
 
 type AppView = 'login' | 'buyerPortal';
 type LoginInitialView = 'selection' | 'buyer';
