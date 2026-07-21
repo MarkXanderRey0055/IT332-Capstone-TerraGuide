@@ -2,12 +2,17 @@ import mongoose from 'mongoose';
 
 const connectDB = async () => {
   try {
-    const connStr = process.env.MONGODB_URI || 'mongodb://localhost:27017/terraguide';
+    const connStr = process.env.MONGODB_URI;
     const conn = await mongoose.connect(connStr);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+
+    console.log("Connected host:", conn.connection.host);
+    console.log("Connected database:", conn.connection.name);
+
+    const collections = await conn.connection.db.listCollections().toArray();
+    console.log("✅ Collections:", collections.map(c => c.name));
+
   } catch (error) {
-    console.error(`MongoDB Connection Error: ${error.message}`);
-    // Do not crash the server in case of initial failure, allow retry or handle gracefully
+    console.error(error);
     throw error;
   }
 };
