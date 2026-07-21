@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
+import buyerPreferenceRoutes from "./routes/buyerPreferenceRoutes.js";
 import { errorHandler } from './middleware/errorMiddleware.js';
 
 // Load environment variables
@@ -38,6 +39,7 @@ app.get('/api/health', (req, res) => {
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
+app.use("/api/preferences", buyerPreferenceRoutes);
 
 // Fallback for unhandled routes
 app.all('*', (req, res, next) => {
