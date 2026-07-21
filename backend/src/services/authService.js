@@ -60,35 +60,41 @@ export const registerUser = async ({ username, email, password, role }) => {
   };
 };
 
-/**
- * Service to log in an existing user.
- */
-export const loginUser = async ({ username, password }) => {
-  if (!username || !password) {
-    throw new AppError('Please provide username/email and password.', 400);
-  }
 
-  // Find user by username or email (to make it user-friendly)
-  const query = username.includes('@') 
-    ? { email: username.toLowerCase() } 
+export const loginUser = async ({ username, password }) => {
+  console.log("\n========== LOGIN DEBUG ==========");
+  console.log("Input:", username);
+
+  const query = username.includes("@")
+    ? { email: username.toLowerCase() }
     : { username: username.toLowerCase() };
+
+  console.log("Query:", query);
 
   const user = await User.findOne(query);
 
+  console.log("User found:", !!user);
+
   if (!user) {
-    throw new AppError('Invalid credentials.', 401);
+    throw new AppError("Invalid credentials.", 401);
   }
 
-  // Check if password matches
+  console.log("Stored username:", user.username);
+  console.log("Stored email:", user.email);
+  console.log("Stored hash:", user.password);
+
   const isMatch = await user.comparePassword(password);
+
+  console.log("Password match:", isMatch);
+
   if (!isMatch) {
-    throw new AppError('Invalid credentials.', 401);
+    throw new AppError("Invalid credentials.", 401);
   }
 
-  // Generate token
+  console.log("LOGIN SUCCESS");
+
   const token = generateToken(user._id);
 
-  // Exclude password from response
   const userObj = user.toObject();
   delete userObj.password;
 
