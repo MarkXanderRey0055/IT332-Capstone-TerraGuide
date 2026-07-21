@@ -14,7 +14,7 @@ import {
 import { mockProperties } from '../../utils/data';
 import type { BuyerPreferences, Property } from '../../types/types';
 import { WelcomeModal } from '../../components/Buyer/WelcomeModal';
-import { PropertyMap } from '../../components/Buyer/PropertyMap';
+import PropertyExplorer from '../../components/Shared/PropertyExplorerFixed';
 import { PropertyDetails } from '../../components/Buyer/PropertyDetails';
 import { BuyerSearch, BuyerSuggestions, BuyerPreferencesView } from './BuyerPages';
 import {
@@ -914,8 +914,11 @@ const handleConfirmLogout = () => {
                 </div>
 
                 <div className="bg-white p-2 rounded-[24px] border border-neutral-200/60 shadow-xs h-[500px] w-full relative z-10 overflow-hidden">
-                  <div className="w-full h-full rounded-[16px] overflow-hidden border border-neutral-200/60">
-                    <PropertyMap properties={properties} onSelectProperty={handleSelectProperty} />
+                    <div className="w-full h-full rounded-[16px] overflow-hidden border border-neutral-200/60">
+                    <PropertyExplorer properties={properties} onSelectProperty={(id) => {
+                      const p = properties.find((x) => x.id === id);
+                      if (p) handleSelectProperty(p);
+                    }} focusProperty={null} />
                   </div>
                 </div>
               </div>
