@@ -2,13 +2,10 @@ import * as propertyService from '../services/propertyService.js';
 import { sendSuccess } from '../utils/response.js';
 import { asyncHandler } from '../middleware/errorMiddleware.js';
 
-
-
 //fetch all listed property
 export const getProperties = asyncHandler(async (req, res) => {
-  const { search } = req.query;
-  const properties = await propertyService.getAllProperties(search);
-  return sendSuccess(res, 200, 'Properties fetched successfully', properties);
+  const result = await propertyService.getAllProperties(req.query);
+  return sendSuccess(res, 200, 'Properties fetched successfully', result);
 });
 
 // fetch single property (fetch by id)

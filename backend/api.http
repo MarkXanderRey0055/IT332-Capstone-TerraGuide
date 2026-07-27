@@ -1,0 +1,122 @@
+
+# AUTHENTICATION
+
+### Register Admin
+POST http://localhost:5000/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "admin1",
+  "email": "admin@terraguide.com",
+  "password": "Password123!",
+  "role": "admin",
+  "fullName": "Admin User",
+  "address": "Balayan, Batangas"
+}
+
+### Login
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+  {
+    "username": "admin1",
+    "password": "Password123!"
+  }
+
+### Get Current User Profile
+GET http://localhost:5000/api/auth/me
+Authorization: Bearer <TOKEN>
+
+
+# BUYER PREFERENCES
+
+### Get Buyer Preferences
+GET http://localhost:5000/api/preferences
+Authorization: Bearer <BUYER_TOKEN>
+
+### Save / Update Buyer Preferences
+POST http://localhost:5000/api/preferences
+Content-Type: application/json
+Authorization: Bearer <BUYER_TOKEN>
+
+{
+  "preferredLocation": "Balayan",
+  "preferredType": "Agricultural",
+  "minBudget": 1000000,
+  "maxBudget": 5000000,
+  "minLotSize": 1000
+}
+
+
+
+# PROPERTY EXPLORER (PUBLIC)
+
+### Get All Listings
+GET http://localhost:5000/api/properties
+
+### Get Property by ID
+GET http://localhost:5000/api/properties/PROPERTY_ID_HERE
+
+### Keyword Search
+GET http://localhost:5000/api/properties?search=balayan
+
+### Filter by Location
+GET http://localhost:5000/api/properties?location=Balayan
+
+### Filter by Type
+GET http://localhost:5000/api/properties?type=Agricultural
+
+### Filter by Status
+GET http://localhost:5000/api/properties?status=Available
+
+### Price and Lot Size Filter
+GET http://localhost:5000/api/properties?minPrice=1000000&maxPrice=5000000&minLotSize=500
+
+### Sort Latest First
+GET http://localhost:5000/api/properties?sort=latest
+
+### Sort Price Low to High
+GET http://localhost:5000/api/properties?sort=priceAsc
+
+### Sort Price High to Low
+GET http://localhost:5000/api/properties?sort=priceDesc
+
+### Pagination
+GET http://localhost:5000/api/properties?page=1&limit=5
+
+### Combined Search
+GET http://localhost:5000/api/properties?location=Balayan&type=Agricultural&minPrice=1000000&sort=priceAsc&page=1&limit=10
+
+
+
+# PROPERTY ADMIN OPERATIONS
+
+### Create New Property
+POST http://localhost:5000/api/properties
+Content-Type: application/json
+Authorization: Bearer <ADMIN_TOKEN>
+
+{
+  "title": "Sample Agricultural Lot",
+  "description": "Ideal for farming and investment.",
+  "location": "Balayan",
+  "type": "Agricultural",
+  "status": "Available",
+  "price": 2500000,
+  "lotSize": 1500,
+  "ownerName": "Juan Dela Cruz"
+}
+
+### Update Property
+PUT http://localhost:5000/api/properties/PROPERTY_ID_HERE
+Content-Type: application/json
+Authorization: Bearer <ADMIN_TOKEN>
+
+{
+  "price": 3000000,
+  "status": "Reserved"
+}
+
+### Delete Property
+DELETE http://localhost:5000/api/properties/PROPERTY_ID_HERE
+Authorization: Bearer <ADMIN_TOKEN>

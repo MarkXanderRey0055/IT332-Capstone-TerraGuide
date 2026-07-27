@@ -46,8 +46,6 @@ export const login = asyncHandler(async (req, res) => {
  * @route   GET /api/auth/me
  * @access  Private
  */
-export const me = asyncHandler(async (req, res) => {
-  const result = await authService.getMe(req.user._id);
-
-  return sendSuccess(res, 200, 'User profile retrieved successfully', { user: result });
+export const getMe = asyncHandler(async (req, res) => {
+  return sendSuccess(res, 200, 'User profile fetched successfully', req.user);
 });

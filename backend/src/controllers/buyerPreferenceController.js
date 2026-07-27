@@ -1,42 +1,42 @@
-import * as preferenceService from "../services/buyerPreferenceService.js";
+import * as buyerPreferenceService from '../services/buyerPreferenceService.js';
+import { sendSuccess } from '../utils/response.js';
+import { asyncHandler } from '../middleware/errorMiddleware.js';
 
-export const savePreference = async (req, res) => {
+/**
+ * @desc    Save or update preferences for the logged-in buyer
+ * @route   POST /api/preferences
+ * @access  Private (Buyer)
+ */
+export const savePreference = asyncHandler(async (req, res) => {
+  const userId = req.user._id || req.user.id;
 
-  try {
+  const preference = await buyerPreferenceService.createOrUpdatePreference(
+    userId,
+    req.body
+  );
 
-    const preference =
-      await preferenceService.createOrUpdatePreference(
-        req.user._id,
-        req.body
-      );
+  return sendSuccess(
+    res,
+    200,
+    'Buyer preferences saved successfully.',
+    preference
+  );
+});
 
-    res.status(200).json({
-      success: true,
-      message: "Buyer preferences saved successfully.",
-      data: preference,
-    });
+/**
+ * @desc    Get saved preferences for the logged-in buyer
+ * @route   GET /api/preferences
+ * @access  Private (Buyer)
+ */
+export const getMyPreference = asyncHandler(async (req, res) => {
+  const userId = req.user._id || req.user.id;
 
-  } catch (err) {
+  const preference = await buyerPreferenceService.getPreferenceByUser(userId);
 
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-
-  }
-
-};
-
-export const getMyPreference = async (req, res) => {
-
-  const preference =
-    await preferenceService.getPreferenceByUser(
-      req.user._id
-    );
-
-  res.json({
-    success: true,
-    data: preference,
-  });
-
-};
+  return sendSuccess(
+    res,
+    200,
+    'Buyer preferences retrieved successfully.',
+    preference
+  );
+});
