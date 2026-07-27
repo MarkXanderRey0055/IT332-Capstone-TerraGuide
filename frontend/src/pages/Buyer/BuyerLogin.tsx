@@ -14,6 +14,8 @@ const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
     email: '',
     username: '',
     password: '',
+    fullName: '',
+    address: '',
   });
 
   const [feedback, setFeedback] = useState<{
@@ -35,6 +37,8 @@ const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
     const username = formData.username.trim();
     const password = formData.password;
     const email = formData.email.trim();
+    const fullName = formData.fullName.trim();
+    const address = formData.address.trim();
 
     if (!username || !password) {
       setFeedback({
@@ -48,15 +52,15 @@ const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
       setLoading(true);
 
       if (isSignUp) {
-        if (!email) {
+        if (!email || !fullName || !address) {
           setFeedback({
             type: 'error',
-            message: 'Please enter your email address.',
+            message: 'Please fill in your email, full name, and address.',
           });
           return;
         }
 
-        await register(username, email, password);
+        await register(username, email, password, fullName, address);
 
         setFeedback({
           type: 'success',
@@ -67,6 +71,8 @@ const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
           email: '',
           username: '',
           password: '',
+          fullName: '',
+          address: '',
         });
 
         setShowPassword(false);
@@ -187,6 +193,48 @@ const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
                   className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-white/10 bg-white/[0.04] text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/30 transition text-sm"
                 />
               </div>
+            </div>
+          )}
+
+          {isSignUp && (
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                Full Name
+              </label>
+
+              <input
+                type="text"
+                value={formData.fullName}
+                onChange={(event) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    fullName: event.target.value,
+                  }))
+                }
+                placeholder="Enter your full name"
+                className="w-full px-4 py-3.5 rounded-xl border border-white/10 bg-white/[0.04] text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/30 transition text-sm"
+              />
+            </div>
+          )}
+
+          {isSignUp && (
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                Address
+              </label>
+
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(event) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    address: event.target.value,
+                  }))
+                }
+                placeholder="Enter your address"
+                className="w-full px-4 py-3.5 rounded-xl border border-white/10 bg-white/[0.04] text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/30 transition text-sm"
+              />
             </div>
           )}
 

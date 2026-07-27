@@ -32,6 +32,7 @@ import {
   SITE_VISITS_STORAGE_KEY,
 } from '../../services/buyerActivityStorage';
 import { notifyInquiry, notifySiteVisitRequest } from '../../services/notificationStorage';
+import { getCurrentUser } from '../../services/AuthService';
 import type { BuyerInquiry, SiteVisitRequest } from '../../types/types';
 
 type BuyerPortalProps = {
@@ -540,11 +541,10 @@ const handleConfirmLogout = () => {
     let currentBuyerName = 'Valued Buyer';
     let currentUserId = 'guest';
     try {
-      const currentBuyer = window.localStorage.getItem('terraguide_currentBuyer');
-      if (currentBuyer) {
-        const parsedBuyer = JSON.parse(currentBuyer) as { username?: string; email?: string };
-        currentBuyerName = parsedBuyer.username || parsedBuyer.email || currentBuyerName;
-        currentUserId = parsedBuyer.username || parsedBuyer.email || currentUserId;
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        currentBuyerName = currentUser.username || currentUser.email || currentBuyerName;
+        currentUserId = currentUser.username || currentUser.email || currentUserId;
       }
     } catch {
       currentBuyerName = 'Valued Buyer';

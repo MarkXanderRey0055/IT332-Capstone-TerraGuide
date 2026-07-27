@@ -41,13 +41,13 @@ export async function login(username: string, password: string) {
   return response.data.user;
 }
 
-/**
- * Register buyer
- */
+
 export async function register(
   username: string,
   email: string,
-  password: string
+  password: string,
+  fullName: string,
+  address: string
 ) {
   const response = (await apiRequest("/auth/register", {
     method: "POST",
@@ -55,6 +55,8 @@ export async function register(
       username,
       email,
       password,
+      fullName,
+      address,
       role: "buyer",
     }),
   })) as AuthResponse;
@@ -96,4 +98,31 @@ export function getCurrentUser(): User | null {
  */
 export function getToken() {
   return localStorage.getItem("terraguide_token");
+}
+
+export function isAuthenticated(): boolean {
+  return !!getToken();
+}
+
+
+export async function verifyToken(): Promise<User | null> {
+  if (!getToken()) {
+    return null;
+  }
+
+  try {
+    const response = (await apiRequest("/auth/me")) as {
+      success: boolean;
+      message: string;
+      data: User;
+    };
+
+    localStorage.setItem("terraguide_user", JSON.stringify(response.data));
+    return response.data;
+  } catch {
+    // Invalid/expired token — apiRequest already clears storage on 401,
+    // but clear again defensively in case of other failures.
+    logout();
+    return null;
+  }
 }

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { login, logout } from "../../services/AuthService";
 
 interface LoginProps {
   onBack: () => void;
@@ -12,25 +13,39 @@ const AdminLogin: React.FC<LoginProps> = ({ onBack, onLogin }) => {
   const [password, setPassword] = useState("");
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
-    const adminUsername = "admin1";
-    const adminPassword = "admin123";
+    const trimmedUsername = username.trim();
 
-    if (username === adminUsername && password === adminPassword) {
-      setError("");
+    if (!trimmedUsername || !password) {
+      setError("Please enter both username and password.");
+      return;
+    }
 
-      console.log("Admin login successful");
+    try {
+      setLoading(true);
 
-      // Sends user to dashboard if function exists
+      const user = await login(trimmedUsername, password);
+
+      if (user.role !== "admin") {
+        // Valid credentials, but not an admin account — don't leave
+        // a buyer-scoped session sitting in storage under the admin flow.
+        logout();
+        setError("This account does not have admin access.");
+        return;
+      }
+
       if (onLogin) {
         onLogin();
       }
-
-    } else {
-      setError("Invalid username or password.");
+    } catch (err: any) {
+      setError(err.message || "Invalid username or password.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -147,9 +162,14 @@ const AdminLogin: React.FC<LoginProps> = ({ onBack, onLogin }) => {
 
           <button
             type="submit"
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-yellow-700/80 to-yellow-800/80 hover:from-yellow-600 hover:to-yellow-700 text-white font-medium shadow-lg transition"
+            disabled={loading}
+            className={`w-full py-4 rounded-xl text-white font-medium shadow-lg transition ${
+              loading
+                ? "bg-gray-600 cursor-not-allowed"
+                : "bg-gradient-to-r from-yellow-700/80 to-yellow-800/80 hover:from-yellow-600 hover:to-yellow-700"
+            }`}
           >
-            Sign In
+            {loading ? "Please wait..." : "Sign In"}
           </button>
 
 
