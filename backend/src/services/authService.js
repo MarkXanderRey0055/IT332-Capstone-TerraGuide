@@ -17,10 +17,10 @@ const generateToken = (userId) => {
 /**
  * Service to register a new user.
  */
-export const registerUser = async ({ username, email, password, role }) => {
+export const registerUser = async ({ username, email, password, role, fullName, address }) => {
   // Validate input presence
-  if (!username || !email || !password || !role) {
-    throw new AppError('Please provide username, email, password, and role.', 400);
+  if (!username || !email || !password || !role || !fullName || !address) {
+    throw new AppError('Please provide username, email, password, role, fullName, and address.', 400);
   }
 
   // Ensure role is either admin or buyer
@@ -28,7 +28,7 @@ export const registerUser = async ({ username, email, password, role }) => {
     throw new AppError('Role must be either "admin" or "buyer".', 400);
   }
 
-  // Check if user already exists (custom check to throw a friendly error before Mongoose handles duplicates)
+  // Check if user already exists
   const existingUsername = await User.findOne({ username: username.toLowerCase() });
   if (existingUsername) {
     throw new AppError('A user with this username already exists.', 400);
@@ -39,12 +39,14 @@ export const registerUser = async ({ username, email, password, role }) => {
     throw new AppError('A user with this email already exists.', 400);
   }
 
-  // Create new user in DB
+  // Create new user in DB with added fields
   const newUser = await User.create({
     username,
     email,
     password,
-    role
+    role,
+    fullName,
+    address
   });
 
   // Generate JWT token
@@ -59,7 +61,6 @@ export const registerUser = async ({ username, email, password, role }) => {
     token
   };
 };
-
 
 export const loginUser = async ({ username, password }) => {
   console.log("\n========== LOGIN DEBUG ==========");

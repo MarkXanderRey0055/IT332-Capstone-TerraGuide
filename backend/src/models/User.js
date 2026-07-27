@@ -35,7 +35,17 @@ const userSchema = new mongoose.Schema(
         message: 'Role must be either admin or buyer'
       },
       required: [true, 'Role is required']
-    }
+    },
+    fullName: {
+    type: String,
+    required: [true, 'Full name is required'],
+    trim: true
+  },
+  address: {
+    type: String,
+    required: [true, 'Address is required'],
+    trim: true
+  }
   },
   {
     timestamps: true

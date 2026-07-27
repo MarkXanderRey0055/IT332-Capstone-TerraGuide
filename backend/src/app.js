@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import buyerPreferenceRoutes from "./routes/buyerPreferenceRoutes.js";
 import { errorHandler } from './middleware/errorMiddleware.js';
+import propertyRoutes from './routes/propertyRoutes.js';
+import recommendationRoutes from './routes/recommendationRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -17,7 +19,7 @@ app.use(helmet());
 // Enable CORS with support for credentials and custom headers
 app.use(
   cors({
-    origin: true, // Allow all origins for development, can be configured for production
+    origin: true, 
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -39,7 +41,9 @@ app.get('/api/health', (req, res) => {
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
-app.use("/api/preferences", buyerPreferenceRoutes);
+app.use('/api/preferences', buyerPreferenceRoutes);
+app.use('/api/properties', propertyRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // Fallback for unhandled routes
 app.all('*', (req, res, next) => {

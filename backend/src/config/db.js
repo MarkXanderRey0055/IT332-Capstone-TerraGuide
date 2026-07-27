@@ -9,7 +9,7 @@ const connectDB = async () => {
     console.log("Connected database:", conn.connection.name);
 
     const collections = await conn.connection.db.listCollections().toArray();
-    console.log("✅ Collections:", collections.map(c => c.name));
+    console.log(" Collections:", collections.map(c => c.name));
 
   } catch (error) {
     console.error(error);
