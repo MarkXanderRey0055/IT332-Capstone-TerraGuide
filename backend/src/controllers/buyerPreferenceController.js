@@ -40,3 +40,17 @@ export const getMyPreference = asyncHandler(async (req, res) => {
     preference
   );
 });
+
+
+export const deleteMyPreference = asyncHandler(async (req, res) => {
+  const userId = req.user._id || req.user.id;
+
+  await buyerPreferenceService.deletePreferenceByUser(userId);
+
+  return sendSuccess(
+    res,
+    200,
+    'Buyer preferences deleted successfully.',
+    null
+  );
+});

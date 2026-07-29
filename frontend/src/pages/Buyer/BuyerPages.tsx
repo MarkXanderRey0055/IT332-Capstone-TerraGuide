@@ -342,8 +342,8 @@ export const BuyerSuggestions: React.FC<BuyerSuggestionsProps> = ({
 
 interface BuyerPreferencesViewProps {
   buyerPrefs: BuyerPreferences | null;
-  onSavePrefs: (prefs: Omit<BuyerPreferences, 'userId' | 'timestamp'>) => void;
-  onResetPrefs: () => void;
+  onSavePrefs: (prefs: Omit<BuyerPreferences, 'userId' | 'timestamp'>) => Promise<void> | void;
+  onResetPrefs: () => Promise<void> | void;
 }
 
 export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
@@ -360,6 +360,7 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
   const [location, setLocation] = useState<string>(buyerPrefs?.location || '');
   const [minLotSize, setMinLotSize] = useState<number>(buyerPrefs?.minLotSize || 0);
   const [savedMessage, setSavedMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (buyerPrefs) {
@@ -384,17 +385,24 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
     setBudgetMax(val);
   };
 
-  const handleSave = () => {
-    onSavePrefs({
-      budgetMin,
-      budgetMax,
-      landType,
-      intendedUse,
-      location,
-      minLotSize,
-    });
-    setSavedMessage('Preferences saved successfully.');
-    window.setTimeout(() => setSavedMessage(''), 2500);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onSavePrefs({
+        budgetMin,
+        budgetMax,
+        landType,
+        intendedUse,
+        location,
+        minLotSize,
+      });
+      setSavedMessage('Preferences saved successfully.');
+      window.setTimeout(() => setSavedMessage(''), 2500);
+    } catch {
+      // Error feedback is already surfaced by the parent via actionFeedback.
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -527,16 +535,18 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
           <button
             type="button"
             onClick={onResetPrefs}
-            className="px-4 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100 cursor-pointer"
+            disabled={isSaving}
+            className="px-4 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all border border-red-100 cursor-pointer"
           >
             Clear Preferences
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="px-5 py-2.5 text-xs font-bold text-white bg-[#1C3A27] rounded-xl hover:bg-[#254F35] shadow-md cursor-pointer border-none"
+            disabled={isSaving}
+            className="px-5 py-2.5 text-xs font-bold text-white bg-[#1C3A27] rounded-xl hover:bg-[#254F35] disabled:opacity-60 disabled:cursor-not-allowed shadow-md cursor-pointer border-none"
           >
-            Save Preferences
+            {isSaving ? 'Saving...' : 'Save Preferences'}
           </button>
         </div>
       </div>

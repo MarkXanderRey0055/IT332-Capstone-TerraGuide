@@ -12,7 +12,11 @@ import {
 } from 'lucide-react';
 import type { BuyerAccount } from '../../services/buyerAccounts';
 import { loadBuyerAccounts, removeBuyerAccount } from '../../services/buyerAccounts';
-import { loadBuyerPreferences, loadAllBuyerPreferences, removeBuyerPreferences } from '../../services/buyerPrefs';
+import {
+  loadAllBuyerPreferences,
+  loadBuyerPreferencesLegacy,
+  removeBuyerPreferencesLegacy,
+} from '../../services/legacyBuyerPreferences';
 import type { BuyerPreferences } from '../../types/types';
 
 interface AdminBuyersProps {
@@ -29,7 +33,7 @@ const formatDate = (timestamp: number) =>
 const formatBudget = (amount: number) => `₱${Math.round(amount).toLocaleString()}`;
 
 const getBuyerPreferences = (account: BuyerAccount): BuyerPreferences | null => {
-  return loadBuyerPreferences(account.username) ?? loadBuyerPreferences(account.email);
+  return loadBuyerPreferencesLegacy(account.username) ?? loadBuyerPreferencesLegacy(account.email);
 };
 
 export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
@@ -79,7 +83,7 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
 
     const withPreferences = buyers.filter((buyer) =>
       allPrefs.some(
-        (pref) =>
+        (pref: any) =>
           pref.userId.toLowerCase() === buyer.username.toLowerCase() ||
           pref.userId.toLowerCase() === buyer.email.toLowerCase(),
       ),
@@ -102,8 +106,8 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
     }
 
     removeBuyerAccount(buyer.id);
-    removeBuyerPreferences(buyer.username);
-    removeBuyerPreferences(buyer.email);
+    removeBuyerPreferencesLegacy(buyer.username);
+    removeBuyerPreferencesLegacy(buyer.email);
     refreshBuyers();
     if (selectedBuyer?.id === buyer.id) {
       setSelectedBuyer(null);

@@ -26,3 +26,16 @@ export const getPreferenceByUser = async (userId) => {
 
   return preference;
 };
+
+/**
+ * Delete saved preferences for a logged-in buyer
+ */
+export const deletePreferenceByUser = async (userId) => {
+  const preference = await BuyerPreference.findOneAndDelete({ userId: userId });
+
+  if (!preference) {
+    throw new AppError('Buyer preferences not found.', 404);
+  }
+
+  return preference;
+};

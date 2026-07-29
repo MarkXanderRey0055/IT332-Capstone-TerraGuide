@@ -334,7 +334,6 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [buyerName, setBuyerName] = useState('Valued Buyer');
   const [buyerUserId, setBuyerUserId] = useState('');
-  const [welcomeCompletionKey, setWelcomeCompletionKey] = useState('terraguide_welcomeCompleted');
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [buyerPrefs, setBuyerPrefs] = useState<BuyerPreferences | null>(null);
   const [properties, setProperties] = useState<Property[]>(() => loadProperties(mockProperties));
@@ -466,23 +465,39 @@ const handleConfirmLogout = () => {
   onSignOut?.();
 };
 
-  const persistPreferences = (prefsData: Omit<BuyerPreferences, 'userId' | 'timestamp'>) => {
+  const persistPreferences = async (
+    prefsData: Omit<BuyerPreferences, 'userId' | 'timestamp'>
+  ) => {
     if (!isAuthenticated) return;
     const userId = buyerUserId || buyerName || 'guest';
-    const saved: BuyerPreferences = {
-      userId,
-      ...prefsData,
-      timestamp: Date.now(),
-    };
-    saveBuyerPreferences(saved);
-    setBuyerPrefs(saved);
+
+    try {
+      const saved = await saveBuyerPreferences(userId, prefsData);
+      setBuyerPrefs(saved);
+    } catch (error) {
+      setActionFeedback(
+        error instanceof Error
+          ? error.message
+          : 'Could not save your preferences. Please try again.'
+      );
+      throw error;
+    }
   };
 
-  const handleResetPreferences = () => {
+  const handleResetPreferences = async () => {
     if (!isAuthenticated) return;
     const userId = buyerUserId || buyerName || 'guest';
-    removeBuyerPreferences(userId);
-    setBuyerPrefs(null);
+
+    try {
+      await removeBuyerPreferences(userId);
+      setBuyerPrefs(null);
+    } catch (error) {
+      setActionFeedback(
+        error instanceof Error
+          ? error.message
+          : 'Could not clear your preferences. Please try again.'
+      );
+    }
   };
 
   useEffect(() => {
@@ -538,33 +553,50 @@ const handleConfirmLogout = () => {
       return;
     }
 
-    let currentBuyerName = 'Valued Buyer';
-    let currentUserId = 'guest';
-    try {
-      const currentUser = getCurrentUser();
-      if (currentUser) {
-        currentBuyerName = currentUser.username || currentUser.email || currentBuyerName;
-        currentUserId = currentUser.username || currentUser.email || currentUserId;
+    let isCancelled = false;
+
+    const syncBuyerSession = async () => {
+      let currentBuyerName = 'Valued Buyer';
+      let currentUserId = 'guest';
+      try {
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+          currentBuyerName = currentUser.username || currentUser.email || currentBuyerName;
+          currentUserId = currentUser.username || currentUser.email || currentUserId;
+        }
+      } catch {
+        currentBuyerName = 'Valued Buyer';
+        currentUserId = 'guest';
       }
-    } catch {
-      currentBuyerName = 'Valued Buyer';
-      currentUserId = 'guest';
-    }
 
-    setBuyerName(currentBuyerName);
-    setBuyerUserId(currentUserId);
-    setBuyerPrefs(loadBuyerPreferences(currentUserId));
+      if (isCancelled) return;
+      setBuyerName(currentBuyerName);
+      setBuyerUserId(currentUserId);
 
-    const currentUserKey = currentBuyerName.trim()
-      ? `terraguide_welcomeCompleted:${currentBuyerName}`
-      : 'terraguide_welcomeCompleted';
-    const hasCompletedWelcomeModal = window.localStorage.getItem(currentUserKey) === 'true';
+      try {
+        const prefs = await loadBuyerPreferences(currentUserId);
+        if (isCancelled) return;
 
-    setWelcomeCompletionKey(currentUserKey);
+        setBuyerPrefs(prefs);
+        // Preferences already exist on the backend (e.g. set on another
+        // device) — no need to nag the buyer with the welcome modal again.
+        setIsWelcomeModalOpen(!prefs);
+      } catch (error) {
+        if (isCancelled) return;
+        setBuyerPrefs(null);
+        setActionFeedback(
+          error instanceof Error
+            ? error.message
+            : 'Could not load your saved preferences.'
+        );
+      }
+    };
 
-    if (!hasCompletedWelcomeModal) {
-      setIsWelcomeModalOpen(true);
-    }
+    syncBuyerSession();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [isAuthenticated]);
 
   if (selectedProperty) {
@@ -989,10 +1021,7 @@ const handleConfirmLogout = () => {
 
       <WelcomeModal
         isOpen={isWelcomeModalOpen}
-        onClose={() => {
-          window.localStorage.setItem(welcomeCompletionKey, 'true');
-          setIsWelcomeModalOpen(false);
-        }}
+        onClose={() => setIsWelcomeModalOpen(false)}
         buyerName={buyerName}
         onSavePreferences={persistPreferences}
       />
