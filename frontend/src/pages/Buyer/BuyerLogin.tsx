@@ -62,26 +62,30 @@ const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
 
         await register(username, email, password, fullName, address);
 
-        setFeedback({
-          type: 'success',
-          message: 'Account created successfully.',
-        });
+          setFeedback({
+            type: 'success',
+            message: 'Account created successfully. Please sign in using your new account.',
+          });
 
-        setFormData({
-          email: '',
-          username: '',
-          password: '',
-          fullName: '',
-          address: '',
-        });
+          // Clear the registration form
+          setFormData({
+            email: '',
+            username: '',
+            password: '',
+            fullName: '',
+            address: '',
+          });
 
-        setShowPassword(false);
+          // Reset password visibility
+          setShowPassword(false);
 
-        if (onSuccess) {
-          onSuccess();
-        }
+          // Switch back to the Sign In screen
+          setIsSignUp(false);
 
-        return;
+          // Do NOT call onSuccess() here.
+          // The user must authenticate first before entering the Buyer Portal.
+
+          return;
       }
 
       await login(username, password);

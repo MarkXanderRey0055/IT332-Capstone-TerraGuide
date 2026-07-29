@@ -29,7 +29,7 @@ import {
 
 interface PropertyExplorerProps {
   properties: Property[];
-  onSelectProperty: (id: number) => void;
+  onSelectProperty: (id: string) => void;
   focusProperty?: Property | null;
 }
 
@@ -228,11 +228,11 @@ export const PropertyExplorer: React.FC<PropertyExplorerProps> = ({ properties, 
   }, [focusProperty]);
 
   const resetToPrimary = () => {
-    const xander = properties.find((p) => p.id === 109) || properties[0];
-    if (xander) {
-      const lat = xander.lat || 13.948324;
-      const lng = xander.lng || 120.722989;
-      setSelectedMapProperty(xander);
+    const primary = properties[0];
+    if (primary) {
+      const lat = primary.lat || 13.948324;
+      const lng = primary.lng || 120.722989;
+      setSelectedMapProperty(primary);
       setMapCenter([lat, lng]);
       setMapZoom(16);
     }

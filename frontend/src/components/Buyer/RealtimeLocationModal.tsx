@@ -1,25 +1,23 @@
 import { X, MapPin } from 'lucide-react';
-import { mockProperties } from '../../utils/data';
 import { PropertyMap } from './PropertyMap';
 import type { Property } from '../../types/types';
-import { loadProperties } from '../../services/propertyStorage';
 
 interface RealtimeLocationModalProps {
   isOpen: boolean;
   property: Property | null;
+  properties: Property[];
   onClose: () => void;
 }
 
 export const RealtimeLocationModal: React.FC<RealtimeLocationModalProps> = ({
   isOpen,
   property,
+  properties,
   onClose,
 }) => {
   if (!isOpen || !property) {
     return null;
   }
-
-  const properties = loadProperties(mockProperties);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">

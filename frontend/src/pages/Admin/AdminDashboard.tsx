@@ -11,8 +11,7 @@ import {
   X,
   Bell,
 } from 'lucide-react';
-import { mockProperties } from '../../utils/data';
-import { loadProperties, saveProperties } from '../../services/propertyStorage';
+import { getProperties } from '../../services/PropertyService';
 import {
   loadNotifications,
   markAllNotificationsRead,
@@ -55,7 +54,8 @@ const PAGE_TITLES: Record<string, string> = {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeNav, setActiveNav] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [properties, setProperties] = useState<Property[]>(() => loadProperties(mockProperties));
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [notifications, setNotifications] = useState<NotificationLog[]>(() => loadNotifications());
   const [toast, setToast] = useState<string | null>(null);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
@@ -97,8 +97,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   useEffect(() => {
-    saveProperties(properties);
-  }, [properties]);
+    let isCancelled = false;
+
+    const fetchProperties = async () => {
+      setIsLoadingProperties(true);
+      try {
+        const fetched = await getProperties();
+        if (isCancelled) return;
+        setProperties(fetched);
+      } catch (error) {
+        if (isCancelled) return;
+        setToast(
+          error instanceof Error
+            ? error.message
+            : 'Could not load property listings.'
+        );
+      } finally {
+        if (!isCancelled) setIsLoadingProperties(false);
+      }
+    };
+
+    fetchProperties();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const syncNotifications = () => setNotifications(loadNotifications());
@@ -352,6 +376,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 properties={properties}
                 setProperties={setProperties}
                 onToast={setToast}
+                isLoading={isLoadingProperties}
               />
             )}
 

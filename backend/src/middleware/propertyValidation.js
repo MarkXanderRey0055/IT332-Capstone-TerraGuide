@@ -25,7 +25,7 @@ export const validatePropertyInput = (req, res, next) => {
   }
 
   // property type 
-  const validTypes = ['Residential', 'House & Lot', 'Agricultural', 'Commercial'];
+  const validTypes = ['Residential', 'House & Lot', 'Agricultural', 'Commercial', 'Condominium'];
   if (type && !validTypes.includes(type)) {
     return next(new AppError(`Property type must be one of: ${validTypes.join(', ')}`, 400));
   }

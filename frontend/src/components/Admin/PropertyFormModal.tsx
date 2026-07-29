@@ -7,7 +7,7 @@ interface PropertyFormModalProps {
   isOpen: boolean;
   property: Property | null;
   onClose: () => void;
-  onSave: (data: Omit<Property, 'id'>) => void;
+  onSave: (data: Omit<Property, 'id'>) => Promise<void>;
 }
 
 const PROPERTY_TYPES: Property['type'][] = [
@@ -38,6 +38,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (property) {
@@ -86,7 +87,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setErrorMsg('');
     const parsedPrice = parseFloat(price.replace(/,/g, ''));
 
@@ -129,25 +130,38 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
 
     const size = Number(lotSize);
 
-    onSave({
-      name: name.trim(),
-      owner: owner.trim(),
-      price: parsedPrice,
-      size,
-      lotSize: size,
-      location: location.trim(),
-      type,
-      status,
-      pricePerSqm: Math.round(parsedPrice / size),
-      images: image.trim() ? [image.trim()] : [],
-      documents: {
-        tax: docTax,
-        deed: docDeed,
-        survey: docSurvey,
-      },
-      lat: parsedLat,
-      lng: parsedLng,
-    });
+    try {
+      setIsSaving(true);
+      await onSave({
+        name: name.trim(),
+        owner: owner.trim(),
+        price: parsedPrice,
+        size,
+        lotSize: size,
+        location: location.trim(),
+        type,
+        status,
+        pricePerSqm: Math.round(parsedPrice / size),
+        images: image.trim() ? [image.trim()] : [],
+        documents: {
+          tax: docTax,
+          deed: docDeed,
+          survey: docSurvey,
+        },
+        lat: parsedLat,
+        lng: parsedLng,
+      });
+      // onSave (in AdminProperties) already closes the modal on success,
+      // so there's nothing else to do here once the await resolves.
+    } catch (error) {
+      setErrorMsg(
+        error instanceof Error
+          ? error.message
+          : 'Could not save this listing. Please try again.'
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -423,16 +437,18 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-bold text-neutral-500 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors shadow-sm cursor-pointer"
+            disabled={isSaving}
+            className="px-4 py-2 text-xs font-bold text-neutral-500 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-sage-500 to-forest-800 rounded-xl hover:brightness-110 transition-all shadow-md cursor-pointer border-none"
+            disabled={isSaving}
+            className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-sage-500 to-forest-800 rounded-xl hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer border-none"
           >
-            Save Listing
+            {isSaving ? 'Saving...' : 'Save Listing'}
           </button>
         </div>
       </div>

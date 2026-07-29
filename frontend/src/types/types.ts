@@ -1,5 +1,5 @@
 export interface Property {
-  id: number;
+  id: string;
   name: string;
   title?: string;
   owner?: string;
@@ -47,7 +47,7 @@ export interface Analytics {
 
 export interface BuyerInquiry {
   id: number;
-  propertyId: number;
+  propertyId: string;
   propertyName: string;
   buyer: string;
   message: string;
@@ -57,7 +57,7 @@ export interface BuyerInquiry {
 
 export interface SiteVisitRequest {
   id: number;
-  propertyId: number;
+  propertyId: string;
   propertyName: string;
   buyer: string;
   preferredDate: string;

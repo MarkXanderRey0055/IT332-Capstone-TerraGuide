@@ -11,7 +11,6 @@ import {
   Lock,
   X,
 } from 'lucide-react';
-import { mockProperties } from '../../utils/data';
 import type { BuyerPreferences, Property } from '../../types/types';
 import { WelcomeModal } from '../../components/Buyer/WelcomeModal';
 import PropertyExplorer from '../../components/Shared/PropertyExplorerFixed';
@@ -22,7 +21,7 @@ import {
   removeBuyerPreferences,
   saveBuyerPreferences,
 } from '../../services/buyerPrefs';
-import { loadProperties } from '../../services/propertyStorage';
+import { getProperties } from '../../services/PropertyService';
 import {
   addInquiry,
   addSiteVisitRequest,
@@ -336,7 +335,8 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [buyerUserId, setBuyerUserId] = useState('');
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [buyerPrefs, setBuyerPrefs] = useState<BuyerPreferences | null>(null);
-  const [properties, setProperties] = useState<Property[]>(() => loadProperties(mockProperties));
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
@@ -535,14 +535,31 @@ const handleConfirmLogout = () => {
   }, [isAuthenticated, buyerUserId, buyerName]);
 
   useEffect(() => {
-    const syncProperties = () => {
-      setProperties(loadProperties(mockProperties));
+    let isCancelled = false;
+
+    const fetchProperties = async () => {
+      setIsLoadingProperties(true);
+      try {
+        const fetched = await getProperties();
+        if (isCancelled) return;
+        setProperties(fetched);
+      } catch (error) {
+        if (isCancelled) return;
+        setActionFeedback(
+          error instanceof Error
+            ? error.message
+            : 'Could not load property listings. Please try again.'
+        );
+      } finally {
+        if (!isCancelled) setIsLoadingProperties(false);
+      }
     };
 
-    syncProperties();
-    window.addEventListener('storage', syncProperties);
+    fetchProperties();
 
-    return () => window.removeEventListener('storage', syncProperties);
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -634,6 +651,7 @@ const handleConfirmLogout = () => {
         )}
         <PropertyDetails
           property={selectedProperty}
+          properties={properties}
           onBack={handleClosePropertyDetails}
           onRequestVisit={handleRequestVisit}
           onSendInquiry={handleSendInquiry}
@@ -1086,7 +1104,13 @@ const handleConfirmLogout = () => {
           </div>
         </header>
 
-        {renderTabContent()}
+        {isLoadingProperties && properties.length === 0 ? (
+          <div className="px-6 py-16 text-center text-sm text-neutral-400">
+            Loading property listings...
+          </div>
+        ) : (
+          renderTabContent()
+        )}
       </div>
     </>
   );
