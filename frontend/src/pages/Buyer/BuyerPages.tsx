@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Search, Sliders, HelpCircle } from 'lucide-react';
 import type { Property as PropertyListing, BuyerPreferences } from '../../types/types';
 import { PropertyCard } from '../../components/Buyer/PropertyCard';
 import { getLotSize } from '../../services/buyerPrefs';
+import { getRecommendations } from '../../services/RecommendationService';
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
 
@@ -219,68 +220,59 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
 };
 
 interface BuyerSuggestionsProps {
-  properties: PropertyListing[];
   buyerPrefs: BuyerPreferences | null;
   onSelectProperty: (property: PropertyListing) => void;
 }
 
 export const BuyerSuggestions: React.FC<BuyerSuggestionsProps> = ({
-  properties,
   buyerPrefs,
   onSelectProperty,
 }) => {
-  const [sortCriteria, setSortCriteria] = useState<'score' | 'price' | 'location'>('score');
+  const [sortCriteria, setSortCriteria] = useState<'recommended' | 'price' | 'location'>('recommended');
+  const [recommended, setRecommended] = useState<PropertyListing[]>([]);
+  const [hasPreferences, setHasPreferences] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  const scoreProperty = (property: PropertyListing) => {
-    let score = 0;
-    const lotSize = getLotSize(property);
+  // Re-fetch whenever buyerPrefs changes — that's how the Suggested tab
+  // picks up new results right after someone updates their preferences,
+  // without needing a manual refresh button.
+  useEffect(() => {
+    let isCancelled = false;
 
-    if (!buyerPrefs) {
-      if (property.type === 'Residential' || property.type === 'House & Lot') score += 30;
-      else if (property.type === 'Agricultural') score += 20;
-      else score += 10;
-      if (property.price <= 6000000) score += 30;
-      if (lotSize >= 500) score += 10;
-      return Math.min(score, 100);
-    }
+    const fetchRecommendations = async () => {
+      setIsLoading(true);
+      setLoadError('');
+      try {
+        const result = await getRecommendations();
+        if (isCancelled) return;
+        setRecommended(result.properties);
+        setHasPreferences(result.hasPreferences);
+      } catch (error) {
+        if (isCancelled) return;
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : 'Could not load your recommendations. Please try again.'
+        );
+      } finally {
+        if (!isCancelled) setIsLoading(false);
+      }
+    };
 
-    const budgetMin = buyerPrefs.budgetMin || 0;
-    const budgetMax = buyerPrefs.budgetMax || Infinity;
-    const minLotSize = buyerPrefs.minLotSize || 0;
+    fetchRecommendations();
 
-    if (property.price >= budgetMin && property.price <= budgetMax) score += 35;
-    else if (property.price <= budgetMax * 1.1) score += 18;
-    else if (property.price < budgetMin) score += 12;
+    return () => {
+      isCancelled = true;
+    };
+  }, [buyerPrefs]);
 
-    if (buyerPrefs.landType && property.type === buyerPrefs.landType) score += 25;
-    else if (!buyerPrefs.landType) score += 10;
-
-    if (buyerPrefs.location) {
-      const pref = buyerPrefs.location.toLowerCase();
-      const loc = property.location.toLowerCase();
-      if (loc.includes(pref) || pref.includes(loc.split(',')[0])) score += 20;
-      else score += 4;
-    } else {
-      score += 10;
-    }
-
-    if (lotSize >= minLotSize) score += 12;
-    else if (minLotSize > 0 && lotSize >= minLotSize * 0.85) score += 6;
-
-    return Math.min(score, 100);
-  };
-
-  const scoredList = properties
-    .filter(isAvailable)
-    .map((property) => ({
-      ...property,
-      matchScore: scoreProperty(property),
-    }));
-
-  const sorted = [...scoredList].sort((a, b) => {
+  const sorted = [...recommended].sort((a, b) => {
     if (sortCriteria === 'price') return a.price - b.price;
     if (sortCriteria === 'location') return a.location.localeCompare(b.location);
-    return b.matchScore - a.matchScore;
+    // 'recommended' — leave it in whatever order the backend gave us,
+    // no re-ranking on our end.
+    return 0;
   });
 
   return (
@@ -289,7 +281,7 @@ export const BuyerSuggestions: React.FC<BuyerSuggestionsProps> = ({
         <h2 className="font-serif text-3xl font-normal text-[#1C3A27]">Suggested For You</h2>
         <p className="text-xs text-neutral-500 mt-1">
           Properties matched to your preferences and budget.
-          {!buyerPrefs && ' Set your preferences for better matches.'}
+          {!hasPreferences && ' Set your preferences for better matches.'}
         </p>
       </div>
 
@@ -297,7 +289,7 @@ export const BuyerSuggestions: React.FC<BuyerSuggestionsProps> = ({
         <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Sort by:</span>
         {(
           [
-            ['score', 'Best Match'],
+            ['recommended', 'Recommended'],
             ['price', 'Lowest Price'],
             ['location', 'Location A-Z'],
           ] as const
@@ -317,11 +309,27 @@ export const BuyerSuggestions: React.FC<BuyerSuggestionsProps> = ({
         ))}
       </div>
 
-      {sorted.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-20 bg-white border border-neutral-200/50 rounded-2xl">
+          <p className="text-xs text-neutral-400">Loading your recommendations...</p>
+        </div>
+      ) : loadError ? (
         <div className="text-center py-20 bg-white border border-neutral-200/50 rounded-2xl">
           <HelpCircle className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
-          <strong className="text-sm font-serif text-[#1C3A27]">No suggestions currently</strong>
-          <p className="text-xs text-neutral-400 mt-1">Check back later for new active listings.</p>
+          <strong className="text-sm font-serif text-[#1C3A27]">Couldn't load recommendations</strong>
+          <p className="text-xs text-neutral-400 mt-1">{loadError}</p>
+        </div>
+      ) : sorted.length === 0 ? (
+        <div className="text-center py-20 bg-white border border-neutral-200/50 rounded-2xl">
+          <HelpCircle className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
+          <strong className="text-sm font-serif text-[#1C3A27]">
+            {hasPreferences ? 'No suggestions currently' : 'No preferences set yet'}
+          </strong>
+          <p className="text-xs text-neutral-400 mt-1">
+            {hasPreferences
+              ? 'Check back later for new active listings.'
+              : 'Set your preferences to start getting matched properties.'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -330,7 +338,6 @@ export const BuyerSuggestions: React.FC<BuyerSuggestionsProps> = ({
               key={property.id}
               property={property}
               isSuggested
-              matchScore={property.matchScore}
               onClick={onSelectProperty}
             />
           ))}
@@ -362,8 +369,11 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
   const [savedMessage, setSavedMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  
+  const hasUserEditedRef = useRef(false);
+
   useEffect(() => {
-    if (buyerPrefs) {
+    if (buyerPrefs && !hasUserEditedRef.current) {
       setBudgetMin(buyerPrefs.budgetMin);
       setBudgetMax(buyerPrefs.budgetMax);
       setLandType(buyerPrefs.landType);
@@ -373,13 +383,19 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
     }
   }, [buyerPrefs]);
 
+  const markEdited = () => {
+    hasUserEditedRef.current = true;
+  };
+
   const handleBudgetMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    markEdited();
     const val = parseInt(e.target.value, 10);
     if (val > budgetMax) setBudgetMax(val);
     setBudgetMin(val);
   };
 
   const handleBudgetMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    markEdited();
     const val = parseInt(e.target.value, 10);
     if (val < budgetMin) setBudgetMin(val);
     setBudgetMax(val);
@@ -396,6 +412,10 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
         location,
         minLotSize,
       });
+      // Local state and buyerPrefs are guaranteed to match right after a
+      // successful save, so it's safe to let the prop drive again from
+      // here (e.g. if preferences ever get refreshed in the background).
+      hasUserEditedRef.current = false;
       setSavedMessage('Preferences saved successfully.');
       window.setTimeout(() => setSavedMessage(''), 2500);
     } catch {
@@ -459,7 +479,10 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
             </label>
             <select
               value={landType}
-              onChange={(e) => setLandType(e.target.value as PropertyListing['type'] | '')}
+              onChange={(e) => {
+                markEdited();
+                setLandType(e.target.value as PropertyListing['type'] | '');
+              }}
               className="w-full p-2.5 bg-[#F5F7F6] border border-neutral-200 rounded-xl text-sm text-neutral-800 focus:outline-none focus:border-[#1C3A27]"
             >
               <option value="">Any</option>
@@ -477,7 +500,10 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
             </label>
             <select
               value={intendedUse}
-              onChange={(e) => setIntendedUse(e.target.value as BuyerPreferences['intendedUse'])}
+              onChange={(e) => {
+                markEdited();
+                setIntendedUse(e.target.value as BuyerPreferences['intendedUse']);
+              }}
               className="w-full p-2.5 bg-[#F5F7F6] border border-neutral-200 rounded-xl text-sm text-neutral-800 focus:outline-none focus:border-[#1C3A27]"
             >
               <option value="">Any</option>
@@ -497,7 +523,10 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
             </label>
             <select
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              onChange={(e) => {
+                markEdited();
+                setLocation(e.target.value);
+              }}
               className="w-full p-2.5 bg-[#F5F7F6] border border-neutral-200 rounded-xl text-sm text-neutral-800 focus:outline-none focus:border-[#1C3A27]"
             >
               <option value="">Any</option>
@@ -519,7 +548,10 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
               type="number"
               placeholder="e.g. 500"
               value={minLotSize || ''}
-              onChange={(e) => setMinLotSize(Math.max(0, parseInt(e.target.value, 10) || 0))}
+              onChange={(e) => {
+                markEdited();
+                setMinLotSize(Math.max(0, parseInt(e.target.value, 10) || 0));
+              }}
               className="w-full p-2.5 bg-[#F5F7F6] border border-neutral-200 rounded-xl text-sm text-neutral-800 focus:outline-none focus:border-[#1C3A27]"
             />
           </div>

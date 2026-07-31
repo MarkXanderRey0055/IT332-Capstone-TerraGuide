@@ -10,7 +10,7 @@ import { apiRequest } from '../utils/api';
 // Shape of a single property document coming back from the backend.
 // Mongoose gives us both `_id` and a virtual `id` (same value, just a
 // hex string), plus timestamps we don't really need on the frontend.
-interface PropertyApiRecord {
+export interface PropertyApiRecord {
   id: string;
   _id?: string;
   name: string;
@@ -59,7 +59,7 @@ interface PropertySingleResponse {
 // Turns whatever Mongoose hands back into the plain Property shape the
 // rest of the app already knows how to work with, so nothing downstream
 // has to care that this came from MongoDB instead of the old mock array.
-function mapToProperty(raw: PropertyApiRecord): Property {
+export function mapToProperty(raw: PropertyApiRecord): Property {
   return {
     id: raw.id,
     name: raw.name,

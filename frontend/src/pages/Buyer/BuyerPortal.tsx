@@ -678,7 +678,6 @@ const handleConfirmLogout = () => {
       case 'Suggested':
         return (
           <BuyerSuggestions
-            properties={properties}
             buyerPrefs={buyerPrefs}
             onSelectProperty={handleSelectProperty}
           />
