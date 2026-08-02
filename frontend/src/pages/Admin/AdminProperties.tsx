@@ -11,7 +11,12 @@ import {
 import type { Property } from '../../types/types';
 import { PropertyFormModal } from '../../components/Admin/PropertyFormModal';
 import { getLotSize } from '../../services/buyerPrefs';
-import { createProperty, updateProperty, deleteProperty } from '../../services/PropertyService';
+import {
+  createProperty,
+  updateProperty,
+  deleteProperty,
+  getProperties,
+} from '../../services/PropertyService';
 
 interface AdminPropertiesProps {
   properties: Property[];
@@ -113,6 +118,22 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     setIsPropertyModalOpen(true);
   };
 
+  const refreshProperties = async () => {
+    try {
+      const fresh = await getProperties();
+      setProperties(fresh);
+    } catch (error) {
+      // The mutation itself already succeeded by the time we get here —
+      // this is just the follow-up refetch failing, so don't let it look
+      // like the save/delete itself failed.
+      showToast(
+        error instanceof Error
+          ? `Saved, but couldn't refresh the list: ${error.message}`
+          : 'Saved, but the property list could not be refreshed.'
+      );
+    }
+  };
+
   const handleDeleteProperty = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete listing "${name}"?`)) {
       return;
@@ -121,8 +142,8 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     setDeletingId(id);
     try {
       await deleteProperty(id);
-      setProperties((prev) => prev.filter((p) => p.id !== id));
       showToast(`Deleted property listing "${name}"`);
+      await refreshProperties();
     } catch (error) {
       showToast(
         error instanceof Error
@@ -136,17 +157,14 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
 
   const handleSaveProperty = async (formData: Omit<Property, 'id'>) => {
     if (selectedProperty) {
-      const updated = await updateProperty(selectedProperty.id, formData);
-      setProperties((prev) =>
-        prev.map((p) => (p.id === selectedProperty.id ? updated : p)),
-      );
-      showToast(`Updated listing "${updated.name}"`);
+      await updateProperty(selectedProperty.id, formData);
+      showToast(`Updated listing "${formData.name}"`);
     } else {
-      const created = await createProperty(formData);
-      setProperties((prev) => [created, ...prev]);
-      showToast(`Added new listing "${created.name}"`);
+      await createProperty(formData);
+      showToast(`Added new listing "${formData.name}"`);
     }
     setIsPropertyModalOpen(false);
+    await refreshProperties();
   };
 
   const filteredProperties = properties.filter(
