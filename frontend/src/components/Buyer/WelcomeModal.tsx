@@ -5,7 +5,9 @@ export interface WelcomeModalProps {
   isOpen: boolean;
   onClose: () => void;
   buyerName?: string;
-  onSavePreferences?: (prefs: Omit<BuyerPreferences, 'userId' | 'timestamp'>) => void;
+  onSavePreferences?: (
+    prefs: Omit<BuyerPreferences, 'userId' | 'timestamp'>
+  ) => Promise<void> | void;
 }
 
 export function WelcomeModal({
@@ -17,6 +19,7 @@ export function WelcomeModal({
   const [minBudget, setMinBudget] = useState(100000);
   const [maxBudget, setMaxBudget] = useState(4000000);
   const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const [preferences, setPreferences] = useState({
     landType: '' as Property['type'] | '',
@@ -33,7 +36,7 @@ export function WelcomeModal({
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const hasMissingFields = Object.values(preferences).some((value) => !String(value).trim());
 
     if (hasMissingFields) {
@@ -46,16 +49,29 @@ export function WelcomeModal({
       return;
     }
 
-    onSavePreferences?.({
-      budgetMin: minBudget,
-      budgetMax: maxBudget,
-      landType: preferences.landType,
-      intendedUse: preferences.intendedUse,
-      location: preferences.location,
-      minLotSize: parseInt(preferences.minimumLotSize, 10) || 0,
-    });
+    try {
+      setIsSaving(true);
+      setError('');
 
-    onClose();
+      await onSavePreferences?.({
+        budgetMin: minBudget,
+        budgetMax: maxBudget,
+        landType: preferences.landType,
+        intendedUse: preferences.intendedUse,
+        location: preferences.location,
+        minLotSize: parseInt(preferences.minimumLotSize, 10) || 0,
+      });
+
+      onClose();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Could not save your preferences. Please try again.'
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!isOpen) {
@@ -185,9 +201,10 @@ export function WelcomeModal({
           <button
             type="button"
             onClick={handleSubmit}
-            className="bg-[#1d5d48] hover:bg-[#184d3b] text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition border-none cursor-pointer"
+            disabled={isSaving}
+            className="bg-[#1d5d48] hover:bg-[#184d3b] disabled:opacity-60 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition border-none cursor-pointer"
           >
-            Save Preferences
+            {isSaving ? 'Saving...' : 'Save Preferences'}
           </button>
         </div>
       </div>

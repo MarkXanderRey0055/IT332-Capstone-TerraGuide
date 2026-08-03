@@ -11,7 +11,6 @@ import {
   Lock,
   X,
 } from 'lucide-react';
-import { mockProperties } from '../../utils/data';
 import type { BuyerPreferences, Property } from '../../types/types';
 import { WelcomeModal } from '../../components/Buyer/WelcomeModal';
 import PropertyExplorer from '../../components/Shared/PropertyExplorerFixed';
@@ -22,7 +21,7 @@ import {
   removeBuyerPreferences,
   saveBuyerPreferences,
 } from '../../services/buyerPrefs';
-import { loadProperties } from '../../services/propertyStorage';
+import { getProperties } from '../../services/PropertyService';
 import {
   addInquiry,
   addSiteVisitRequest,
@@ -32,6 +31,7 @@ import {
   SITE_VISITS_STORAGE_KEY,
 } from '../../services/buyerActivityStorage';
 import { notifyInquiry, notifySiteVisitRequest } from '../../services/notificationStorage';
+import { getCurrentUser } from '../../services/AuthService';
 import type { BuyerInquiry, SiteVisitRequest } from '../../types/types';
 
 type BuyerPortalProps = {
@@ -333,10 +333,10 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [buyerName, setBuyerName] = useState('Valued Buyer');
   const [buyerUserId, setBuyerUserId] = useState('');
-  const [welcomeCompletionKey, setWelcomeCompletionKey] = useState('terraguide_welcomeCompleted');
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [buyerPrefs, setBuyerPrefs] = useState<BuyerPreferences | null>(null);
-  const [properties, setProperties] = useState<Property[]>(() => loadProperties(mockProperties));
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
@@ -465,23 +465,39 @@ const handleConfirmLogout = () => {
   onSignOut?.();
 };
 
-  const persistPreferences = (prefsData: Omit<BuyerPreferences, 'userId' | 'timestamp'>) => {
+  const persistPreferences = async (
+    prefsData: Omit<BuyerPreferences, 'userId' | 'timestamp'>
+  ) => {
     if (!isAuthenticated) return;
     const userId = buyerUserId || buyerName || 'guest';
-    const saved: BuyerPreferences = {
-      userId,
-      ...prefsData,
-      timestamp: Date.now(),
-    };
-    saveBuyerPreferences(saved);
-    setBuyerPrefs(saved);
+
+    try {
+      const saved = await saveBuyerPreferences(userId, prefsData);
+      setBuyerPrefs(saved);
+    } catch (error) {
+      setActionFeedback(
+        error instanceof Error
+          ? error.message
+          : 'Could not save your preferences. Please try again.'
+      );
+      throw error;
+    }
   };
 
-  const handleResetPreferences = () => {
+  const handleResetPreferences = async () => {
     if (!isAuthenticated) return;
     const userId = buyerUserId || buyerName || 'guest';
-    removeBuyerPreferences(userId);
-    setBuyerPrefs(null);
+
+    try {
+      await removeBuyerPreferences(userId);
+      setBuyerPrefs(null);
+    } catch (error) {
+      setActionFeedback(
+        error instanceof Error
+          ? error.message
+          : 'Could not clear your preferences. Please try again.'
+      );
+    }
   };
 
   useEffect(() => {
@@ -519,14 +535,31 @@ const handleConfirmLogout = () => {
   }, [isAuthenticated, buyerUserId, buyerName]);
 
   useEffect(() => {
-    const syncProperties = () => {
-      setProperties(loadProperties(mockProperties));
+    let isCancelled = false;
+
+    const fetchProperties = async () => {
+      setIsLoadingProperties(true);
+      try {
+        const fetched = await getProperties();
+        if (isCancelled) return;
+        setProperties(fetched);
+      } catch (error) {
+        if (isCancelled) return;
+        setActionFeedback(
+          error instanceof Error
+            ? error.message
+            : 'Could not load property listings. Please try again.'
+        );
+      } finally {
+        if (!isCancelled) setIsLoadingProperties(false);
+      }
     };
 
-    syncProperties();
-    window.addEventListener('storage', syncProperties);
+    fetchProperties();
 
-    return () => window.removeEventListener('storage', syncProperties);
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -537,34 +570,50 @@ const handleConfirmLogout = () => {
       return;
     }
 
-    let currentBuyerName = 'Valued Buyer';
-    let currentUserId = 'guest';
-    try {
-      const currentBuyer = window.localStorage.getItem('terraguide_currentBuyer');
-      if (currentBuyer) {
-        const parsedBuyer = JSON.parse(currentBuyer) as { username?: string; email?: string };
-        currentBuyerName = parsedBuyer.username || parsedBuyer.email || currentBuyerName;
-        currentUserId = parsedBuyer.username || parsedBuyer.email || currentUserId;
+    let isCancelled = false;
+
+    const syncBuyerSession = async () => {
+      let currentBuyerName = 'Valued Buyer';
+      let currentUserId = 'guest';
+      try {
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+          currentBuyerName = currentUser.username || currentUser.email || currentBuyerName;
+          currentUserId = currentUser.username || currentUser.email || currentUserId;
+        }
+      } catch {
+        currentBuyerName = 'Valued Buyer';
+        currentUserId = 'guest';
       }
-    } catch {
-      currentBuyerName = 'Valued Buyer';
-      currentUserId = 'guest';
-    }
 
-    setBuyerName(currentBuyerName);
-    setBuyerUserId(currentUserId);
-    setBuyerPrefs(loadBuyerPreferences(currentUserId));
+      if (isCancelled) return;
+      setBuyerName(currentBuyerName);
+      setBuyerUserId(currentUserId);
 
-    const currentUserKey = currentBuyerName.trim()
-      ? `terraguide_welcomeCompleted:${currentBuyerName}`
-      : 'terraguide_welcomeCompleted';
-    const hasCompletedWelcomeModal = window.localStorage.getItem(currentUserKey) === 'true';
+      try {
+        const prefs = await loadBuyerPreferences(currentUserId);
+        if (isCancelled) return;
 
-    setWelcomeCompletionKey(currentUserKey);
+        setBuyerPrefs(prefs);
+        // Preferences already exist on the backend (e.g. set on another
+        // device) — no need to nag the buyer with the welcome modal again.
+        setIsWelcomeModalOpen(!prefs);
+      } catch (error) {
+        if (isCancelled) return;
+        setBuyerPrefs(null);
+        setActionFeedback(
+          error instanceof Error
+            ? error.message
+            : 'Could not load your saved preferences.'
+        );
+      }
+    };
 
-    if (!hasCompletedWelcomeModal) {
-      setIsWelcomeModalOpen(true);
-    }
+    syncBuyerSession();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [isAuthenticated]);
 
   if (selectedProperty) {
@@ -602,6 +651,7 @@ const handleConfirmLogout = () => {
         )}
         <PropertyDetails
           property={selectedProperty}
+          properties={properties}
           onBack={handleClosePropertyDetails}
           onRequestVisit={handleRequestVisit}
           onSendInquiry={handleSendInquiry}
@@ -628,7 +678,6 @@ const handleConfirmLogout = () => {
       case 'Suggested':
         return (
           <BuyerSuggestions
-            properties={properties}
             buyerPrefs={buyerPrefs}
             onSelectProperty={handleSelectProperty}
           />
@@ -989,10 +1038,7 @@ const handleConfirmLogout = () => {
 
       <WelcomeModal
         isOpen={isWelcomeModalOpen}
-        onClose={() => {
-          window.localStorage.setItem(welcomeCompletionKey, 'true');
-          setIsWelcomeModalOpen(false);
-        }}
+        onClose={() => setIsWelcomeModalOpen(false)}
         buyerName={buyerName}
         onSavePreferences={persistPreferences}
       />
@@ -1057,7 +1103,13 @@ const handleConfirmLogout = () => {
           </div>
         </header>
 
-        {renderTabContent()}
+        {isLoadingProperties && properties.length === 0 ? (
+          <div className="px-6 py-16 text-center text-sm text-neutral-400">
+            Loading property listings...
+          </div>
+        ) : (
+          renderTabContent()
+        )}
       </div>
     </>
   );

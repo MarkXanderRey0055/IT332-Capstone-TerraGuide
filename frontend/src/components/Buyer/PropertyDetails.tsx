@@ -5,6 +5,7 @@ import { RealtimeLocationModal } from './RealtimeLocationModal';
 
 interface PropertyDetailsProps {
   property: Property | null;
+  properties: Property[];
   onBack: () => void;
   onRequestVisit?: () => void;
   onSendInquiry?: () => void;
@@ -15,6 +16,7 @@ const formatPrice = (price: number) =>
 
 export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
   property,
+  properties,
   onBack,
   onRequestVisit,
   onSendInquiry,
@@ -30,6 +32,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
       <RealtimeLocationModal
         isOpen={isRealtimeModalOpen}
         property={property}
+        properties={properties}
         onClose={() => setIsRealtimeModalOpen(false)}
       />
       <div className="max-w-6xl mx-auto space-y-6">
@@ -83,10 +86,10 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                     <span className="font-medium">Lot Size</span>
                     <span className="text-neutral-500">{(property.size ?? property.lotSize ?? 0).toLocaleString()} sqm</span>
                   </div>
-                  <div className="flex items-center justify-between">
+                  {/* <div className="flex items-center justify-between">
                     <span className="font-medium">Price / sqm</span>
                     <span className="text-neutral-500">₱{(property.pricePerSqm ?? 0).toLocaleString()}</span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>

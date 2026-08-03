@@ -11,11 +11,18 @@ import {
 import type { Property } from '../../types/types';
 import { PropertyFormModal } from '../../components/Admin/PropertyFormModal';
 import { getLotSize } from '../../services/buyerPrefs';
+import {
+  createProperty,
+  updateProperty,
+  deleteProperty,
+  getProperties,
+} from '../../services/PropertyService';
 
 interface AdminPropertiesProps {
   properties: Property[];
   setProperties: React.Dispatch<React.SetStateAction<Property[]>>;
   onToast?: (message: string) => void;
+  isLoading?: boolean;
 }
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
@@ -90,10 +97,12 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
   properties,
   setProperties,
   onToast,
+  isLoading,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const showToast = (message: string) => {
     onToast?.(message);
@@ -109,28 +118,53 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     setIsPropertyModalOpen(true);
   };
 
-  const handleDeleteProperty = (id: number, name: string) => {
-    if (confirm(`Are you sure you want to delete listing "${name}"?`)) {
-      setProperties((prev) => prev.filter((p) => p.id !== id));
-      showToast(`Deleted property listing "${name}"`);
+  const refreshProperties = async () => {
+    try {
+      const fresh = await getProperties();
+      setProperties(fresh);
+    } catch (error) {
+      // The mutation itself already succeeded by the time we get here —
+      // this is just the follow-up refetch failing, so don't let it look
+      // like the save/delete itself failed.
+      showToast(
+        error instanceof Error
+          ? `Saved, but couldn't refresh the list: ${error.message}`
+          : 'Saved, but the property list could not be refreshed.'
+      );
     }
   };
 
-  const handleSaveProperty = (formData: Omit<Property, 'id'>) => {
-    if (selectedProperty) {
-      setProperties((prev) =>
-        prev.map((p) => (p.id === selectedProperty.id ? { ...p, ...formData } : p)),
+  const handleDeleteProperty = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete listing "${name}"?`)) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      await deleteProperty(id);
+      showToast(`Deleted property listing "${name}"`);
+      await refreshProperties();
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : `Could not delete "${name}". Please try again.`
       );
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleSaveProperty = async (formData: Omit<Property, 'id'>) => {
+    if (selectedProperty) {
+      await updateProperty(selectedProperty.id, formData);
       showToast(`Updated listing "${formData.name}"`);
     } else {
-      const newProperty: Property = {
-        id: Date.now() + Math.floor(Math.random() * 1000),
-        ...formData,
-      };
-      setProperties((prev) => [newProperty, ...prev]);
+      await createProperty(formData);
       showToast(`Added new listing "${formData.name}"`);
     }
     setIsPropertyModalOpen(false);
+    await refreshProperties();
   };
 
   const filteredProperties = properties.filter(
@@ -173,7 +207,11 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
       </div>
 
       <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] overflow-hidden">
-        {filteredProperties.length === 0 ? (
+        {isLoading ? (
+          <div className="p-12 text-center">
+            <p className="text-gray-500 text-sm">Loading property listings...</p>
+          </div>
+        ) : filteredProperties.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-gray-500 text-sm">
               {searchQuery ? 'No listings match your search.' : 'No property listings yet. Add your first listing.'}
@@ -242,7 +280,8 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
                         <button
                           type="button"
                           onClick={() => handleDeleteProperty(p.id, p.name)}
-                          className="p-1.5 bg-white/[0.04] hover:bg-red-950/20 text-gray-400 rounded-lg border border-white/[0.08] hover:text-red-400 transition-colors cursor-pointer"
+                          disabled={deletingId === p.id}
+                          className="p-1.5 bg-white/[0.04] hover:bg-red-950/20 text-gray-400 rounded-lg border border-white/[0.08] hover:text-red-400 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                           title="Delete Listing"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

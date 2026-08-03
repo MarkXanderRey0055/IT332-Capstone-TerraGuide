@@ -236,7 +236,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
   };
 
   const resetToPrimary = () => {
-    const target = focusProperty ?? properties.find((property) => property.id === 109) ?? properties[0];
+    const target = focusProperty ?? properties[0];
     if (target) {
       setSelectedMapProperty(target);
     }

@@ -19,13 +19,38 @@ const propertySchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['Residential', 'House & Lot', 'Agricultural', 'Commercial'],
+      enum: ['Residential', 'House & Lot', 'Agricultural', 'Commercial', 'Condominium'],
       required: [true, 'Property type is required'],
+    },
+    // Optional-ish extras the admin form collects — title/description aren't
+    // filled in by the current form but we leave room for them, and size/
+    // pricePerSqm/images are things the form already computes and sends.
+    title: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    description: {
+      type: String,
+      trim: true,
+      default: '',
     },
     price: {
       type: Number,
       required: [true, 'Price is required'],
       min: [0, 'Price must be greater than or equal to 0'],
+    },
+    size: {
+      type: Number,
+      default: 0,
+    },
+    pricePerSqm: {
+      type: Number,
+      default: 0,
+    },
+    images: {
+      type: [String],
+      default: [],
     },
     status: {
       type: String,

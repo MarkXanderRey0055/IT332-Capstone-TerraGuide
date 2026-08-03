@@ -3,7 +3,7 @@ import type { Property, Document, Analytics } from '../types/types';
 // Mock real estate listings centered around Balayan, Batangas / Calabarzon region
 export const mockProperties: Property[] = [
   {
-    id: 1,
+    id: "1",
     name: "tindahan ng masayang alaala",
     owner: "Maria Santos",
     type: "Commercial",
@@ -21,7 +21,7 @@ export const mockProperties: Property[] = [
     documents: { tax: 'verified', deed: 'pending', survey: 'verified' },
   },
   {
-    id: 109,
+    id: "109",
     name: "Bahay ni Xander",
     title: "Bahay ni Xander",
     owner: "Xander Reyes",
@@ -41,7 +41,7 @@ export const mockProperties: Property[] = [
     documents: { tax: 'verified', deed: 'verified', survey: 'pending' },
   },
   {
-    id: 3,
+    id: "3",
     name: "Bahay ni Clyde",
     owner: "Clyde Mendoza",
     description: "A distinctive commercial property located in Poblacion, Balayan, ideal for adaptive reuse or mixed-use development.",
@@ -60,7 +60,7 @@ export const mockProperties: Property[] = [
     documents: { tax: 'pending', deed: 'verified', survey: 'missing' },
   },
   {
-    id: 4,
+    id: "4",
     name: "Kapitan Toti Rice Fields",
     owner: "Antonio 'Toti' Garcia",
     type: "Agricultural",
@@ -78,7 +78,7 @@ export const mockProperties: Property[] = [
     documents: { tax: 'verified', deed: 'verified', survey: 'verified' },
   },
   {
-    id: 5,
+    id: "5",
     name: "Avida Towers Prime Taft",
     owner: "Avida Land Corp.",
     type: "Condominium",
@@ -96,7 +96,7 @@ export const mockProperties: Property[] = [
     documents: { tax: 'verified', deed: 'verified', survey: 'verified' },
   },
   {
-    id: 6,
+    id: "6",
     name: "Amaia Skies Cubao",
     owner: "Amaia Land",
     type: "Condominium",
@@ -114,7 +114,7 @@ export const mockProperties: Property[] = [
     documents: { tax: 'verified', deed: 'verified', survey: 'verified' },
   },
   {
-    id: 7,
+    id: "7",
     name: "Camella Cerritos Bacoor",
     owner: "Vista Land",
     type: "House & Lot",
