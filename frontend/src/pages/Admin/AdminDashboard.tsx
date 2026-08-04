@@ -20,6 +20,7 @@ import {
 } from '../../services/notificationStorage';
 import { AdminProperties } from './AdminProperties';
 import { AdminBuyers } from './AdminBuyers';
+import { AdminAnalytics } from './AdminAnalytics';
 import type { NotificationLog, Property } from '../../types/types';
 
 type NavItem = {
@@ -280,7 +281,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 ? 'Create, modify, and audit real estate listings.'
                 : activeNav === 'buyers'
                   ? 'View and manage buyer accounts registered through the portal.'
-                  : 'Manage listings, buyers, and transactions from one place.'}
+                  : activeNav === 'analytics'
+                    ? 'Portfolio performance, compliance trends, and properties that need attention.'
+                    : 'Manage listings, buyers, and transactions from one place.'}
             </p>
           </div>
           <button
@@ -382,7 +385,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
             {activeNav === 'buyers' && <AdminBuyers onToast={setToast} />}
 
-            {activeNav !== 'dashboard' && activeNav !== 'properties' && activeNav !== 'buyers' && (
+            {activeNav === 'analytics' && <AdminAnalytics onToast={setToast} />}
+
+            {activeNav !== 'dashboard' &&
+              activeNav !== 'properties' &&
+              activeNav !== 'buyers' &&
+              activeNav !== 'analytics' && (
               <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-8 text-center">
                 <div className="w-14 h-14 rounded-2xl bg-[#1a3d2e] flex items-center justify-center mx-auto mb-4">
                   {navItems.find((item) => item.id === activeNav)?.icon}

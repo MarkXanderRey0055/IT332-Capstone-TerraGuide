@@ -7,9 +7,11 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Sparkles,
 } from 'lucide-react';
 import type { Property } from '../../types/types';
 import { PropertyFormModal } from '../../components/Admin/PropertyFormModal';
+import { AuditModal } from '../../components/Admin/AuditModal';
 import { getLotSize } from '../../services/buyerPrefs';
 import {
   createProperty,
@@ -103,6 +105,8 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [auditProperty, setAuditProperty] = useState<Property | null>(null);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
   const showToast = (message: string) => {
     onToast?.(message);
@@ -116,6 +120,11 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
   const handleEditPropertyClick = (property: Property) => {
     setSelectedProperty(property);
     setIsPropertyModalOpen(true);
+  };
+
+  const handleAuditPropertyClick = (property: Property) => {
+    setAuditProperty(property);
+    setIsAuditModalOpen(true);
   };
 
   const refreshProperties = async () => {
@@ -279,6 +288,14 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
                         </button>
                         <button
                           type="button"
+                          onClick={() => handleAuditPropertyClick(p)}
+                          className="p-1.5 bg-white/[0.04] hover:bg-emerald-950/20 text-gray-300 rounded-lg border border-white/[0.08] hover:text-emerald-400 transition-colors cursor-pointer"
+                          title="AI Compliance Audit"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleDeleteProperty(p.id, p.name)}
                           disabled={deletingId === p.id}
                           className="p-1.5 bg-white/[0.04] hover:bg-red-950/20 text-gray-400 rounded-lg border border-white/[0.08] hover:text-red-400 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
@@ -301,6 +318,12 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
         property={selectedProperty}
         onClose={() => setIsPropertyModalOpen(false)}
         onSave={handleSaveProperty}
+      />
+
+      <AuditModal
+        isOpen={isAuditModalOpen}
+        property={auditProperty}
+        onClose={() => setIsAuditModalOpen(false)}
       />
     </>
   );
