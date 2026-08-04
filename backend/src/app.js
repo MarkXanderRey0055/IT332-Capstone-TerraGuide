@@ -8,6 +8,7 @@ import { errorHandler } from './middleware/errorMiddleware.js';
 import propertyRoutes from './routes/propertyRoutes.js';
 import recommendationRoutes from './routes/recommendationRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -46,6 +47,7 @@ app.use('/api/preferences', buyerPreferenceRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/audits', auditRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Fallback for unhandled routes
 app.all('*', (req, res, next) => {
