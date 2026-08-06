@@ -82,7 +82,7 @@ export default function App() {
 
   if (isRestoringSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#112a1d]">
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED]">
         <p className="text-sm text-gray-400">Loading...</p>
       </div>
     );

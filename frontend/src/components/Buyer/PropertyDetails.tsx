@@ -28,7 +28,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F9F6] text-[#1E2E24] font-sans px-6 py-8">
+    <div className="min-h-screen bg-[#F7F4ED] text-[#1E2E24] font-sans px-6 py-8">
       <RealtimeLocationModal
         isOpen={isRealtimeModalOpen}
         property={property}
