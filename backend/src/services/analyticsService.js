@@ -2,6 +2,7 @@ import Property from '../models/Property.js';
 import User from '../models/User.js';
 import BuyerPreference from '../models/BuyerPreference.js';
 import Audit from '../models/Audit.js';
+import { generatePortfolioNarrative } from './geminiService.js';
 
 // A property counts as "ready" once its latest audit clears this bar.
 // Used for the success-rate KPI and for flagging low-compliance listings
@@ -27,7 +28,58 @@ async function getLatestAuditsByProperty() {
   return map;
 }
 
-// Powers the KPI cards at the top of the Analytics page.
+// Same threshold used for the "Low/Medium/High" risk label — not audited
+// at all is automatically High risk, since we have zero visibility into
+// that property's actual state.
+function computeRiskLevel(audit) {
+  if (!audit) return 'High';
+
+  const missingCount = audit.missingItems ? audit.missingItems.length : 0;
+
+  if (audit.complianceScore < 40 || missingCount >= 2) return 'High';
+  if (audit.complianceScore < COMPLIANCE_READY_THRESHOLD || missingCount >= 1) return 'Medium';
+  return 'Low';
+}
+
+// Compliance score is already a pure documents-verified percentage, so
+// blending in a second real signal — how the price stacks up against
+// comparable listings — gives us something genuinely different to call
+// "market readiness" instead of just reprinting the compliance number
+// under a new name. Weighted 60/40 toward compliance since paperwork
+// being in order matters more to actually closing a deal than price
+// positioning alone.
+function computeMarketReadinessScore(property, audit) {
+  const comparisonAverage = audit.comparisonAverage || 0;
+
+  let priceCompetitivenessScore = 50; // neutral when there's nothing to compare against
+  if (comparisonAverage > 0) {
+    const ratio = property.price / comparisonAverage;
+    if (ratio <= 1) {
+      priceCompetitivenessScore = 100;
+    } else {
+      const overshoot = ratio - 1; // e.g. 0.2 = priced 20% above comparable listings
+      priceCompetitivenessScore = Math.max(0, 100 - overshoot * 200);
+    }
+  }
+
+  return Math.round(audit.complianceScore * 0.6 + priceCompetitivenessScore * 0.4);
+}
+
+// "Success rate" per property isn't a rescaled copy of the compliance
+// score — it's where that score lands relative to every other audited
+// property, i.e. "scores better than X% of the audited portfolio". With
+// only one audited property there's nothing to rank against, so it just
+// tops out at 100.
+function computeSuccessRatePercentile(score, allScores) {
+  if (allScores.length <= 1) return 100;
+
+  const countBelow = allScores.filter((s) => s < score).length;
+  const countEqual = allScores.filter((s) => s === score).length;
+
+  return Math.round(((countBelow + countEqual / 2) / allScores.length) * 100);
+}
+
+
 export async function getDashboardSummary() {
   const [
     totalProperties,
@@ -75,6 +127,14 @@ export async function getDashboardSummary() {
     0
   );
 
+  // Reuses the exact same risk logic as the rankings/attention lists —
+  // "High risk" here means the same thing everywhere on this page.
+  // (allProperties already carries _id by default alongside price.)
+  const highRiskListingsCount = allProperties.filter((property) => {
+    const audit = latestAudits.get(property._id.toString());
+    return computeRiskLevel(audit) === 'High';
+  }).length;
+
   return {
     totalProperties,
     availableProperties,
@@ -84,6 +144,7 @@ export async function getDashboardSummary() {
     averageComplianceScore,
     averageSuccessRate,
     estimatedPortfolioValue,
+    highRiskListingsCount,
     // handy for the frontend to know how many properties the compliance
     // numbers above are actually based on
     auditedPropertiesCount: complianceScores.length,
@@ -202,6 +263,7 @@ export async function getAttentionProperties() {
         location: property.location,
         status: property.status,
         complianceScore: audit ? audit.complianceScore : null,
+        riskLevel: computeRiskLevel(audit),
         reasons,
       });
     }
@@ -212,4 +274,216 @@ export async function getAttentionProperties() {
   flagged.sort((a, b) => (a.complianceScore ?? -1) - (b.complianceScore ?? -1));
 
   return flagged;
+}
+
+// The main property performance report — every audited property, ranked
+// by market readiness, with its compliance score, success-rate percentile,
+// and risk level alongside it. Properties that have never been audited
+// can't be meaningfully ranked (there's no score to rank them by), so
+// they're left out of the list but counted separately.
+export async function getPropertyRankings() {
+  const [properties, latestAudits] = await Promise.all([
+    Property.find(),
+    getLatestAuditsByProperty(),
+  ]);
+
+  const auditedEntries = properties
+    .map((property) => {
+      const audit = latestAudits.get(property._id.toString());
+      return audit ? { property, audit } : null;
+    })
+    .filter(Boolean);
+
+  const allScores = auditedEntries.map((entry) => entry.audit.complianceScore);
+
+  const rankings = auditedEntries
+    .map(({ property, audit }) => ({
+      propertyId: property._id.toString(),
+      name: property.name,
+      type: property.type,
+      location: property.location,
+      status: property.status,
+      complianceScore: audit.complianceScore,
+      successRate: computeSuccessRatePercentile(audit.complianceScore, allScores),
+      marketReadinessScore: computeMarketReadinessScore(property, audit),
+      riskLevel: computeRiskLevel(audit),
+    }))
+    .sort((a, b) => b.marketReadinessScore - a.marketReadinessScore)
+    .map((entry, index) => ({ rank: index + 1, ...entry }));
+
+  return {
+    rankings,
+    unauditedCount: properties.length - auditedEntries.length,
+  };
+}
+
+// What buyers are actually asking for, straight from the buyerpreferences
+// collection — no assumptions, just what people typed into the
+// Preferences form.
+export async function getBuyerIntelligence() {
+  const preferences = await BuyerPreference.find();
+
+  if (preferences.length === 0) {
+    return {
+      budgetDistribution: [],
+      preferredTypes: [],
+      preferredLocations: [],
+      averageBudget: 0,
+      totalBuyersWithPreferences: 0,
+    };
+  }
+
+  // one representative number per buyer for the budget chart — the
+  // midpoint of their stated min/max range
+  const midpoints = preferences.map((pref) => (pref.budgetMin + pref.budgetMax) / 2);
+
+  const budgetBuckets = [
+    { label: 'Under ₱1M', min: 0, max: 1000000 },
+    { label: '₱1M - ₱2M', min: 1000000, max: 2000000 },
+    { label: '₱2M - ₱4M', min: 2000000, max: 4000000 },
+    { label: '₱4M - ₱6M', min: 4000000, max: 6000000 },
+    { label: 'Over ₱6M', min: 6000000, max: Infinity },
+  ];
+
+  const budgetDistribution = budgetBuckets.map((bucket) => ({
+    label: bucket.label,
+    count: midpoints.filter((mid) => mid >= bucket.min && mid < bucket.max).length,
+  }));
+
+  const typeCounts = {};
+  const locationCounts = {};
+
+  preferences.forEach((pref) => {
+    if (pref.landType) {
+      typeCounts[pref.landType] = (typeCounts[pref.landType] || 0) + 1;
+    }
+    if (pref.location) {
+      locationCounts[pref.location] = (locationCounts[pref.location] || 0) + 1;
+    }
+  });
+
+  const preferredTypes = Object.entries(typeCounts).map(([label, count]) => ({
+    label,
+    count,
+  }));
+
+  const preferredLocations = Object.entries(locationCounts)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const averageBudget = Math.round(
+    midpoints.reduce((sum, mid) => sum + mid, 0) / midpoints.length
+  );
+
+  return {
+    budgetDistribution,
+    preferredTypes,
+    preferredLocations,
+    averageBudget,
+    totalBuyersWithPreferences: preferences.length,
+  };
+}
+
+// Sales trend/revenue/forecast — all clearly flagged as approximate. The
+// schema doesn't have a dedicated "date sold" field, so we're using
+// updatedAt on Sold properties as a stand-in. That means any later edit
+// to a sold listing (fixing a typo, say) would nudge its "sale month" —
+// worth knowing about, not something to quietly paper over.
+export async function getSalesPerformance() {
+  const soldProperties = await Property.find({ status: 'Sold' }).select('price updatedAt');
+
+  if (soldProperties.length === 0) {
+    return {
+      monthlyTrend: [],
+      totalRevenue: 0,
+      monthlyAverage: 0,
+      forecastNextMonth: 0,
+      isApproximate: true,
+      note: "No properties are marked Sold yet, so there's no sales history to show.",
+    };
+  }
+
+  const monthlyTotals = new Map();
+  soldProperties.forEach((property) => {
+    const date = new Date(property.updatedAt);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    monthlyTotals.set(key, (monthlyTotals.get(key) || 0) + property.price);
+  });
+
+  const monthlyTrend = Array.from(monthlyTotals.entries())
+    .sort(([a], [b]) => (a > b ? 1 : -1))
+    .map(([month, total]) => ({ month, total }));
+
+  const totalRevenue = soldProperties.reduce((sum, property) => sum + property.price, 0);
+  const monthlyAverage = Math.round(totalRevenue / monthlyTrend.length);
+
+  // Naive projection off the last up-to-3 months — not a real forecasting
+  // model. With this few data points, anything fancier would just be
+  // noise dressed up as precision.
+  const recentMonths = monthlyTrend.slice(-3);
+  const forecastNextMonth = Math.round(
+    recentMonths.reduce((sum, month) => sum + month.total, 0) / recentMonths.length
+  );
+
+  return {
+    monthlyTrend,
+    totalRevenue,
+    monthlyAverage,
+    forecastNextMonth,
+    isApproximate: true,
+    note:
+      "Based on each property's last-updated date as a stand-in for its sale date, since the system doesn't record a dedicated sale date separately from general edits.",
+  };
+}
+
+// Gathers everything the AI Portfolio Insights report needs into one
+// factual snapshot. This is the ONLY thing Gemini ever sees for this
+// feature - real, already-computed numbers, same principle as the
+// Compliance Auditor: the backend does the math, the AI writes it up.
+export async function getPortfolioSnapshot() {
+  const [summary, rankingsResult, buyerIntelligence, salesPerformance] = await Promise.all([
+    getDashboardSummary(),
+    getPropertyRankings(),
+    getBuyerIntelligence(),
+    getSalesPerformance(),
+  ]);
+
+  const riskCounts = rankingsResult.rankings.reduce(
+    (acc, entry) => {
+      acc[entry.riskLevel] = (acc[entry.riskLevel] || 0) + 1;
+      return acc;
+    },
+    { High: 0, Medium: 0, Low: 0 }
+  );
+  // never-audited properties are already excluded from rankings — count
+  // them as their own bucket rather than silently dropping them
+  riskCounts.NotAudited = rankingsResult.unauditedCount;
+
+  const topPreferredType =
+    [...buyerIntelligence.preferredTypes].sort((a, b) => b.count - a.count)[0]?.label ?? null;
+  const topPreferredLocation = buyerIntelligence.preferredLocations[0]?.label ?? null;
+
+  return {
+    summary,
+    riskCounts,
+    buyerIntelligence: {
+      topPreferredType,
+      topPreferredLocation,
+      averageBudget: buyerIntelligence.averageBudget,
+      totalBuyersWithPreferences: buyerIntelligence.totalBuyersWithPreferences,
+    },
+    salesPerformance,
+  };
+}
+
+// Generates the AI Portfolio Insights report: builds the factual snapshot,
+// hands it to Gemini, returns both. Not persisted anywhere — this is
+// generated fresh each time an admin asks for it, since (unlike a
+// per-property compliance audit) there's no obvious "history" use case
+// for a whole-portfolio report yet.
+export async function generatePortfolioInsights() {
+  const snapshot = await getPortfolioSnapshot();
+  const insights = await generatePortfolioNarrative(snapshot);
+
+  return { snapshot, insights };
 }

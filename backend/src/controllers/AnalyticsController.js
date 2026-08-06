@@ -44,3 +44,50 @@ export const getAttentionProperties = asyncHandler(async (req, res) => {
     attentionProperties
   );
 });
+
+// @desc    Get the ranked property performance report (compliance,
+//          success rate, market readiness, risk level)
+// @route   GET /api/analytics/rankings
+// @access  Private (Admin)
+export const getPropertyRankings = asyncHandler(async (req, res) => {
+  const rankings = await analyticsService.getPropertyRankings();
+
+  return sendSuccess(res, 200, 'Property rankings retrieved successfully.', rankings);
+});
+
+// @desc    Get buyer preference analytics (budget, preferred types/locations)
+// @route   GET /api/analytics/buyer-intelligence
+// @access  Private (Admin)
+export const getBuyerIntelligence = asyncHandler(async (req, res) => {
+  const buyerIntelligence = await analyticsService.getBuyerIntelligence();
+
+  return sendSuccess(
+    res,
+    200,
+    'Buyer intelligence retrieved successfully.',
+    buyerIntelligence
+  );
+});
+
+// @desc    Get sales trend/revenue/forecast (approximate, see response note)
+// @route   GET /api/analytics/sales-performance
+// @access  Private (Admin)
+export const getSalesPerformance = asyncHandler(async (req, res) => {
+  const salesPerformance = await analyticsService.getSalesPerformance();
+
+  return sendSuccess(
+    res,
+    200,
+    'Sales performance retrieved successfully.',
+    salesPerformance
+  );
+});
+
+// @desc    Generate the AI Portfolio Insights executive report
+// @route   POST /api/analytics/portfolio-insights
+// @access  Private (Admin)
+export const generatePortfolioInsights = asyncHandler(async (req, res) => {
+  const result = await analyticsService.generatePortfolioInsights();
+
+  return sendSuccess(res, 200, 'Portfolio insights generated successfully.', result);
+});

@@ -85,10 +85,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   );
 
   const notificationStyle = (type: NotificationLog['type'], read: boolean) => {
-    if (read) return 'border-white/[0.06] bg-white/[0.02] opacity-70';
-    if (type === 'signup') return 'border-amber-500/20 bg-amber-500/5';
-    if (type === 'inquiry') return 'border-sky-500/20 bg-sky-500/5';
-    return 'border-emerald-500/20 bg-emerald-500/5';
+    if (read) return 'admin-panel-muted opacity-70';
+    if (type === 'signup') return 'admin-panel-muted border-amber-700/20 bg-amber-100/40';
+    if (type === 'inquiry') return 'admin-panel-muted border-sky-700/20 bg-sky-100/35';
+    return 'admin-panel-muted border-emerald-700/20 bg-emerald-100/35';
   };
 
   const notificationLabel = (type: NotificationLog['type']) => {
@@ -175,7 +175,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const activeTitle = PAGE_TITLES[activeNav] ?? 'Dashboard';
 
   return (
-    <div className="h-screen w-full flex overflow-hidden bg-[#0f1f16] font-sans">
+    <div className="admin-shell h-screen w-full flex overflow-hidden font-sans">
       {sidebarOpen && (
         <button
           type="button"
@@ -189,17 +189,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         className={`
           fixed lg:static inset-y-0 left-0 z-50
           w-64 shrink-0 flex flex-col
-          bg-[#0a1810] border-r border-white/[0.06]
+          admin-sidebar
           transform transition-transform duration-200 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        <div className="px-5 py-6 border-b border-white/[0.06]">
+        <div className="px-5 py-6 border-b border-[#ccbba4]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#2d6a4f] flex items-center justify-center shadow-[0_0_12px_rgba(45,106,79,0.45)]">
+            <div className="admin-button w-9 h-9 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">T</span>
             </div>
-            <span className="text-white font-serif font-bold text-lg tracking-wide">TerraGuide</span>
+            <span className="text-[#2f2417] font-serif font-bold text-lg tracking-wide">TerraGuide</span>
           </div>
         </div>
 
@@ -215,12 +215,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                   transition-colors cursor-pointer border-none
                   ${isActive
-                    ? 'bg-[#1a3d2e] text-white'
-                    : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                    ? 'admin-button text-white'
+                    : 'bg-transparent text-[#6f604d] hover:text-[#2f2417] hover:bg-white/40'
                   }
                 `}
               >
-                <span className={isActive ? 'text-emerald-300' : 'text-gray-500'}>{item.icon}</span>
+                <span className={isActive ? 'text-[#f3e7c5]' : 'text-[#8e7a61]'}>{item.icon}</span>
                 <span className="flex-1 text-left">{item.label}</span>
                 {item.badge != null && (
                   <span className="min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold flex items-center justify-center">
@@ -234,29 +234,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           <button
             type="button"
             onClick={() => handleNavClick('logout')}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer border-none mt-2"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-[#6f604d] hover:text-[#2f2417] hover:bg-white/40 transition-colors cursor-pointer border-none mt-2"
           >
-            <span className="text-gray-500">
+            <span className="text-[#8e7a61]">
               <LogOut className="w-5 h-5" />
             </span>
             <span className="flex-1 text-left">Logout</span>
           </button>
         </nav>
 
-        <div className="px-4 py-4 border-t border-white/[0.06]">
+        <div className="px-4 py-4 border-t border-[#ccbba4]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-[#2d6a4f] flex items-center justify-center shadow-[0_0_12px_rgba(45,106,79,0.35)] shrink-0">
+            <div className="admin-button w-9 h-9 rounded-full flex items-center justify-center shrink-0">
               <span className="text-white font-semibold text-sm">A</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-semibold truncate">Admin Head</p>
-              <p className="text-gray-500 text-xs truncate">admin@terraguide.com</p>
+              <p className="text-[#2f2417] text-sm font-semibold truncate">Admin Head</p>
+              <p className="text-[#7c6a57] text-xs truncate">admin@terraguide.com</p>
             </div>
             <button
               type="button"
               onClick={() => handleNavClick('logout')}
               aria-label="Logout"
-              className="text-gray-500 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-1 shrink-0"
+              className="text-[#8e7a61] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1 shrink-0"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -265,18 +265,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="shrink-0 flex items-center gap-4 px-4 sm:px-6 py-4 border-b border-white/[0.06] bg-[#112a1d]">
+        <header className="admin-header shrink-0 flex items-center gap-4 px-4 sm:px-6 py-4">
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open sidebar"
-            className="lg:hidden text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-1"
+            className="lg:hidden text-[#8e7a61] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1"
           >
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-white font-serif text-xl sm:text-2xl font-bold truncate">{activeTitle}</h1>
-            <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
+            <h1 className="text-[#2f2417] font-serif text-xl sm:text-2xl font-bold truncate">{activeTitle}</h1>
+            <p className="text-[#7c6a57] text-xs sm:text-sm mt-0.5">
               {activeNav === 'properties'
                 ? 'Create, modify, and audit real estate listings.'
                 : activeNav === 'buyers'
@@ -290,7 +290,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             type="button"
             onClick={() => setSidebarOpen(false)}
             aria-label="Close sidebar"
-            className="lg:hidden text-gray-400 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-1"
+            className="lg:hidden text-[#8e7a61] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1"
           >
             <X className={`w-5 h-5 ${sidebarOpen ? 'block' : 'hidden'}`} />
           </button>
@@ -309,26 +309,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   ].map((stat) => (
                     <div
                       key={stat.label}
-                      className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5"
+                      className="admin-panel rounded-2xl p-5"
                     >
-                      <p className="text-gray-400 text-xs uppercase tracking-wider">{stat.label}</p>
-                      <p className="text-white text-2xl font-bold mt-2">{stat.value}</p>
-                      <p className="text-emerald-400/80 text-xs mt-2">{stat.change}</p>
+                      <p className="text-[#7c6a57] text-xs uppercase tracking-wider">{stat.label}</p>
+                      <p className="text-[#2f2417] text-2xl font-bold mt-2">{stat.value}</p>
+                      <p className="text-[#45654d] text-xs mt-2">{stat.change}</p>
                     </div>
                   ))}
                 </div>
 
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6">
-                  <div className="flex items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
+                <div className="admin-panel rounded-2xl p-6">
+                  <div className="flex items-center justify-between gap-4 border-b border-[#d6c7b2] pb-4">
                     <div className="flex items-center gap-2">
-                      <Bell className="w-4 h-4 text-amber-400" />
-                      <h2 className="text-white font-semibold text-base">Activity Notifications</h2>
+                      <Bell className="w-4 h-4 text-amber-700" />
+                      <h2 className="text-[#2f2417] font-semibold text-base">Activity Notifications</h2>
                     </div>
                     {unreadNotifications > 0 && (
                       <button
                         type="button"
                         onClick={handleMarkAllNotificationsRead}
-                        className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold bg-transparent border-none cursor-pointer"
+                        className="text-xs text-[#45654d] hover:text-[#2f4736] font-semibold bg-transparent border-none cursor-pointer"
                       >
                         Mark all read
                       </button>
@@ -336,7 +336,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   </div>
 
                   {activityNotifications.length === 0 ? (
-                    <p className="text-gray-500 text-sm mt-4">
+                    <p className="text-[#7c6a57] text-sm mt-4">
                       No activity yet. Notifications will appear here when buyers register, send
                       inquiries, or request site visits.
                     </p>
@@ -350,12 +350,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 shrink-0">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57] shrink-0">
                                   {notificationLabel(notification.type)}
                                 </span>
-                                <p className="text-white text-sm font-semibold truncate">{notification.title}</p>
+                                <p className="text-[#2f2417] text-sm font-semibold truncate">{notification.title}</p>
                               </div>
-                              <span className="text-[10px] text-gray-500 shrink-0">
+                              <span className="text-[10px] text-[#7c6a57] shrink-0">
                                 {new Date(notification.time).toLocaleString('en-PH', {
                                   month: 'short',
                                   day: 'numeric',
@@ -364,7 +364,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                 })}
                               </span>
                             </div>
-                            <p className="text-gray-400 text-xs mt-1">{notification.sub}</p>
+                            <p className="text-[#6f604d] text-xs mt-1">{notification.sub}</p>
                           </div>
                         </div>
                       ))}
@@ -391,12 +391,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               activeNav !== 'properties' &&
               activeNav !== 'buyers' &&
               activeNav !== 'analytics' && (
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-8 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-[#1a3d2e] flex items-center justify-center mx-auto mb-4">
+              <div className="admin-panel rounded-2xl p-8 text-center">
+                <div className="admin-button w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   {navItems.find((item) => item.id === activeNav)?.icon}
                 </div>
-                <h2 className="text-white font-serif text-xl font-bold">{activeTitle}</h2>
-                <p className="text-gray-500 text-sm mt-2 max-w-md mx-auto">
+                <h2 className="text-[#2f2417] font-serif text-xl font-bold">{activeTitle}</h2>
+                <p className="text-[#7c6a57] text-sm mt-2 max-w-md mx-auto">
                   This section is ready for content. Select another item from the sidebar to navigate
                   the admin portal.
                 </p>
@@ -414,12 +414,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             className="absolute inset-0 bg-black/60 border-none cursor-pointer"
             onClick={handleCancelLogout}
           />
-          <div className="relative w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#112a1d] p-6 shadow-2xl">
-            <div className="w-11 h-11 rounded-xl bg-[#1a3d2e] flex items-center justify-center mb-4">
+          <div className="admin-panel relative w-full max-w-sm rounded-2xl p-6">
+            <div className="admin-button w-11 h-11 rounded-xl flex items-center justify-center mb-4">
               <LogOut className="w-5 h-5 text-emerald-300" />
             </div>
-            <h2 className="text-white font-serif text-lg font-bold">Log out of TerraGuide?</h2>
-            <p className="text-gray-400 text-sm mt-2">
+            <h2 className="text-[#2f2417] font-serif text-lg font-bold">Log out of TerraGuide?</h2>
+            <p className="text-[#6f604d] text-sm mt-2">
               Are you sure you want to log out? You'll need to sign in again to access the admin
               portal.
             </p>
@@ -427,7 +427,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               <button
                 type="button"
                 onClick={handleCancelLogout}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 bg-white/[0.04] hover:bg-white/[0.08] border-none cursor-pointer transition-colors"
+                className="admin-button-secondary px-4 py-2 rounded-lg text-sm font-medium text-[#5d503f] border-none cursor-pointer transition-colors"
               >
                 Cancel
               </button>
@@ -444,7 +444,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 right-6 z-[600] px-4 py-3 bg-[#1a3d2e] border border-emerald-500/30 text-emerald-100 text-sm font-medium rounded-xl shadow-lg">
+        <div className="admin-panel fixed bottom-6 right-6 z-[600] px-4 py-3 text-[#2f4736] text-sm font-medium rounded-xl">
           {toast}
         </div>
       )}

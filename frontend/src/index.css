@@ -1,6 +1,94 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
+:root {
+  --admin-bg: #f7f4ed;
+  --admin-surface: #c7d3c0;
+  --admin-surface-strong: #8fa28a;
+  --admin-border: rgba(78, 96, 73, 0.24);
+  --admin-text: #223127;
+  --admin-muted: #4d5e4d;
+  --admin-shadow-soft: 0 10px 24px rgba(92, 108, 88, 0.14);
+  --admin-shadow-skeuo:
+    18px 18px 34px rgba(143, 162, 138, 0.32),
+    -14px -14px 28px rgba(255, 255, 255, 0.92),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.76),
+    inset -1px -1px 0 rgba(102, 122, 97, 0.18);
+}
+
+.admin-shell {
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(199, 211, 192, 0.7), transparent 32%),
+    linear-gradient(180deg, #fcfaf5 0%, var(--admin-bg) 100%);
+  color: var(--admin-text);
+}
+
+.admin-panel {
+  background: linear-gradient(180deg, rgba(247, 244, 237, 0.98), rgba(199, 211, 192, 0.98));
+  border: 1px solid var(--admin-border);
+  box-shadow: var(--admin-shadow-skeuo);
+}
+
+.admin-panel-muted {
+  background: linear-gradient(180deg, rgba(247, 244, 237, 0.96), rgba(219, 228, 214, 0.96));
+  border: 1px solid rgba(78, 96, 73, 0.18);
+  box-shadow:
+    10px 10px 22px rgba(143, 162, 138, 0.2),
+    -8px -8px 18px rgba(255, 255, 255, 0.82),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.admin-sidebar {
+  background: linear-gradient(180deg, #d5e0d0 0%, #c7d3c0 100%);
+  border-right: 1px solid rgba(78, 96, 73, 0.18);
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.65),
+    14px 0 24px rgba(115, 133, 111, 0.14);
+}
+
+.admin-header {
+  background: linear-gradient(180deg, rgba(247, 244, 237, 0.96), rgba(231, 238, 227, 0.96));
+  border-bottom: 1px solid rgba(78, 96, 73, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.admin-input {
+  background: linear-gradient(180deg, rgba(247, 244, 237, 0.98), rgba(235, 240, 232, 0.98));
+  border: 1px solid rgba(78, 96, 73, 0.22);
+  color: var(--admin-text);
+  box-shadow:
+    inset 2px 2px 4px rgba(143, 162, 138, 0.18),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.admin-input::placeholder {
+  color: #6a7a69;
+}
+
+.admin-button {
+  background: linear-gradient(180deg, #8fa28a 0%, #6f866a 100%);
+  border: 1px solid rgba(66, 83, 63, 0.5);
+  box-shadow:
+    0 10px 18px rgba(92, 108, 88, 0.24),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.22),
+    inset -1px -1px 0 rgba(73, 90, 68, 0.28);
+}
+
+.admin-button-secondary {
+  background: linear-gradient(180deg, #f7f4ed 0%, #d8e1d2 100%);
+  border: 1px solid rgba(78, 96, 73, 0.2);
+  box-shadow: var(--admin-shadow-soft);
+}
+
+.admin-table thead tr {
+  background: linear-gradient(180deg, rgba(247, 244, 237, 0.98), rgba(219, 228, 214, 0.98));
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(199, 211, 192, 0.36);
+}
+
 /* Optional: Ensures the map container takes up full space allocated to it */
 .leaflet-container {
   width: 100%;

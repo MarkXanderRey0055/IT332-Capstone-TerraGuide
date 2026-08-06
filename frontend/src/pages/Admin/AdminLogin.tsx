@@ -141,7 +141,7 @@ const AdminLogin: React.FC<LoginProps> = ({ onBack, onLogin }) => {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-4 rounded-xl text-white font-medium shadow-lg transition ${
+              className={`w-full py-4 rounded-xl text-white font-medium transition ${
                 loading
                   ? "bg-gray-600 cursor-not-allowed"
                   : "bg-gradient-to-r from-yellow-700/80 to-yellow-800/80 hover:from-yellow-600 hover:to-yellow-700"
