@@ -1,9 +1,5 @@
 import { apiRequest } from '../utils/api';
 
-// Same pattern as PropertyService/AuditService — this is the only file
-// that knows the analytics endpoints exist. Everything here is admin-only
-// on the backend.
-
 export interface DashboardSummary {
   totalProperties: number;
   availableProperties: number;
@@ -171,15 +167,66 @@ export async function getSalesPerformance(): Promise<SalesPerformance> {
   return response.data;
 }
 
-/**
- * Generates the AI Portfolio Insights executive report. This is the
- * "slow" call — the backend gathers a full snapshot and calls Gemini
- * before responding, so it can take a few seconds. Not auto-triggered;
- * the admin clicks a button, same UX pattern as the Compliance Auditor.
- */
 export async function generatePortfolioInsights(): Promise<PortfolioInsightsResult> {
   const response = (await apiRequest('/analytics/portfolio-insights', {
     method: 'POST',
   })) as ApiEnvelope<PortfolioInsightsResult>;
+  return response.data;
+}
+
+
+export interface TrendingType {
+  type: string;
+  percentage: number;
+}
+
+export interface TopTrendingListing {
+  rank: number;
+  propertyId: string;
+  name: string;
+  type: string;
+  location: string;
+  status: string;
+  // Same marketReadinessScore already computed for Admin Analytics
+  // rankings — just surfaced here as "Market Score" for buyers.
+  marketScore: number;
+}
+
+export interface BuyerMarketTrends {
+  trendingTypes: TrendingType[];
+  topListings: TopTrendingListing[];
+  totalBuyersWithPreferences: number;
+}
+
+export interface BuyerMarketInsight {
+  buyerDemand: string;
+  topListings: string;
+  marketContext: string;
+}
+
+export interface BuyerMarketInsightResult {
+  snapshot: {
+    totalProperties: number;
+    availableProperties: number;
+    totalBuyersWithPreferences: number;
+    averageBudget: number;
+    topPreferredLocation: string | null;
+    trendingTypes: TrendingType[];
+    topListings: TopTrendingListing[];
+  };
+  insight: BuyerMarketInsight;
+}
+
+export async function getBuyerMarketTrends(limit = 5): Promise<BuyerMarketTrends> {
+  const response = (await apiRequest(
+    `/analytics/buyer/market-trends?limit=${limit}`
+  )) as ApiEnvelope<BuyerMarketTrends>;
+  return response.data;
+}
+
+export async function generateBuyerMarketInsight(): Promise<BuyerMarketInsightResult> {
+  const response = (await apiRequest('/analytics/buyer/market-insight', {
+    method: 'POST',
+  })) as ApiEnvelope<BuyerMarketInsightResult>;
   return response.data;
 }

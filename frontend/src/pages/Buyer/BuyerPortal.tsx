@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { BuyerPreferences, Property } from '../../types/types';
 import { WelcomeModal } from '../../components/Buyer/WelcomeModal';
+import { BuyerMarketIntelligence } from '../../components/Buyer/BuyerMarketIntelligence';
 import PropertyExplorer from '../../components/Shared/PropertyExplorerFixed';
 import { PropertyDetails } from '../../components/Buyer/PropertyDetails';
 import { BuyerSearch, BuyerSuggestions, BuyerPreferencesView } from './BuyerPages';
@@ -34,46 +35,10 @@ import {
 import { notifyInquiry, notifySiteVisitRequest } from '../../services/notificationStorage';
 import { getCurrentUser } from '../../services/AuthService';
 import type { BuyerInquiry, SiteVisitRequest } from '../../types/types';
+import { COLORS } from '../../styles/buyerTheme';
 
-// ============================================================
-// MATERIAL DESIGN COLOR PALETTE
-// ============================================================
-const COLORS = {
-  // Primary colors
-  primary: '#091413',      // Background - Darkest
-  primaryVariant: '#0D1F1A', // Slightly lighter for cards
-  primaryLight: '#285A48',  // Primary actions, buttons
-  primaryMedium: '#408A71', // Hover states, accents
-  primaryLightest: '#B0E4CC', // Highlights, badges, important elements
-  
-  // Surface colors (Material Design surfaces)
-  surface: '#0D1F1A',
-  surfaceVariant: '#122A20',
-  surfaceElevated: '#1A3D2F',
-  
-  // Text colors (following Material Design contrast guidelines)
-  textPrimary: '#FFFFFF',
-  textSecondary: '#E8F5EF',
-  textHint: '#B0E4CC',
-  textDisabled: '#6A9F8A',
-  
-  // Status colors
-  success: '#B0E4CC',
-  warning: '#E4C7A0',
-  error: '#E4A0A0',
-  info: '#A0C4E4',
-  
-  // Elevation shadows (Material Design elevation levels)
-  elevation1: '0 2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
-  elevation2: '0 4px 8px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2)',
-  elevation4: '0 8px 16px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2)',
-  elevation8: '0 16px 32px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.2)',
-  elevation24: '0 32px 64px rgba(0,0,0,0.4), 0 16px 32px rgba(0,0,0,0.2)',
-};
+export { COLORS };
 
-// ============================================================
-// MATERIAL DESIGN COMPONENT STYLES
-// ============================================================
 const materialStyles = {
   // Surface styles
   surface: `
@@ -1396,6 +1361,12 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                 </div>
               </div>
             </section>
+
+            {/* Buyer Decision Analytics — market intelligence */}
+            <BuyerMarketIntelligence
+              properties={properties}
+              onSelectProperty={handleSelectProperty}
+            />
           </>
         );
     }

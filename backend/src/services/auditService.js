@@ -1,7 +1,7 @@
 import Property from '../models/Property.js';
 import Audit from '../models/Audit.js';
 import AppError from '../utils/errors.js';
-import { generateComplianceInsights } from './geminiService.js';
+import { generateComplianceInsights } from './aiService.js';
 
 const DOCUMENT_LABELS = {
   tax: 'Tax Declaration',
