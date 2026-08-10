@@ -8,6 +8,8 @@ import {
   getBuyerIntelligence,
   getSalesPerformance,
   generatePortfolioInsights,
+  getBuyerMarketTrends,
+  generateBuyerMarketInsight,
 } from '../controllers/AnalyticsController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -21,5 +23,7 @@ router.get('/rankings', protect, authorize('admin'), getPropertyRankings);
 router.get('/buyer-intelligence', protect, authorize('admin'), getBuyerIntelligence);
 router.get('/sales-performance', protect, authorize('admin'), getSalesPerformance);
 router.post('/portfolio-insights', protect, authorize('admin'), generatePortfolioInsights);
+router.get('/buyer/market-trends', protect, authorize('buyer'), getBuyerMarketTrends);
+router.post('/buyer/market-insight', protect, authorize('buyer'), generateBuyerMarketInsight);
 
 export default router;

@@ -2,7 +2,8 @@ import Property from '../models/Property.js';
 import User from '../models/User.js';
 import BuyerPreference from '../models/BuyerPreference.js';
 import Audit from '../models/Audit.js';
-import { generatePortfolioNarrative } from './geminiService.js';
+import AppError from '../utils/errors.js';
+import { generatePortfolioNarrative, generateBuyerMarketNarrative } from './aiService.js';
 
 // A property counts as "ready" once its latest audit clears this bar.
 // Used for the success-rate KPI and for flagging low-compliance listings
@@ -486,4 +487,108 @@ export async function generatePortfolioInsights() {
   const insights = await generatePortfolioNarrative(snapshot);
 
   return { snapshot, insights };
+}
+
+// ============================================================
+// BUYER DECISION ANALYTICS
+// ("market intelligence" section on the Buyer Home page)
+//
+// Everything below is deliberately built on top of the functions
+// already defined in this file (getBuyerIntelligence, getPropertyRankings,
+// getDashboardSummary) rather than re-querying or re-scoring anything.
+// No new ranking/scoring formula is introduced here — "Market Score" on
+// the buyer side is the exact same marketReadinessScore already computed
+// for the Admin Analytics rankings report.
+// ============================================================
+
+// Turns the existing buyer-preference type counts (getBuyerIntelligence)
+// into percentages for the "Trending Property Types" progress bars, and
+// reuses the existing property rankings (getPropertyRankings) — sorted by
+// marketReadinessScore — for the "Top Market Listings" list. Both are
+// already real, already-computed numbers; this function just reshapes them
+// for the buyer-facing widget.
+export async function getBuyerMarketTrends(limit = 5) {
+  const [buyerIntelligence, rankingsResult] = await Promise.all([
+    getBuyerIntelligence(),
+    getPropertyRankings(),
+  ]);
+
+  const totalPreferenceVotes = buyerIntelligence.preferredTypes.reduce(
+    (sum, entry) => sum + entry.count,
+    0
+  );
+
+  const trendingTypes =
+    totalPreferenceVotes > 0
+      ? buyerIntelligence.preferredTypes
+          .map((entry) => ({
+            type: entry.label,
+            percentage: Math.round((entry.count / totalPreferenceVotes) * 100),
+          }))
+          .sort((a, b) => b.percentage - a.percentage)
+      : [];
+
+  // getPropertyRankings() already returns rankings sorted by
+  // marketReadinessScore (descending) with rank/name/type/location
+  // attached — just take the top N and rename the field for the buyer
+  // widget without touching the underlying number.
+  const topListings = rankingsResult.rankings.slice(0, limit).map((entry) => ({
+    rank: entry.rank,
+    propertyId: entry.propertyId,
+    name: entry.name,
+    type: entry.type,
+    location: entry.location,
+    status: entry.status,
+    marketScore: entry.marketReadinessScore,
+  }));
+
+  return {
+    trendingTypes,
+    topListings,
+    totalBuyersWithPreferences: buyerIntelligence.totalBuyersWithPreferences,
+  };
+}
+
+// Gathers the factual snapshot the buyer-facing AI summary is grounded
+// in. Same principle as getPortfolioSnapshot() for admins: only real,
+// already-computed numbers are handed to the model — nothing is invented
+// in the prompt itself.
+export async function getBuyerMarketSnapshot() {
+  const [summary, marketTrends, buyerIntelligence] = await Promise.all([
+    getDashboardSummary(),
+    getBuyerMarketTrends(5),
+    getBuyerIntelligence(),
+  ]);
+
+  const topPreferredLocation = buyerIntelligence.preferredLocations[0]?.label ?? null;
+
+  return {
+    totalProperties: summary.totalProperties,
+    availableProperties: summary.availableProperties,
+    totalBuyersWithPreferences: buyerIntelligence.totalBuyersWithPreferences,
+    averageBudget: buyerIntelligence.averageBudget,
+    topPreferredLocation,
+    trendingTypes: marketTrends.trendingTypes,
+    topListings: marketTrends.topListings,
+  };
+}
+
+// Generates the buyer-facing "AI Market Insight" summary. Click-to-generate
+// only (never auto-run on page load) — the frontend controls when this
+// fires. If there simply isn't enough real data yet to summarize, this
+// throws a clear, expected error instead of asking the AI to invent a
+// market picture out of nothing.
+export async function generateBuyerMarketInsight() {
+  const snapshot = await getBuyerMarketSnapshot();
+
+  if (snapshot.totalProperties === 0) {
+    throw new AppError(
+      'Not enough listing data yet to generate a market insight.',
+      400
+    );
+  }
+
+  const insight = await generateBuyerMarketNarrative(snapshot);
+
+  return { snapshot, insight };
 }

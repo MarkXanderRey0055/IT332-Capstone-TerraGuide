@@ -9,6 +9,7 @@ import propertyRoutes from './routes/propertyRoutes.js';
 import recommendationRoutes from './routes/recommendationRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
+import adminBuyerRoutes from './routes/adminBuyerRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -48,6 +49,7 @@ app.use('/api/properties', propertyRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/audits', auditRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/admin/buyers', adminBuyerRoutes);
 
 // Fallback for unhandled routes
 app.all('*', (req, res, next) => {
