@@ -22,9 +22,7 @@ const propertySchema = new mongoose.Schema(
       enum: ['Residential', 'House & Lot', 'Agricultural', 'Commercial', 'Condominium'],
       required: [true, 'Property type is required'],
     },
-    // Optional-ish extras the admin form collects — title/description aren't
-    // filled in by the current form but we leave room for them, and size/
-    // pricePerSqm/images are things the form already computes and sends.
+    
     title: {
       type: String,
       trim: true,
@@ -85,6 +83,12 @@ const propertySchema = new mongoose.Schema(
         enum: ['pending', 'verified', 'missing'],
         default: 'pending',
       },
+    },
+    
+    cabinetId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Cabinet',
+      default: null,
     },
   },
   {
