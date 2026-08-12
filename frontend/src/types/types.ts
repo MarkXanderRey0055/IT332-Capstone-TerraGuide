@@ -19,6 +19,9 @@ export interface Property {
     deed: 'pending' | 'verified' | 'missing';
     survey: 'pending' | 'verified' | 'missing';
   };
+  // Which Filing Cabinet this property is currently organized under.
+  // null/undefined means the property is Unassigned.
+  cabinetId?: string | null;
 }
 
 export interface BuyerPreferences {

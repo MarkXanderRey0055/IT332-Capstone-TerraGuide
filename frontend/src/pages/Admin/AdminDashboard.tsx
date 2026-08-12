@@ -10,8 +10,12 @@ import {
   Menu,
   X,
   Bell,
+  Sparkles,
+  Gauge,
+  RefreshCw,
 } from 'lucide-react';
 import { getProperties } from '../../services/PropertyService';
+import { getAiUsageStatus, type AIUsageStatus } from '../../services/AIUsageService';
 import {
   loadNotifications,
   markAllNotificationsRead,
@@ -60,6 +64,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [notifications, setNotifications] = useState<NotificationLog[]>(() => loadNotifications());
   const [toast, setToast] = useState<string | null>(null);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [aiUsage, setAiUsage] = useState<AIUsageStatus | null>(null);
+  const [isLoadingAiUsage, setIsLoadingAiUsage] = useState(true);
+  const [aiUsageError, setAiUsageError] = useState('');
 
   const unreadNotifications = useMemo(
     () => notifications.filter((notification) => !notification.read).length,
@@ -97,6 +104,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     return 'Site Visit';
   };
 
+  // Daily quota warning thresholds: 0-69% normal, 70-89% approaching,
+  // 90-99% almost at limit, 100% reached. Reuses the same amber/red
+  // classes already used for status badges elsewhere in the admin UI.
+  const getDailyUsageState = (percentage: number) => {
+    if (percentage >= 100) {
+      return { label: 'Daily AI limit reached.', barColor: 'bg-red-500', textColor: 'text-red-600' };
+    }
+    if (percentage >= 90) {
+      return { label: 'Almost at today\'s AI limit.', barColor: 'bg-amber-500', textColor: 'text-amber-600' };
+    }
+    if (percentage >= 70) {
+      return { label: "AI usage is approaching today's limit.", barColor: 'bg-amber-500', textColor: 'text-amber-600' };
+    }
+    return { label: null, barColor: 'bg-[#45654d]', textColor: 'text-[#45654d]' };
+  };
+
+  const getRpmState = (current: number, limit: number) => {
+    const percentage = limit > 0 ? (current / limit) * 100 : 0;
+    if (percentage >= 100) {
+      return { dot: 'bg-red-500', label: 'Rate limited', message: 'AI requests temporarily rate limited.', textColor: 'text-red-600' };
+    }
+    if (percentage >= 70) {
+      return { dot: 'bg-amber-500', label: 'Approaching limit', message: 'AI request rate is approaching the configured limit.', textColor: 'text-amber-600' };
+    }
+    return { dot: 'bg-emerald-500', label: 'Operational', message: null, textColor: 'text-[#45654d]' };
+  };
+
+  const formatResetTime = (resetAtIso: string) => {
+    const resetDate = new Date(resetAtIso);
+    const now = new Date();
+    const msRemaining = resetDate.getTime() - now.getTime();
+    const hoursRemaining = Math.max(0, Math.floor(msRemaining / (1000 * 60 * 60)));
+    const minutesRemaining = Math.max(0, Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60)));
+    const timeLabel = resetDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
+    return `Resets at ${timeLabel} · in ${hoursRemaining}h ${minutesRemaining}m`;
+  };
+
   useEffect(() => {
     let isCancelled = false;
 
@@ -124,6 +168,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       isCancelled = true;
     };
   }, []);
+
+  const fetchAiUsage = async () => {
+    try {
+      const status = await getAiUsageStatus();
+      setAiUsage(status);
+      setAiUsageError('');
+    } catch (error) {
+      setAiUsageError(
+        error instanceof Error ? error.message : 'Could not load AI usage status.'
+      );
+    }
+  };
+
+  useEffect(() => {
+    setIsLoadingAiUsage(true);
+    fetchAiUsage().finally(() => setIsLoadingAiUsage(false));
+  }, []);
+
+  const handleRefreshAiUsage = async () => {
+    setIsLoadingAiUsage(true);
+    await fetchAiUsage();
+    setIsLoadingAiUsage(false);
+  };
 
   useEffect(() => {
     const syncNotifications = () => setNotifications(loadNotifications());
@@ -316,6 +383,109 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       <p className="text-[#45654d] text-xs mt-2">{stat.change}</p>
                     </div>
                   ))}
+                </div>
+
+                {/* AI Usage — operational status card, not a second analytics page */}
+                <div className="admin-panel rounded-2xl p-6">
+                  <div className="flex items-center justify-between gap-4 border-b border-[#d6c7b2] pb-4 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-700" />
+                      <h2 className="text-[#2f2417] font-semibold text-base">AI Usage</h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRefreshAiUsage}
+                      disabled={isLoadingAiUsage}
+                      className="text-[#5d503f] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1 disabled:opacity-50"
+                      title="Refresh AI usage status"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isLoadingAiUsage ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+
+                  {isLoadingAiUsage && !aiUsage ? (
+                    <p className="text-[#7c6a57] text-sm">Loading AI usage status...</p>
+                  ) : aiUsageError && !aiUsage ? (
+                    <p className="text-red-600 text-sm">{aiUsageError}</p>
+                  ) : aiUsage ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {/* Daily quota */}
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57] mb-1">
+                          AI Usage Today
+                        </p>
+                        <p className="text-[#2f2417] text-2xl font-bold">
+                          {aiUsage.daily.used} <span className="text-sm font-semibold text-[#9d8c76]">/ {aiUsage.daily.limit}</span>
+                        </p>
+                        <div className="w-full h-2 rounded-full overflow-hidden mt-2 bg-black/10">
+                          <div
+                            className={`h-full transition-all ${getDailyUsageState(aiUsage.daily.percentage).barColor}`}
+                            style={{ width: `${Math.min(aiUsage.daily.percentage, 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-[#7c6a57] mt-1.5">
+                          {aiUsage.daily.remaining} request{aiUsage.daily.remaining === 1 ? '' : 's'} remaining
+                        </p>
+                        <p className="text-[10px] text-[#9d8c76] mt-0.5">{formatResetTime(aiUsage.resetAt)}</p>
+                        {getDailyUsageState(aiUsage.daily.percentage).label && (
+                          <p className={`text-[10px] font-semibold mt-1.5 ${getDailyUsageState(aiUsage.daily.percentage).textColor}`}>
+                            {getDailyUsageState(aiUsage.daily.percentage).label}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* RPM status */}
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57] mb-1 flex items-center gap-1.5">
+                          <Gauge className="w-3 h-3" /> AI Request Rate
+                        </p>
+                        <p className="text-[#2f2417] text-2xl font-bold">
+                          {aiUsage.rpm.current} <span className="text-sm font-semibold text-[#9d8c76]">/ {aiUsage.rpm.limit} RPM</span>
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-2.5">
+                          <span className={`w-2 h-2 rounded-full ${getRpmState(aiUsage.rpm.current, aiUsage.rpm.limit).dot}`} />
+                          <span className={`text-[11px] font-semibold ${getRpmState(aiUsage.rpm.current, aiUsage.rpm.limit).textColor}`}>
+                            {getRpmState(aiUsage.rpm.current, aiUsage.rpm.limit).label}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-[#9d8c76] mt-1.5">
+                          Short-term request rate — separate from the daily quota.
+                        </p>
+                        {getRpmState(aiUsage.rpm.current, aiUsage.rpm.limit).message && (
+                          <p className={`text-[10px] font-semibold mt-1.5 ${getRpmState(aiUsage.rpm.current, aiUsage.rpm.limit).textColor}`}>
+                            {getRpmState(aiUsage.rpm.current, aiUsage.rpm.limit).message}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Breakdown */}
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57] mb-2">
+                          Usage Breakdown
+                        </p>
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[#6f604d]">Compliance Audits</span>
+                            <span className="font-semibold text-[#2f2417]">{aiUsage.breakdown.compliance}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[#6f604d]">Portfolio Insights</span>
+                            <span className="font-semibold text-[#2f2417]">{aiUsage.breakdown.portfolio}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[#6f604d]">Market Insights</span>
+                            <span className="font-semibold text-[#2f2417]">{aiUsage.breakdown.market}</span>
+                          </div>
+                          <div className="flex items-center justify-between pt-1.5 border-t border-[#d6c7b2] mt-1.5">
+                            <span className="text-[#2f2417] font-semibold">Total</span>
+                            <span className="font-bold text-[#2f2417]">
+                              {aiUsage.daily.used} / {aiUsage.daily.limit}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="admin-panel rounded-2xl p-6">

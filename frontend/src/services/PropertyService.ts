@@ -32,6 +32,7 @@ export interface PropertyApiRecord {
     deed: 'pending' | 'verified' | 'missing';
     survey: 'pending' | 'verified' | 'missing';
   };
+  cabinetId?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -77,6 +78,7 @@ export function mapToProperty(raw: PropertyApiRecord): Property {
     lng: raw.lng,
     images: raw.images ?? [],
     documents: raw.documents,
+    cabinetId: raw.cabinetId ?? null,
   };
 }
 
@@ -143,10 +145,6 @@ export async function updateProperty(
   return mapToProperty(response.data);
 }
 
-/**
- * Admin-only. Deletes a listing for good — there's no "soft delete"
- * on the backend, so once this succeeds the property is just gone.
- */
 export async function deleteProperty(id: string): Promise<void> {
   await apiRequest(`/properties/${id}`, { method: 'DELETE' });
 }

@@ -1,9 +1,27 @@
+/**
+ * ULTRA-FAST AI SERVICE USING NVIDIA NIM (LLAMA 3.1 8B)
+ *
+ * Replaces Google Gemini SDK calls with direct NVIDIA NIM API requests.
+ * Exposes both generateComplianceInsights and generatePortfolioNarrative
+ * to support Phase 6 AI Compliance Audits and the BI Analytics Dashboard.
+ */
+
+import { reserveAiUsage } from './aiUsageService.js';
+
+/**
+ * Generates compliance findings and predictive recommendations for a single property listing.
+ */
 export async function generateComplianceInsights(facts) {
   const apiKey = process.env.NVIDIA_API_KEY;
 
   if (!apiKey) {
     throw new Error('API key is not set in backend/.env');
   }
+
+  // Central AI control — checks TerraGuide's daily quota and RPM safety
+  // limit atomically, and throws before NVIDIA is ever called if either
+  // is exhausted. Shared by all three AI features, see aiUsageService.js.
+  await reserveAiUsage('compliance');
 
   const prompt = buildCompliancePrompt(facts);
   const rawText = await callNvidiaModel(apiKey, prompt);
@@ -35,6 +53,8 @@ export async function generatePortfolioNarrative(snapshot) {
     throw new Error('API key is not set in backend/.env');
   }
 
+  await reserveAiUsage('portfolio');
+
   const prompt = buildPortfolioPrompt(snapshot);
   const rawText = await callNvidiaModel(apiKey, prompt);
 
@@ -62,12 +82,20 @@ export async function generatePortfolioNarrative(snapshot) {
   return parsed;
 }
 
+/**
+ * Generates a concise, buyer-facing market summary for the Buyer Home page's
+ * "AI Market Insight" widget. Reuses the same NVIDIA NIM call path as
+ * compliance insights and the admin portfolio narrative — only the prompt
+ * and expected response shape differ.
+ */
 export async function generateBuyerMarketNarrative(snapshot) {
   const apiKey = process.env.NVIDIA_API_KEY;
 
   if (!apiKey) {
     throw new Error('API key is not set in backend/.env');
   }
+
+  await reserveAiUsage('market');
 
   const prompt = buildBuyerMarketPrompt(snapshot);
   const rawText = await callNvidiaModel(apiKey, prompt);
@@ -236,6 +264,11 @@ Respond EXACTLY with this JSON structure and nothing else:
 }`;
 }
 
+/**
+ * Buyer-facing market summary prompt for the Buyer Home page. Advisory in
+ * tone, not promotional — this is meant to help a buyer understand the
+ * current market, not sell them a listing.
+ */
 function buildBuyerMarketPrompt(snapshot) {
   const {
     totalProperties,
@@ -247,7 +280,8 @@ function buildBuyerMarketPrompt(snapshot) {
     topListings,
   } = snapshot;
 
-  
+  // Only show preference breakdown when we actually have something to show —
+  // if there's no data, tell the model that explicitly so it doesn't guess.
   const preferenceBreakdown =
     trendingTypes && trendingTypes.length > 0
       ? trendingTypes.map((t) => `${t.type} (${t.percentage}% of recorded preferences)`).join(', ')
@@ -261,7 +295,8 @@ function buildBuyerMarketPrompt(snapshot) {
           .join('; ')
       : 'No market readiness scores available yet';
 
-  
+  // A zero or missing budget means it simply wasn't recorded — label it that
+  // way so the model doesn't try to read meaning into the absence of a number.
   const budgetLine =
     averageBudget && averageBudget > 0
       ? `Average stated budget among buyers who set preferences: ₱${averageBudget.toLocaleString()}`

@@ -141,11 +141,19 @@ export const BuyerMarketIntelligence: React.FC<BuyerMarketIntelligenceProps> = (
       const result = await generateBuyerMarketInsight();
       setInsightResult(result);
     } catch (err) {
-      setInsightError(
-        err instanceof ApiError
-          ? err.message
-          : 'Could not generate a market insight right now. Please try again.'
-      );
+      if (err instanceof ApiError && (err.details?.error === 'AI_DAILY_LIMIT_REACHED' || err.details?.error === 'AI_RATE_LIMIT_REACHED')) {
+        // Buyers don't need to know this is a shared daily quota or an
+        // RPM window — just that the feature isn't available right now.
+        setInsightError(
+          'AI Market Insight is temporarily unavailable because the AI service has reached its current usage limit. Please try again later.'
+        );
+      } else {
+        setInsightError(
+          err instanceof ApiError
+            ? err.message
+            : 'Could not generate a market insight right now. Please try again.'
+        );
+      }
     } finally {
       setIsGeneratingInsight(false);
     }
