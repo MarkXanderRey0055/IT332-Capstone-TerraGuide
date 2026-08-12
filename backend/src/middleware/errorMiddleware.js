@@ -43,7 +43,7 @@ export const errorHandler = (err, req, res, next) => {
     console.error('💥 SYSTEM ERROR:', err);
   }
 
-  return sendError(res, statusCode, message);
+  return sendError(res, statusCode, message, err.details || null);
 };
 
 /**

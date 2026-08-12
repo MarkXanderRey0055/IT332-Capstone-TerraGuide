@@ -9,11 +9,16 @@ export const AUTH_UNAUTHORIZED_EVENT = "auth:unauthorized";
  */
 export class ApiError extends Error {
   status: number;
+  // Structured extra fields from the backend's `errors` field, when
+  // present — e.g. AI usage limit responses carry a machine-readable
+  // `error` code plus quota numbers here instead of just a message string.
+  details: Record<string, unknown> | null;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, details: Record<string, unknown> | null = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.details = details;
   }
 }
 
@@ -57,7 +62,7 @@ export async function apiRequest(
       window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
     }
 
-    throw new ApiError(data?.message || "Request failed", response.status);
+    throw new ApiError(data?.message || "Request failed", response.status, data?.errors ?? null);
   }
 
   return data;
