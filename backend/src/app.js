@@ -12,6 +12,7 @@ import analyticsRoutes from './routes/analyticsRoutes.js';
 import adminBuyerRoutes from './routes/adminBuyerRoutes.js';
 import cabinetRoutes from './routes/cabinetRoutes.js';
 import aiUsageRoutes from './routes/aiUsageRoutes.js';
+import transactionRoutes from './routes/transactionRoutes.js';
 
 dotenv.config();
 
@@ -48,7 +49,9 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/admin/buyers', adminBuyerRoutes);
 app.use('/api/cabinets', cabinetRoutes);
 app.use('/api/ai', aiUsageRoutes);
+app.use('/api/transactions', transactionRoutes);
 
+// Fallback for unhandled routes
 app.all('*', (req, res, next) => {
   const err = new Error(`Can't find ${req.originalUrl} on this server!`);
   err.statusCode = 404;

@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { getProperties } from '../../services/PropertyService';
 import { getAiUsageStatus, type AIUsageStatus } from '../../services/AIUsageService';
+import { getPendingTransactionCount } from '../../services/TransactionService';
+import { AdminTransactions } from './AdminTransactions';
 import {
   loadNotifications,
   markAllNotificationsRead,
@@ -67,6 +69,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [aiUsage, setAiUsage] = useState<AIUsageStatus | null>(null);
   const [isLoadingAiUsage, setIsLoadingAiUsage] = useState(true);
   const [aiUsageError, setAiUsageError] = useState('');
+  const [pendingTransactionCount, setPendingTransactionCount] = useState<number | null>(null);
 
   const unreadNotifications = useMemo(
     () => notifications.filter((notification) => !notification.read).length,
@@ -184,6 +187,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   useEffect(() => {
     setIsLoadingAiUsage(true);
     fetchAiUsage().finally(() => setIsLoadingAiUsage(false));
+  }, []);
+
+  useEffect(() => {
+    getPendingTransactionCount()
+      .then(setPendingTransactionCount)
+      .catch(() => setPendingTransactionCount(null));
   }, []);
 
   const handleRefreshAiUsage = async () => {
@@ -350,7 +359,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   ? 'View and manage buyer accounts registered through the portal.'
                   : activeNav === 'analytics'
                     ? 'Portfolio performance, compliance trends, and properties that need attention.'
-                    : 'Manage listings, buyers, and transactions from one place.'}
+                    : activeNav === 'transactions'
+                      ? 'Track deals from reservation through to a completed sale.'
+                      : 'Manage listings, buyers, and transactions from one place.'}
             </p>
           </div>
           <button
@@ -371,7 +382,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   {[
                     { label: 'Total Properties', value: '128', change: '+12 this month' },
                     { label: 'Active Buyers', value: '342', change: '+28 this month' },
-                    { label: 'Pending Transactions', value: '17', change: '2 need review' },
+                    {
+                      label: 'Pending Transactions',
+                      value: pendingTransactionCount === null ? '—' : String(pendingTransactionCount),
+                      change: 'Reserved + Processing',
+                    },
                     { label: 'Revenue (YTD)', value: '₱24.6M', change: '+8.4% vs last year' },
                   ].map((stat) => (
                     <div
@@ -557,10 +572,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
             {activeNav === 'analytics' && <AdminAnalytics onToast={setToast} />}
 
+            {activeNav === 'transactions' && <AdminTransactions onToast={setToast} />}
+
             {activeNav !== 'dashboard' &&
               activeNav !== 'properties' &&
               activeNav !== 'buyers' &&
-              activeNav !== 'analytics' && (
+              activeNav !== 'analytics' &&
+              activeNav !== 'transactions' && (
               <div className="admin-panel rounded-2xl p-8 text-center">
                 <div className="admin-button w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   {navItems.find((item) => item.id === activeNav)?.icon}
