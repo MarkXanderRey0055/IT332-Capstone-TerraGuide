@@ -6,6 +6,8 @@ export interface DashboardSummary {
   reservedProperties: number;
   soldProperties: number;
   totalBuyers: number;
+  propertiesAddedThisMonth: number;
+  buyersRegisteredThisMonth: number;
   averageComplianceScore: number;
   averageSuccessRate: number;
   estimatedPortfolioValue: number;
@@ -86,6 +88,8 @@ export interface SalesPerformance {
   forecastNextMonth: number;
   isApproximate: boolean;
   note: string;
+  revenueYTD: number;
+  revenueYTDSource: string;
 }
 
 export interface PortfolioSnapshot {
@@ -167,13 +171,32 @@ export async function getSalesPerformance(): Promise<SalesPerformance> {
   return response.data;
 }
 
+export type RecentActivityType =
+  | 'buyer_registered'
+  | 'property_added'
+  | 'transaction_created'
+  | 'transaction_status_changed'
+  | 'transaction_completed';
+
+export interface RecentActivityItem {
+  type: RecentActivityType;
+  title: string;
+  description: string;
+  timestamp: string;
+}
+
+export async function getRecentActivity(): Promise<RecentActivityItem[]> {
+  const response = (await apiRequest('/analytics/activity')) as ApiEnvelope<RecentActivityItem[]>;
+  return response.data;
+}
+
+
 export async function generatePortfolioInsights(): Promise<PortfolioInsightsResult> {
   const response = (await apiRequest('/analytics/portfolio-insights', {
     method: 'POST',
   })) as ApiEnvelope<PortfolioInsightsResult>;
   return response.data;
 }
-
 
 export interface TrendingType {
   type: string;
@@ -187,8 +210,6 @@ export interface TopTrendingListing {
   type: string;
   location: string;
   status: string;
-  // Same marketReadinessScore already computed for Admin Analytics
-  // rankings — just surfaced here as "Market Score" for buyers.
   marketScore: number;
 }
 
