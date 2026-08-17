@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   Home,
@@ -17,17 +17,20 @@ import {
 import { getProperties } from '../../services/PropertyService';
 import { getAiUsageStatus, type AIUsageStatus } from '../../services/AIUsageService';
 import { getPendingTransactionCount } from '../../services/TransactionService';
-import { AdminTransactions } from './AdminTransactions';
 import {
-  loadNotifications,
-  markAllNotificationsRead,
-  NOTIFICATIONS_STORAGE_KEY,
-  NOTIFICATIONS_UPDATED_EVENT,
-} from '../../services/notificationStorage';
+  getDashboardSummary,
+  getSalesPerformance,
+  getRecentActivity,
+  type DashboardSummary,
+  type SalesPerformance,
+  type RecentActivityItem,
+  type RecentActivityType,
+} from '../../services/AnalyticsService';
+import { AdminTransactions } from './AdminTransactions';
 import { AdminProperties } from './AdminProperties';
 import { AdminBuyers } from './AdminBuyers';
 import { AdminAnalytics } from './AdminAnalytics';
-import type { NotificationLog, Property } from '../../types/types';
+import type { Property } from '../../types/types';
 
 type NavItem = {
   id: string;
@@ -58,53 +61,36 @@ const PAGE_TITLES: Record<string, string> = {
   settings: 'Settings',
 };
 
+const formatPeso = (amount: number) => `₱${Math.round(amount).toLocaleString('en-US')}`;
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeNav, setActiveNav] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
-  const [notifications, setNotifications] = useState<NotificationLog[]>(() => loadNotifications());
   const [toast, setToast] = useState<string | null>(null);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [aiUsage, setAiUsage] = useState<AIUsageStatus | null>(null);
   const [isLoadingAiUsage, setIsLoadingAiUsage] = useState(true);
   const [aiUsageError, setAiUsageError] = useState('');
   const [pendingTransactionCount, setPendingTransactionCount] = useState<number | null>(null);
+  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null);
+  const [salesPerformance, setSalesPerformance] = useState<SalesPerformance | null>(null);
+  const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>([]);
+  const [isLoadingDashboardData, setIsLoadingDashboardData] = useState(true);
 
-  const unreadNotifications = useMemo(
-    () => notifications.filter((notification) => !notification.read).length,
-    [notifications],
-  );
+  const navItems: NavItem[] = NAV_ITEMS;
 
-  const navItems = useMemo<NavItem[]>(
-    () =>
-      NAV_ITEMS.map((item) =>
-        item.id === 'dashboard' && unreadNotifications > 0
-          ? { ...item, badge: unreadNotifications }
-          : item,
-      ),
-    [unreadNotifications],
-  );
-
-  const activityNotifications = useMemo(
-    () =>
-      [...notifications].sort(
-        (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime(),
-      ),
-    [notifications],
-  );
-
-  const notificationStyle = (type: NotificationLog['type'], read: boolean) => {
-    if (read) return 'admin-panel-muted opacity-70';
-    if (type === 'signup') return 'admin-panel-muted border-amber-700/20 bg-amber-100/40';
-    if (type === 'inquiry') return 'admin-panel-muted border-sky-700/20 bg-sky-100/35';
+  const activityStyle = (type: RecentActivityType) => {
+    if (type === 'buyer_registered') return 'admin-panel-muted border-amber-700/20 bg-amber-100/40';
+    if (type === 'property_added') return 'admin-panel-muted border-sky-700/20 bg-sky-100/35';
     return 'admin-panel-muted border-emerald-700/20 bg-emerald-100/35';
   };
 
-  const notificationLabel = (type: NotificationLog['type']) => {
-    if (type === 'signup') return 'Account';
-    if (type === 'inquiry') return 'Inquiry';
-    return 'Site Visit';
+  const activityLabel = (type: RecentActivityType) => {
+    if (type === 'buyer_registered') return 'Buyer';
+    if (type === 'property_added') return 'Property';
+    return 'Transaction';
   };
 
   // Daily quota warning thresholds: 0-69% normal, 70-89% approaching,
@@ -202,19 +188,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   useEffect(() => {
-    const syncNotifications = () => setNotifications(loadNotifications());
+    let isCancelled = false;
 
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === NOTIFICATIONS_STORAGE_KEY || event.key === null) {
-        syncNotifications();
+    const fetchDashboardData = async () => {
+      setIsLoadingDashboardData(true);
+      try {
+        const [summary, sales, activity] = await Promise.all([
+          getDashboardSummary(),
+          getSalesPerformance(),
+          getRecentActivity(),
+        ]);
+        if (isCancelled) return;
+        setDashboardSummary(summary);
+        setSalesPerformance(sales);
+        setRecentActivity(activity);
+      } catch (error) {
+        if (isCancelled) return;
+        setToast(error instanceof Error ? error.message : 'Could not load dashboard data.');
+      } finally {
+        if (!isCancelled) setIsLoadingDashboardData(false);
       }
     };
 
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, syncNotifications);
+    fetchDashboardData();
     return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, syncNotifications);
+      isCancelled = true;
     };
   }, []);
 
@@ -223,12 +221,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     const timer = window.setTimeout(() => setToast(null), 3000);
     return () => window.clearTimeout(timer);
   }, [toast]);
-
-  const handleMarkAllNotificationsRead = () => {
-    markAllNotificationsRead();
-    setNotifications(loadNotifications());
-    setToast('All notifications marked as read.');
-  };
 
   const handleNavClick = (id: string) => {
     if (id === 'logout') {
@@ -380,14 +372,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                   {[
-                    { label: 'Total Properties', value: '128', change: '+12 this month' },
-                    { label: 'Active Buyers', value: '342', change: '+28 this month' },
+                    {
+                      label: 'Total Properties',
+                      value: dashboardSummary ? String(dashboardSummary.totalProperties) : '—',
+                      change: dashboardSummary ? `+${dashboardSummary.propertiesAddedThisMonth} this month` : '',
+                    },
+                    {
+                      label: 'Active Buyers',
+                      value: dashboardSummary ? String(dashboardSummary.totalBuyers) : '—',
+                      change: dashboardSummary ? `+${dashboardSummary.buyersRegisteredThisMonth} this month` : '',
+                    },
                     {
                       label: 'Pending Transactions',
                       value: pendingTransactionCount === null ? '—' : String(pendingTransactionCount),
                       change: 'Reserved + Processing',
                     },
-                    { label: 'Revenue (YTD)', value: '₱24.6M', change: '+8.4% vs last year' },
+                    {
+                      label: 'Revenue (YTD)',
+                      value: salesPerformance ? formatPeso(salesPerformance.revenueYTD) : '—',
+                      change: 'Year to date',
+                    },
                   ].map((stat) => (
                     <div
                       key={stat.label}
@@ -509,39 +513,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       <Bell className="w-4 h-4 text-amber-700" />
                       <h2 className="text-[#2f2417] font-semibold text-base">Activity Notifications</h2>
                     </div>
-                    {unreadNotifications > 0 && (
-                      <button
-                        type="button"
-                        onClick={handleMarkAllNotificationsRead}
-                        className="text-xs text-[#45654d] hover:text-[#2f4736] font-semibold bg-transparent border-none cursor-pointer"
-                      >
-                        Mark all read
-                      </button>
-                    )}
                   </div>
 
-                  {activityNotifications.length === 0 ? (
+                  {isLoadingDashboardData ? (
+                    <p className="text-[#7c6a57] text-sm mt-4">Loading recent activity...</p>
+                  ) : recentActivity.length === 0 ? (
                     <p className="text-[#7c6a57] text-sm mt-4">
-                      No activity yet. Notifications will appear here when buyers register, send
-                      inquiries, or request site visits.
+                      No activity yet. This section reflects real properties, buyers, and
+                      transactions as they're added.
                     </p>
                   ) : (
                     <div className="space-y-3 mt-4 max-h-[320px] overflow-y-auto pr-1">
-                      {activityNotifications.map((notification) => (
+                      {recentActivity.map((activity, index) => (
                         <div
-                          key={notification.id}
-                          className={`p-4 rounded-xl border flex items-start gap-3 ${notificationStyle(notification.type, notification.read)}`}
+                          key={`${activity.type}-${activity.timestamp}-${index}`}
+                          className={`p-4 rounded-xl border flex items-start gap-3 ${activityStyle(activity.type)}`}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex items-center gap-2 min-w-0">
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57] shrink-0">
-                                  {notificationLabel(notification.type)}
+                                  {activityLabel(activity.type)}
                                 </span>
-                                <p className="text-[#2f2417] text-sm font-semibold truncate">{notification.title}</p>
+                                <p className="text-[#2f2417] text-sm font-semibold truncate">{activity.title}</p>
                               </div>
                               <span className="text-[10px] text-[#7c6a57] shrink-0">
-                                {new Date(notification.time).toLocaleString('en-PH', {
+                                {new Date(activity.timestamp).toLocaleString('en-PH', {
                                   month: 'short',
                                   day: 'numeric',
                                   hour: 'numeric',
@@ -549,7 +546,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                 })}
                               </span>
                             </div>
-                            <p className="text-[#6f604d] text-xs mt-1">{notification.sub}</p>
+                            <p className="text-[#6f604d] text-xs mt-1">{activity.description}</p>
                           </div>
                         </div>
                       ))}

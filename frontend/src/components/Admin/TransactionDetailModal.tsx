@@ -4,6 +4,7 @@ import type { Property } from '../../types/types';
 import type { Transaction, TransactionStatus } from '../../services/TransactionService';
 import { updateTransaction } from '../../services/TransactionService';
 import { AuditModal } from './AuditModal';
+import { CurrencyInput } from './CurrencyInput';
 
 interface TransactionDetailModalProps {
   isOpen: boolean;
@@ -16,9 +17,6 @@ interface TransactionDetailModalProps {
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
 
-// Mirrors the backend's transition table exactly — restricting the picker
-// to valid next states is just a UX nicety, the server is still the real
-// authority and will reject anything outside this table regardless.
 const ALLOWED_TRANSITIONS: Record<TransactionStatus, TransactionStatus[]> = {
   Reserved: ['Processing', 'Completed', 'Cancelled'],
   Processing: ['Completed', 'Cancelled'],
@@ -44,7 +42,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   onClose,
   onUpdated,
 }) => {
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<TransactionStatus>('Reserved');
   const [errorMsg, setErrorMsg] = useState('');
@@ -53,7 +51,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
 
   useEffect(() => {
     if (transaction) {
-      setAmount(transaction.amount.toString());
+      setAmount(transaction.amount);
       setNotes(transaction.notes);
       setStatus(transaction.status);
       setErrorMsg('');
@@ -75,8 +73,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
 
   const handleSave = async () => {
     setErrorMsg('');
-    const amountNum = Number(amount);
-    if (!Number.isFinite(amountNum) || amountNum < 0) {
+    if (amount === '' || amount < 0) {
       setErrorMsg('Enter a valid transaction amount.');
       return;
     }
@@ -84,7 +81,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
     setIsSaving(true);
     try {
       const payload: { amount?: number; notes?: string; status?: TransactionStatus } = {
-        amount: amountNum,
+        amount,
         notes: notes.trim(),
       };
       if (status !== transaction.status) {
@@ -164,11 +161,9 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
               <label className="text-[10px] uppercase tracking-wider font-bold text-[#7c6a57] block mb-1">
                 Transaction Amount (₱)
               </label>
-              <input
-                type="number"
-                min={0}
+              <CurrencyInput
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={setAmount}
                 disabled={isTerminal}
                 className="admin-input w-full px-3 py-2 rounded-lg text-xs disabled:opacity-60"
               />

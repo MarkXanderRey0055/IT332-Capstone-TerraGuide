@@ -4,6 +4,7 @@ import type { Property } from '../../types/types';
 import type { AdminBuyerProfile } from '../../services/AdminBuyerService';
 import { getBuyers } from '../../services/AdminBuyerService';
 import { createTransaction } from '../../services/TransactionService';
+import { CurrencyInput } from './CurrencyInput';
 
 interface TransactionFormModalProps {
   isOpen: boolean;
@@ -27,7 +28,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   const [propertySearch, setPropertySearch] = useState('');
   const [selectedBuyerId, setSelectedBuyerId] = useState('');
   const [selectedPropertyId, setSelectedPropertyId] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -83,8 +84,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       setErrorMsg('Select a property for this transaction.');
       return;
     }
-    const amountNum = Number(amount);
-    if (!Number.isFinite(amountNum) || amountNum < 0) {
+    if (amount === '' || amount < 0) {
       setErrorMsg('Enter a valid transaction amount.');
       return;
     }
@@ -94,7 +94,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       await createTransaction({
         buyerId: selectedBuyerId,
         propertyId: selectedPropertyId,
-        amount: amountNum,
+        amount,
         notes: notes.trim(),
       });
       onCreated();
@@ -216,13 +216,11 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
             <label className="text-[10px] uppercase tracking-wider font-bold text-[#7c6a57] block mb-1">
               Transaction Amount (₱) <span className="text-red-500">*</span>
             </label>
-            <input
-              type="number"
+            <CurrencyInput
               required
-              min={0}
-              placeholder={selectedProperty ? String(selectedProperty.price) : 'e.g. 500000'}
+              placeholder={selectedProperty ? selectedProperty.price.toLocaleString('en-US') : 'e.g. 500,000'}
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={setAmount}
               className="admin-input w-full px-3 py-2 rounded-lg text-xs"
             />
           </div>
