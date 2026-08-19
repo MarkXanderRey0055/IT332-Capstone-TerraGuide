@@ -13,7 +13,6 @@ import type { Property } from '../../types/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   MapPin,
-  Maximize,
   Eye,
   X,
   Compass,
@@ -29,7 +28,7 @@ import {
 
 interface PropertyExplorerProps {
   properties: Property[];
-  onSelectProperty: (id: number) => void;
+  onSelectProperty: (id: string) => void;
   focusProperty?: Property | null;
 }
 
@@ -228,7 +227,7 @@ export const PropertyExplorer: React.FC<PropertyExplorerProps> = ({ properties, 
   }, [focusProperty]);
 
   const resetToPrimary = () => {
-    const xander = properties.find((p) => p.id === 109) || properties[0];
+    const xander = properties.find((p) => p.id === '109') || properties[0];
     if (xander) {
       const lat = xander.lat || 13.948324;
       const lng = xander.lng || 120.722989;
@@ -349,7 +348,66 @@ export const PropertyExplorer: React.FC<PropertyExplorerProps> = ({ properties, 
                   <motion.div key="list" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }} className="flex flex-col flex-1 w-full min-h-0 overflow-hidden">
                     <div className="p-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/20 shrink-0"><div className="flex items-center gap-2"><div className="p-1.5 rounded-xl bg-emerald-50 text-emerald-600"><List className="w-4 h-4"/></div><div><h3 className="font-serif font-black text-xs text-neutral-800 uppercase tracking-wider">Properties List</h3><p className="text-[9px] text-neutral-400 font-medium">Click to navigate on map</p></div></div><div className="flex items-center gap-1.5"><span className="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded-full">{filteredProperties.length}</span><button onClick={() => setIsListExpanded(false)} className="p-1 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors border-none bg-transparent cursor-pointer"><ChevronLeft className="w-4.5 h-4.5"/></button></div></div>
                     <div className="p-3 bg-neutral-50/50 border-b border-neutral-100 space-y-2 shrink-0"><div className="relative"><Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400"/><input type="text" placeholder="Search by name or location..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-white border border-neutral-200 rounded-xl pl-9 pr-8 py-2 text-xs text-neutral-800 placeholder-neutral-400 font-semibold focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none"/>{searchQuery && (<button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-2.5 p-0.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 border-none bg-transparent cursor-pointer"><X className="w-3 h-3"/></button>)}</div><div className="flex gap-1">{(['All','Available','Reserved','Sold'] as const).map((status) => (<button key={status} onClick={() => setStatusFilter(status)} className={`flex-1 py-1 rounded-lg text-[9px] font-extrabold tracking-wider uppercase transition-all cursor-pointer border-none ${statusFilter===status ? 'bg-[#1C3A27] text-white shadow-sm font-black' : 'bg-white hover:bg-neutral-100 text-neutral-600 border border-neutral-150'}`}>{status}</button>))}</div></div>
-                    <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin">{filteredProperties.length===0 ? (<div className="py-10 text-center"><p className="text-xs text-neutral-400 font-medium">No properties match your filters</p></div>) : (filteredProperties.map((property) => (<div key={property.id} onClick={() => handleSelectPropertyFromList(property)} className="p-2.5 rounded-2xl cursor-pointer transition-all flex items-start gap-2.5 border text-left group bg-white/40 border-transparent hover:bg-neutral-50/80 hover:border-neutral-100"><div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-neutral-100 border border-neutral-200/55 relative"><img src={property.images?.[0] || 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=100&q=80'} alt={property.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" referrerPolicy="no-referrer"/><span className={`absolute bottom-0 right-0 block w-2.5 h-2.5 rounded-full border-2 border-white ${property.status==='Available' ? 'bg-emerald-500 animate-pulse' : property.status==='Reserved' ? 'bg-amber-500' : 'bg-rose-500'}`}/></div><div className="flex-1 min-w-0"><div className="flex items-center justify-between gap-1"><h4 className="font-serif font-black text-xs text-neutral-900 truncate leading-tight group-hover:text-[#1C3A27] transition-colors">{property.name}</h4><span className="text-[10px] font-black text-emerald-800 shrink-0">{formatPrice(property.price)}</span></div><p className="text-[9px] text-neutral-400 font-medium truncate mt-0.5">{property.location}</p><div className="flex items-center justify-between mt-1 text-[8px] font-bold text-neutral-500"><span>{property.type} • {(property.lotSize||property.size||0).toLocaleString()} sqm</span><span className={`px-1 py-0.5 rounded uppercase font-black text-[7px] ${property.status==='Available' ? 'bg-emerald-100 text-emerald-800' : property.status==='Reserved' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'}`}>{property.status}</span></div></div></div>))))}</div>
+                    <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin">
+                      {filteredProperties.length === 0 ? (
+                        <div className="py-10 text-center">
+                          <p className="text-xs text-neutral-400 font-medium">No properties match your filters</p>
+                        </div>
+                      ) : (
+                        filteredProperties.map((property) => (
+                          <div
+                            key={property.id}
+                            onClick={() => handleSelectPropertyFromList(property)}
+                            className="p-2.5 rounded-2xl cursor-pointer transition-all flex items-start gap-2.5 border text-left group bg-white/40 border-transparent hover:bg-neutral-50/80 hover:border-neutral-100"
+                          >
+                            <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-neutral-100 border border-neutral-200/55 relative">
+                              <img
+                                src={property.images?.[0] || 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=100&q=80'}
+                                alt={property.name}
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                referrerPolicy="no-referrer"
+                              />
+                              <span
+                                className={`absolute bottom-0 right-0 block w-2.5 h-2.5 rounded-full border-2 border-white ${
+                                  property.status === 'Available'
+                                    ? 'bg-emerald-500 animate-pulse'
+                                    : property.status === 'Reserved'
+                                      ? 'bg-amber-500'
+                                      : 'bg-rose-500'
+                                }`}
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <h4 className="font-serif font-black text-xs text-neutral-900 truncate leading-tight group-hover:text-[#1C3A27] transition-colors">
+                                  {property.name}
+                                </h4>
+                                <span className="text-[10px] font-black text-emerald-800 shrink-0">
+                                  {formatPrice(property.price)}
+                                </span>
+                              </div>
+                              <p className="text-[9px] text-neutral-400 font-medium truncate mt-0.5">
+                                {property.location}
+                              </p>
+                              <div className="flex items-center justify-between mt-1 text-[8px] font-bold text-neutral-500">
+                                <span>{property.type} • {(property.lotSize || property.size || 0).toLocaleString()} sqm</span>
+                                <span
+                                  className={`px-1 py-0.5 rounded uppercase font-black text-[7px] ${
+                                    property.status === 'Available'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : property.status === 'Reserved'
+                                        ? 'bg-amber-100 text-amber-800'
+                                        : 'bg-rose-100 text-rose-800'
+                                  }`}
+                                >
+                                  {property.status}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </motion.div>
                 ) : (
                   <motion.div key="detail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} className="flex flex-col flex-1 w-full min-h-0 overflow-hidden">

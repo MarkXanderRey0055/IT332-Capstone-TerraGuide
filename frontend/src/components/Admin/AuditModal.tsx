@@ -12,8 +12,6 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  Award,
-  Zap,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';

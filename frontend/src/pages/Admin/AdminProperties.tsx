@@ -40,6 +40,7 @@ interface AdminPropertiesProps {
   setProperties: React.Dispatch<React.SetStateAction<Property[]>>;
   onToast?: (message: string) => void;
   isLoading?: boolean;
+  onDataChanged?: () => void;
 }
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
@@ -115,6 +116,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
   setProperties,
   onToast,
   isLoading,
+  onDataChanged,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
@@ -199,6 +201,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
       showToast(`Deleted property listing "${name}"`);
       await refreshProperties();
       await refreshCabinets();
+      onDataChanged?.();
     } catch (error) {
       showToast(
         error instanceof Error
@@ -220,6 +223,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     }
     setIsPropertyModalOpen(false);
     await refreshProperties();
+    onDataChanged?.();
   };
 
   // ---- Filing Cabinet handlers ----

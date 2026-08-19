@@ -29,7 +29,6 @@ import {
   Info,
   Zap,
   Award,
-  TrendingDown,
   MapPin,
 } from 'lucide-react';
 import {
@@ -794,7 +793,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
                           <RiskBadge level={p.riskLevel} />
                         </div>
                         <div className="flex flex-wrap gap-1 mt-1.5">
-                          {p.reasons.map((reason, idx) => (
+                          {p.reasons.map((reason) => (
                             <span key={reason} className="text-[10px] text-[#7c6a57] bg-white/30 px-2 py-0.5 rounded-full">
                               {reason}
                             </span>

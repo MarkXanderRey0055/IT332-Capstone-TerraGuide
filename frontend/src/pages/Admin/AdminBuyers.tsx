@@ -16,6 +16,7 @@ import { ApiError } from '../../utils/api';
 
 interface AdminBuyersProps {
   onToast?: (message: string) => void;
+  onDataChanged?: () => void;
 }
 
 // Same enum values as the backend BuyerPreference schema — keeping the
@@ -59,7 +60,7 @@ const emptyForm: BuyerFormState = {
   minLotSize: '',
 };
 
-export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
+export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast, onDataChanged }) => {
   const [buyers, setBuyers] = useState<AdminBuyerProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -200,6 +201,7 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
 
       closeForm();
       await loadBuyers(searchQuery);
+      onDataChanged?.();
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
     } finally {
@@ -216,6 +218,7 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
       await deleteBuyer(buyer.userId);
       showToast(`Deleted buyer account "${buyer.fullName}".`);
       await loadBuyers(searchQuery);
+      onDataChanged?.();
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not delete this buyer account.');
     }

@@ -9,6 +9,7 @@ import { TransactionDetailModal } from '../../components/Admin/TransactionDetail
 
 interface AdminTransactionsProps {
   onToast?: (message: string) => void;
+  onDataChanged?: () => void;
 }
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
@@ -30,7 +31,7 @@ const getStatusBadge = (status: TransactionStatus) => {
   }
 };
 
-export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast }) => {
+export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, onDataChanged }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,11 +88,13 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast })
   const handleCreated = () => {
     showToast('Transaction created and property reserved.');
     loadAll();
+    onDataChanged?.();
   };
 
   const handleUpdated = () => {
     showToast('Transaction updated.');
     loadAll();
+    onDataChanged?.();
   };
 
   return (

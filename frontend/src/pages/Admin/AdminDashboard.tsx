@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   LayoutDashboard,
   Home,
@@ -78,6 +78,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [salesPerformance, setSalesPerformance] = useState<SalesPerformance | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>([]);
   const [isLoadingDashboardData, setIsLoadingDashboardData] = useState(true);
+  const [activityScrollCueDirection, setActivityScrollCueDirection] = useState<'down' | 'up' | null>(null);
+  const [isActivityCardHovered, setIsActivityCardHovered] = useState(false);
+  const [dashboardRefreshToken, setDashboardRefreshToken] = useState(0);
+  const activityListRef = useRef<HTMLDivElement | null>(null);
 
   const navItems: NavItem[] = NAV_ITEMS;
 
@@ -158,6 +162,44 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     };
   }, []);
 
+  useEffect(() => {
+    const activityList = activityListRef.current;
+    if (!activityList) {
+      setActivityScrollCueDirection(null);
+      return;
+    }
+
+    const updateScrollCue = () => {
+      const hasOverflow = activityList.scrollHeight > activityList.clientHeight + 8;
+      const isAtTop = activityList.scrollTop <= 8;
+      const isAtBottom =
+        activityList.scrollTop + activityList.clientHeight >= activityList.scrollHeight - 8;
+
+      if (!hasOverflow) {
+        setActivityScrollCueDirection(null);
+        return;
+      }
+
+      if (isAtBottom && !isAtTop) {
+        setActivityScrollCueDirection('up');
+        return;
+      }
+
+      setActivityScrollCueDirection('down');
+    };
+
+    updateScrollCue();
+    activityList.addEventListener('scroll', updateScrollCue, { passive: true });
+
+    const resizeObserver = new ResizeObserver(updateScrollCue);
+    resizeObserver.observe(activityList);
+
+    return () => {
+      activityList.removeEventListener('scroll', updateScrollCue);
+      resizeObserver.disconnect();
+    };
+  }, [recentActivity, isLoadingDashboardData]);
+
   const fetchAiUsage = async () => {
     try {
       const status = await getAiUsageStatus();
@@ -179,7 +221,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     getPendingTransactionCount()
       .then(setPendingTransactionCount)
       .catch(() => setPendingTransactionCount(null));
-  }, []);
+  }, [dashboardRefreshToken]);
 
   const handleRefreshAiUsage = async () => {
     setIsLoadingAiUsage(true);
@@ -214,7 +256,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [dashboardRefreshToken]);
+
+  const refreshDashboardCards = () => {
+    setDashboardRefreshToken((current) => current + 1);
+  };
 
   useEffect(() => {
     if (!toast) return;
@@ -523,33 +569,60 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       transactions as they're added.
                     </p>
                   ) : (
-                    <div className="space-y-3 mt-4 max-h-[320px] overflow-y-auto pr-1">
-                      {recentActivity.map((activity, index) => (
-                        <div
-                          key={`${activity.type}-${activity.timestamp}-${index}`}
-                          className={`p-4 rounded-xl border flex items-start gap-3 ${activityStyle(activity.type)}`}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57] shrink-0">
-                                  {activityLabel(activity.type)}
+                    <div
+                      className="relative mt-4"
+                      onMouseEnter={() => setIsActivityCardHovered(true)}
+                      onMouseLeave={() => setIsActivityCardHovered(false)}
+                    >
+                      <div
+                        ref={activityListRef}
+                        className="admin-scrollable-panel space-y-3 max-h-[320px] overflow-y-auto pr-1"
+                      >
+                        {recentActivity.map((activity, index) => (
+                          <div
+                            key={`${activity.type}-${activity.timestamp}-${index}`}
+                            className={`p-4 rounded-xl border flex items-start gap-3 ${activityStyle(activity.type)}`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57] shrink-0">
+                                    {activityLabel(activity.type)}
+                                  </span>
+                                  <p className="text-[#2f2417] text-sm font-semibold truncate">{activity.title}</p>
+                                </div>
+                                <span className="text-[10px] text-[#7c6a57] shrink-0">
+                                  {new Date(activity.timestamp).toLocaleString('en-PH', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: 'numeric',
+                                    minute: '2-digit',
+                                  })}
                                 </span>
-                                <p className="text-[#2f2417] text-sm font-semibold truncate">{activity.title}</p>
                               </div>
-                              <span className="text-[10px] text-[#7c6a57] shrink-0">
-                                {new Date(activity.timestamp).toLocaleString('en-PH', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: 'numeric',
-                                  minute: '2-digit',
-                                })}
-                              </span>
+                              <p className="text-[#6f604d] text-xs mt-1">{activity.description}</p>
                             </div>
-                            <p className="text-[#6f604d] text-xs mt-1">{activity.description}</p>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+
+                      <div
+                        className={`admin-scroll-cue pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 transition-opacity duration-200 ${
+                          activityScrollCueDirection && isActivityCardHovered ? 'opacity-100' : 'opacity-0'
+                        }`}
+                        aria-hidden="true"
+                      >
+                        <span
+                          className={`admin-scroll-cue__mouse ${
+                            activityScrollCueDirection === 'up' ? 'admin-scroll-cue__mouse--up' : ''
+                          }`}
+                        >
+                          <span className="admin-scroll-cue__dot" />
+                        </span>
+                        <span className="admin-scroll-cue__label">
+                          {activityScrollCueDirection === 'up' ? 'Scroll Up' : 'Scroll Down'}
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -562,14 +635,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 setProperties={setProperties}
                 onToast={setToast}
                 isLoading={isLoadingProperties}
+                onDataChanged={refreshDashboardCards}
               />
             )}
 
-            {activeNav === 'buyers' && <AdminBuyers onToast={setToast} />}
+            {activeNav === 'buyers' && <AdminBuyers onToast={setToast} onDataChanged={refreshDashboardCards} />}
 
             {activeNav === 'analytics' && <AdminAnalytics onToast={setToast} />}
 
-            {activeNav === 'transactions' && <AdminTransactions onToast={setToast} />}
+            {activeNav === 'transactions' && <AdminTransactions onToast={setToast} onDataChanged={refreshDashboardCards} />}
 
             {activeNav !== 'dashboard' &&
               activeNav !== 'properties' &&
