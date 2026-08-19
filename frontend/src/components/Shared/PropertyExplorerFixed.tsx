@@ -13,7 +13,6 @@ import type { Property } from '../../types/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   MapPin,
-  Maximize,
   Eye,
   X,
   Compass,

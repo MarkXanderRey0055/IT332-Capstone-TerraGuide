@@ -89,6 +89,84 @@
   background: rgba(199, 211, 192, 0.36);
 }
 
+.admin-scroll-cue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.admin-scrollable-panel {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-scrollable-panel::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.admin-scroll-cue__mouse {
+  width: 2.5rem;
+  height: 4.5rem;
+  border: 3px solid rgba(122, 122, 124, 0.88);
+  border-radius: 999px;
+  display: flex;
+  margin: 0 auto;
+  background: linear-gradient(180deg, rgba(247, 244, 237, 0.82), rgba(216, 225, 210, 0.72));
+  box-shadow:
+    0 10px 16px rgba(92, 108, 88, 0.14),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.admin-scroll-cue__dot {
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  margin: auto;
+  border-radius: 999px;
+  background: linear-gradient(170deg, rgba(122, 122, 124, 0.92), rgb(123, 124, 124));
+  animation: admin-scroll-cue 1s linear infinite;
+}
+
+.admin-scroll-cue__mouse--up .admin-scroll-cue__dot {
+  animation-name: admin-scroll-cue-up;
+}
+
+.admin-scroll-cue__label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #7c6a57;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+@keyframes admin-scroll-cue {
+  0% {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(18px);
+  }
+}
+
+@keyframes admin-scroll-cue-up {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(-18px);
+  }
+}
+
 /* Optional: Ensures the map container takes up full space allocated to it */
 .leaflet-container {
   width: 100%;
