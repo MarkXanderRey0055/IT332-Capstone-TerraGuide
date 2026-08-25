@@ -50,6 +50,11 @@ import {
   type PortfolioInsightsResult,
   type RiskLevel,
 } from '../../services/AnalyticsService';
+import {
+  exportDataset,
+  type ExportDataset,
+  type ExportFormat,
+} from '../../services/ExportService';
 
 ChartJS.register(
   CategoryScale,
@@ -212,6 +217,8 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
   const [insightsResult, setInsightsResult] = useState<PortfolioInsightsResult | null>(null);
   const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
   const [insightsError, setInsightsError] = useState('');
+  const [isExportingReport, setIsExportingReport] = useState(false);
+  const [reportFormat, setReportFormat] = useState<ExportFormat>('pdf');
 
   // Collapsible sections
   const [expandedSections, setExpandedSections] = useState({
@@ -294,6 +301,20 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
       );
     } finally {
       setIsGeneratingInsights(false);
+    }
+  };
+
+  const handleExportReport = async () => {
+    setIsExportingReport(true);
+    try {
+      await exportDataset('analytics' as ExportDataset, reportFormat);
+      onToast?.(`Analytics report downloaded as ${reportFormat.toUpperCase()}.`);
+    } catch (error) {
+      onToast?.(
+        error instanceof Error ? error.message : 'Could not export the analytics report.'
+      );
+    } finally {
+      setIsExportingReport(false);
     }
   };
 
@@ -488,9 +509,38 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
           <span className="text-xs font-semibold text-[#2f4736]">Quick Actions:</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button className="text-xs px-3 py-1.5 rounded-lg bg-white/70 hover:bg-white transition-all shadow-sm flex items-center gap-1.5">
+          <div className="inline-flex rounded-lg overflow-hidden border border-white/50 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setReportFormat('pdf')}
+              className={`text-xs px-3 py-1.5 transition-all ${
+                reportFormat === 'pdf'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-white/70 text-[#2f2417] hover:bg-white'
+              }`}
+            >
+              PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => setReportFormat('csv')}
+              className={`text-xs px-3 py-1.5 transition-all ${
+                reportFormat === 'csv'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-white/70 text-[#2f2417] hover:bg-white'
+              }`}
+            >
+              CSV
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleExportReport}
+            disabled={isExportingReport}
+            className="text-xs px-3 py-1.5 rounded-lg bg-white/70 hover:bg-white transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
             <Download className="w-3 h-3" />
-            Export Report
+            {isExportingReport ? 'Preparing Report...' : 'Export Report'}
           </button>
           <button className="text-xs px-3 py-1.5 rounded-lg bg-white/70 hover:bg-white transition-all shadow-sm flex items-center gap-1.5">
             <Calendar className="w-3 h-3" />

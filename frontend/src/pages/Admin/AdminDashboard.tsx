@@ -30,6 +30,7 @@ import { AdminTransactions } from './AdminTransactions';
 import { AdminProperties } from './AdminProperties';
 import { AdminBuyers } from './AdminBuyers';
 import { AdminAnalytics } from './AdminAnalytics';
+import { AdminSettings } from './AdminSettings';
 import type { Property } from '../../types/types';
 
 type NavItem = {
@@ -645,11 +646,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
             {activeNav === 'transactions' && <AdminTransactions onToast={setToast} onDataChanged={refreshDashboardCards} />}
 
+            {activeNav === 'settings' && <AdminSettings onToast={setToast} />}
+
             {activeNav !== 'dashboard' &&
               activeNav !== 'properties' &&
               activeNav !== 'buyers' &&
               activeNav !== 'analytics' &&
-              activeNav !== 'transactions' && (
+              activeNav !== 'transactions' &&
+              activeNav !== 'settings' && (
               <div className="admin-panel rounded-2xl p-8 text-center">
                 <div className="admin-button w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   {navItems.find((item) => item.id === activeNav)?.icon}
