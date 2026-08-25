@@ -13,6 +13,7 @@ import adminBuyerRoutes from './routes/adminBuyerRoutes.js';
 import cabinetRoutes from './routes/cabinetRoutes.js';
 import aiUsageRoutes from './routes/aiUsageRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
+import exportRoutes from './routes/exportRoutes.js';
 
 dotenv.config();
 
@@ -50,6 +51,7 @@ app.use('/api/admin/buyers', adminBuyerRoutes);
 app.use('/api/cabinets', cabinetRoutes);
 app.use('/api/ai', aiUsageRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/export', exportRoutes);
 
 // Fallback for unhandled routes
 app.all('*', (req, res, next) => {
