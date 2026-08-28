@@ -61,7 +61,11 @@ const MapUpdater: React.FC<{ focusProperty?: Property | null; focusZoom: number 
   return null;
 };
 
-const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+const hasValidCoords = (lat: number, lng: number) =>
+  typeof lat === 'number' && typeof lng === 'number' && isFinite(lat) && isFinite(lng);
+
+const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number | null => {
+  if (!hasValidCoords(lat1, lon1) || !hasValidCoords(lat2, lon2)) return null;
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -72,7 +76,8 @@ const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lo
       Math.sin(dLon / 2) *
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  const result = R * c;
+  return isFinite(result) ? result : null;
 };
 
 const getCustomIcon = (property: Property, isFocused: boolean) => {
@@ -153,6 +158,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
   const [startName, setStartName] = useState<string>('WalterMart Balayan');
   const [startOption, setStartOption] = useState<string>('waltermart');
   const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [gpsError, setGpsError] = useState<string>('');
   const [isPickingLocation, setIsPickingLocation] = useState<boolean>(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState<boolean>(false);
   const [hasPromptedLocation, setHasPromptedLocation] = useState<boolean>(false);
@@ -163,7 +169,9 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
 
   useEffect(() => {
     if (focusProperty) {
-      setSelectedMapProperty(focusProperty);
+      setSelectedMapProperty((prev) =>
+        prev?.id === focusProperty.id ? prev : focusProperty
+      );
     } else {
       setSelectedMapProperty(null);
     }
@@ -176,26 +184,23 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
   }, [selectedMapProperty, hasPromptedLocation, startOption]);
 
   let distanceText = '';
-  if (selectedMapProperty) {
-    const d = calculateHaversineDistance(
-      startLat,
-      startLng,
-      selectedMapProperty.lat,
-      selectedMapProperty.lng,
-    );
-    if (d < 1) {
-      distanceText = `${Math.round(d * 1000)}m (Est. ${Math.round((d / 30) * 60) || 1} min drive)`;
-    } else {
-      distanceText = `${d.toFixed(2)} km (Est. ${Math.round((d / 30) * 60)} mins drive)`;
+  if (selectedMapProperty && hasValidCoords(selectedMapProperty.lat, selectedMapProperty.lng)) {
+    const d = calculateHaversineDistance(startLat, startLng, selectedMapProperty.lat, selectedMapProperty.lng);
+    if (d !== null) {
+      distanceText = d < 1
+        ? `${Math.round(d * 1000)}m (Est. ${Math.round((d / 30) * 60) || 1} min drive)`
+        : `${d.toFixed(2)} km (Est. ${Math.round((d / 30) * 60)} mins drive)`;
     }
   }
 
   const handleLocateMe = () => {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
+      setGpsError('Geolocation is not supported by your browser.');
+      setStartOption('waltermart');
       return;
     }
     setIsLocating(true);
+    setGpsError('');
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -207,10 +212,17 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
       },
       (error) => {
         console.error('GPS error:', error);
-        alert('Unable to fetch your GPS coordinates. Using default start location instead.');
+        const msg =
+          error.code === error.PERMISSION_DENIED
+            ? 'Location access was denied. Please allow it in your browser settings.'
+            : error.code === error.TIMEOUT
+            ? 'Location request timed out. Try again or select a preset.'
+            : 'Unable to get your location. Using default starting point.';
+        setGpsError(msg);
+        setStartOption('waltermart');
         setIsLocating(false);
       },
-      { enableHighAccuracy: true, timeout: 5000 },
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   };
 
@@ -363,7 +375,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
             />
           )}
 
-          {properties.map((property) => {
+          {properties.filter((p) => hasValidCoords(p.lat, p.lng)).map((property) => {
             const isFocused = selectedMapProperty?.id === property.id;
             return (
               <Marker
@@ -452,6 +464,12 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
                 </span>
               )}
             </div>
+
+            {gpsError && (
+              <p className="text-[10px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5 leading-snug">
+                {gpsError}
+              </p>
+            )}
 
             <div className="space-y-1.5">
               <label className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block">
