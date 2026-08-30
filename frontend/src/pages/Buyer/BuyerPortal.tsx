@@ -15,7 +15,7 @@ import {
 import type { BuyerPreferences, Property } from '../../types/types';
 import { WelcomeModal } from '../../components/Buyer/WelcomeModal';
 import { BuyerMarketIntelligence } from '../../components/Buyer/BuyerMarketIntelligence';
-import PropertyExplorer from '../../components/Shared/PropertyExplorerFixed';
+import PropertyExplorer from '../../components/Shared/PropertyExplorer';
 import { PropertyDetails } from '../../components/Buyer/PropertyDetails';
 import { BuyerSearch, BuyerSuggestions, BuyerPreferencesView } from './BuyerPages';
 import {
