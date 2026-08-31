@@ -77,99 +77,208 @@ function toCSV(columns, rows) {
   return '\uFEFF' + [headerLine, ...lines].join('\r\n') + '\r\n';
 }
 
-//pdf implementation 
+// ── PDF layout constants ──────────────────────────────────────────────
 const PDF_MARGIN = 40;
-const PDF_PAGE_SIZE = 'A4';
+const HEADER_HEIGHT = 24; // minimum row height for table header
+const MIN_ROW_HEIGHT = 20; // minimum row height for data rows
+const CELL_PAD_V = 6;     // top/bottom padding inside each cell
+const CELL_PAD_H = 5;     // left/right padding inside each cell
+const FONT_SIZE = 8.5;
+const SECTION_BAND_H = 18; // height of section-divider bands in analytics
 
 /**
- * Renders a paginated table report into a PDFDocument, streamed to `res`.
- * Monetary columns (marked `money: true`) are peso-formatted; everything
- * else is printed as-is.
+ * Resolves column pixel widths from the widthPct array on column defs.
+ * Falls back to equal distribution when widthPct is absent.
+ * widthPct values must sum to 1.0; if they don't, they're normalised.
  */
-function buildPDF({ title, columns, rows, res, filename }) {
-  const doc = new PDFDocument({ size: PDF_PAGE_SIZE, margin: PDF_MARGIN, bufferPages: true });
+function resolveColWidths(columns, pageWidth) {
+  const hasPct = columns.every((c) => typeof c.widthPct === 'number');
+  if (!hasPct) {
+    const w = pageWidth / columns.length;
+    return columns.map(() => w);
+  }
+  const total = columns.reduce((s, c) => s + c.widthPct, 0);
+  return columns.map((c) => (c.widthPct / total) * pageWidth);
+}
+
+/**
+ * Measures how tall a row needs to be so every cell's text fits without
+ * overflowing into an adjacent row.
+ */
+function measureRowHeight(doc, columns, colWidths, row) {
+  doc.font('Helvetica').fontSize(FONT_SIZE);
+  let maxH = MIN_ROW_HEIGHT;
+  columns.forEach((col, i) => {
+    const raw = row[col.key];
+    const text = col.money
+      ? formatPeso(raw)
+      : raw === null || raw === undefined
+      ? ''
+      : String(raw);
+    if (!text) return;
+    const cellW = colWidths[i] - CELL_PAD_H * 2;
+    const h = doc.heightOfString(text, { width: cellW }) + CELL_PAD_V * 2;
+    if (h > maxH) maxH = h;
+  });
+  return maxH;
+}
+
+/**
+ * Builds a professional paginated PDF report.
+ * - Column widths come from per-column widthPct (proportional, not equal).
+ * - Row heights expand to fit wrapped text — no clipping, no overlap.
+ * - Analytics report gets section-divider bands between groups.
+ * - Properties report uses landscape A4 orientation for its wide schema.
+ * - Table headers repeat on every new page.
+ * - Page numbers added as a final pass.
+ */
+function buildPDF({ title, columns, rows, res, filename, landscape = false }) {
+  const pageSize = landscape ? [841.89, 595.28] : 'A4'; // A4 landscape vs portrait
+  const doc = new PDFDocument({ size: pageSize, margin: PDF_MARGIN, bufferPages: true });
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   doc.pipe(res);
 
-  const pageWidth = doc.page.width - PDF_MARGIN * 2;
-  const colWidth = pageWidth / columns.length;
-  const rowHeight = 20;
+  const pageWidth  = doc.page.width  - PDF_MARGIN * 2;
+  const pageHeight = doc.page.height;
+  const colWidths  = resolveColWidths(columns, pageWidth);
 
-  function drawHeader() {
-    doc.fontSize(18).font('Helvetica-Bold').fillColor('#1f2937').text('TerraGuide', PDF_MARGIN, PDF_MARGIN);
-    doc
-      .fontSize(12)
-      .font('Helvetica')
-      .fillColor('#374151')
-      .text(title, PDF_MARGIN, PDF_MARGIN + 22);
-    doc
-      .fontSize(9)
-      .fillColor('#6b7280')
-      .text(`Generated: ${formatDateReadable(new Date())}`, PDF_MARGIN, PDF_MARGIN + 40);
+  // Resolved x-origin for each column
+  const colX = colWidths.reduce((acc, w, i) => {
+    acc.push(i === 0 ? PDF_MARGIN : acc[i - 1] + colWidths[i - 1]);
+    return acc;
+  }, []);
 
-    const tableTop = PDF_MARGIN + 62;
-    drawTableHeaderRow(tableTop);
-    return tableTop + rowHeight;
+  const bottomLimit = pageHeight - PDF_MARGIN - 24; // leave room for page number
+
+  // ── Report header (title block, drawn once on page 1) ────────────────
+  function drawReportHeader() {
+    const y0 = PDF_MARGIN;
+
+    doc.fontSize(20).font('Helvetica-Bold').fillColor('#0f766e')
+       .text('TerraGuide', PDF_MARGIN, y0, { lineBreak: false });
+
+    doc.fontSize(11).font('Helvetica').fillColor('#374151')
+       .text(title, PDF_MARGIN, y0 + 26);
+
+    doc.fontSize(8.5).fillColor('#6b7280')
+       .text(`Generated: ${formatDateReadable(new Date())}`, PDF_MARGIN, y0 + 43);
+
+    // Dividing rule between header and table
+    const ruleY = y0 + 60;
+    doc.moveTo(PDF_MARGIN, ruleY).lineTo(PDF_MARGIN + pageWidth, ruleY)
+       .strokeColor('#d1fae5').lineWidth(1).stroke();
+
+    return ruleY + 8; // top of first table header
   }
 
+  // ── Table column-header row ──────────────────────────────────────────
   function drawTableHeaderRow(y) {
-    doc.font('Helvetica-Bold').fontSize(8).fillColor('#ffffff');
-    doc.rect(PDF_MARGIN, y, pageWidth, rowHeight).fill('#0f766e');
-    doc.fillColor('#ffffff');
+    doc.rect(PDF_MARGIN, y, pageWidth, HEADER_HEIGHT).fill('#0f766e');
+    doc.font('Helvetica-Bold').fontSize(FONT_SIZE).fillColor('#ffffff');
     columns.forEach((col, i) => {
-      doc.text(col.header, PDF_MARGIN + i * colWidth + 4, y + 6, {
-        width: colWidth - 8,
-        ellipsis: true,
-      });
+      doc.text(
+        col.pdfHeader || col.header,
+        colX[i] + CELL_PAD_H,
+        y + CELL_PAD_V,
+        { width: colWidths[i] - CELL_PAD_H * 2, lineBreak: false }
+      );
     });
+    return y + HEADER_HEIGHT;
   }
 
-  let y = drawHeader();
-  const bottomLimit = doc.page.height - PDF_MARGIN - 20;
+  // ── Section-divider band (analytics only) ────────────────────────────
+  function drawSectionBand(y, label) {
+    doc.rect(PDF_MARGIN, y, pageWidth, SECTION_BAND_H).fill('#1f2937');
+    doc.font('Helvetica-Bold').fontSize(8).fillColor('#d1fae5')
+       .text(label.toUpperCase(), PDF_MARGIN + CELL_PAD_H, y + 5,
+             { width: pageWidth - CELL_PAD_H * 2, lineBreak: false });
+    return y + SECTION_BAND_H;
+  }
 
-  rows.forEach((row, rowIndex) => {
-    if (y + rowHeight > bottomLimit) {
-      doc.addPage();
-      y = PDF_MARGIN;
-      drawTableHeaderRow(y);
-      y += rowHeight;
+  // ── Render a single data row ─────────────────────────────────────────
+  function drawDataRow(y, row, rowHeight, isEven) {
+    if (isEven) {
+      doc.rect(PDF_MARGIN, y, pageWidth, rowHeight).fill('#f8faf9');
+    } else {
+      doc.rect(PDF_MARGIN, y, pageWidth, rowHeight).fill('#ffffff');
     }
 
-    if (rowIndex % 2 === 0) {
-      doc.rect(PDF_MARGIN, y, pageWidth, rowHeight).fill('#f3f4f6');
-    }
+    // Subtle row border
+    doc.rect(PDF_MARGIN, y, pageWidth, rowHeight)
+       .strokeColor('#e5e7eb').lineWidth(0.3).stroke();
 
-    doc.font('Helvetica').fontSize(8).fillColor('#111827');
+    doc.font('Helvetica').fontSize(FONT_SIZE).fillColor('#111827');
     columns.forEach((col, i) => {
       const raw = row[col.key];
-      const text = col.money ? formatPeso(raw) : raw === null || raw === undefined ? '' : String(raw);
-      doc.text(text, PDF_MARGIN + i * colWidth + 4, y + 6, {
-        width: colWidth - 8,
-        ellipsis: true,
-      });
+      const text = col.money
+        ? formatPeso(raw)
+        : raw === null || raw === undefined
+        ? ''
+        : String(raw);
+      doc.text(
+        text,
+        colX[i] + CELL_PAD_H,
+        y + CELL_PAD_V,
+        { width: colWidths[i] - CELL_PAD_H * 2, align: col.align || 'left' }
+      );
     });
+  }
 
-    y += rowHeight;
+  // ── Main render loop ─────────────────────────────────────────────────
+  let y = drawReportHeader();
+  y = drawTableHeaderRow(y);
+
+  const isAnalytics = columns.some((c) => c.key === 'section');
+  let lastSection = null;
+  let evenRow = false; // tracks alternating stripe independent of index
+
+  rows.forEach((row) => {
+    // Section-divider bands for analytics report
+    if (isAnalytics && row.section !== lastSection) {
+      const bandH = SECTION_BAND_H + 2;
+      if (y + bandH > bottomLimit) {
+        doc.addPage();
+        y = PDF_MARGIN;
+        y = drawTableHeaderRow(y);
+      }
+      y = drawSectionBand(y, row.section);
+      lastSection = row.section;
+      evenRow = false; // reset stripe on new section
+    }
+
+    const rowH = measureRowHeight(doc, columns, colWidths, row);
+
+    // Page break — ensure the full row fits, then repeat the header
+    if (y + rowH > bottomLimit) {
+      doc.addPage();
+      y = PDF_MARGIN;
+      y = drawTableHeaderRow(y);
+      evenRow = false;
+    }
+
+    drawDataRow(y, row, rowH, evenRow);
+    y += rowH;
+    evenRow = !evenRow;
   });
 
   if (rows.length === 0) {
-    doc.font('Helvetica-Oblique').fontSize(10).fillColor('#6b7280').text('No records found.', PDF_MARGIN, y + 10);
+    doc.font('Helvetica-Oblique').fontSize(10).fillColor('#6b7280')
+       .text('No records found.', PDF_MARGIN, y + 12);
   }
 
-  // Page numbers, added after content flows so we know the final page count.
+  // ── Page numbers (final pass) ────────────────────────────────────────
   const pageRange = doc.bufferedPageRange();
   for (let i = 0; i < pageRange.count; i++) {
     doc.switchToPage(pageRange.start + i);
-    doc
-      .font('Helvetica')
-      .fontSize(8)
-      .fillColor('#9ca3af')
-      .text(`Page ${i + 1} of ${pageRange.count}`, PDF_MARGIN, doc.page.height - PDF_MARGIN, {
-        width: pageWidth,
-        align: 'center',
-      });
+    doc.font('Helvetica').fontSize(8).fillColor('#9ca3af')
+       .text(
+         `Page ${i + 1} of ${pageRange.count}`,
+         PDF_MARGIN,
+         pageHeight - PDF_MARGIN + 8,
+         { width: pageWidth, align: 'center' }
+       );
   }
 
   doc.end();
@@ -423,55 +532,55 @@ async function buildAnalyticsRows() {
 /* ------------------------------------------------------------------ */
 
 const PROPERTY_COLUMNS = [
-  { header: 'Property Name', key: 'name' },
-  { header: 'Owner', key: 'owner' },
-  { header: 'Location', key: 'location' },
-  { header: 'Type', key: 'type' },
-  { header: 'Price', key: 'price', money: true },
-  { header: 'Lot Size (sqm)', key: 'lotSize' },
-  { header: 'Price per Sqm', key: 'pricePerSqm', money: true },
-  { header: 'Status', key: 'status' },
-  { header: 'Cabinet', key: 'cabinet' },
-  { header: 'Latitude', key: 'lat' },
-  { header: 'Longitude', key: 'lng' },
-  { header: 'Deed Status', key: 'deedStatus' },
-  { header: 'Tax Status', key: 'taxStatus' },
-  { header: 'Survey Status', key: 'surveyStatus' },
-  { header: 'Created Date', key: 'createdAt' },
-  { header: 'Updated Date', key: 'updatedAt' },
+  { header: 'Property Name',  pdfHeader: 'Property Name', key: 'name',        widthPct: 0.13 },
+  { header: 'Owner',          pdfHeader: 'Owner',         key: 'owner',        widthPct: 0.09 },
+  { header: 'Location',       pdfHeader: 'Location',      key: 'location',     widthPct: 0.12 },
+  { header: 'Type',           pdfHeader: 'Type',          key: 'type',         widthPct: 0.08 },
+  { header: 'Price',          pdfHeader: 'Price',         key: 'price',        widthPct: 0.08, money: true, align: 'right' },
+  { header: 'Lot Size (sqm)', pdfHeader: 'Lot (sqm)',     key: 'lotSize',      widthPct: 0.06 },
+  { header: 'Price per Sqm',  pdfHeader: 'Price/Sqm',     key: 'pricePerSqm',  widthPct: 0.07, money: true, align: 'right' },
+  { header: 'Status',         pdfHeader: 'Status',        key: 'status',       widthPct: 0.06 },
+  { header: 'Cabinet',        pdfHeader: 'Cabinet',       key: 'cabinet',      widthPct: 0.07 },
+  { header: 'Latitude',       pdfHeader: 'Lat',           key: 'lat',          widthPct: 0.05 },
+  { header: 'Longitude',      pdfHeader: 'Lng',           key: 'lng',          widthPct: 0.05 },
+  { header: 'Deed Status',    pdfHeader: 'Deed',          key: 'deedStatus',   widthPct: 0.04 },
+  { header: 'Tax Status',     pdfHeader: 'Tax',           key: 'taxStatus',    widthPct: 0.04 },
+  { header: 'Survey Status',  pdfHeader: 'Survey',        key: 'surveyStatus', widthPct: 0.04 },
+  { header: 'Created Date',   pdfHeader: 'Created',       key: 'createdAt',    widthPct: 0.07 },
+  { header: 'Updated Date',   pdfHeader: 'Updated',       key: 'updatedAt',    widthPct: 0.05 },
 ];
 
 const BUYER_COLUMNS = [
-  { header: 'Full Name', key: 'fullName' },
-  { header: 'Username', key: 'username' },
-  { header: 'Email', key: 'email' },
-  { header: 'Address', key: 'address' },
-  { header: 'Registered Date', key: 'registeredAt' },
-  { header: 'Budget Min', key: 'budgetMin', money: true },
-  { header: 'Budget Max', key: 'budgetMax', money: true },
-  { header: 'Land Type', key: 'landType' },
-  { header: 'Intended Use', key: 'intendedUse' },
-  { header: 'Preferred Location', key: 'preferredLocation' },
-  { header: 'Min Lot Size (sqm)', key: 'minLotSize' },
+  { header: 'Full Name',          pdfHeader: 'Full Name',      key: 'fullName',          widthPct: 0.13 },
+  { header: 'Username',           pdfHeader: 'Username',       key: 'username',          widthPct: 0.10 },
+  { header: 'Email',              pdfHeader: 'Email',          key: 'email',             widthPct: 0.17 },
+  { header: 'Address',            pdfHeader: 'Address',        key: 'address',           widthPct: 0.13 },
+  { header: 'Registered Date',    pdfHeader: 'Registered',     key: 'registeredAt',      widthPct: 0.10 },
+  { header: 'Budget Min',         pdfHeader: 'Budget Min',     key: 'budgetMin',         widthPct: 0.09, money: true, align: 'right' },
+  { header: 'Budget Max',         pdfHeader: 'Budget Max',     key: 'budgetMax',         widthPct: 0.09, money: true, align: 'right' },
+  { header: 'Land Type',          pdfHeader: 'Land Type',      key: 'landType',          widthPct: 0.07 },
+  { header: 'Intended Use',       pdfHeader: 'Intended Use',   key: 'intendedUse',       widthPct: 0.07 },
+  { header: 'Preferred Location', pdfHeader: 'Pref. Location', key: 'preferredLocation', widthPct: 0.09 },
+  { header: 'Min Lot Size (sqm)', pdfHeader: 'Min Lot (sqm)',  key: 'minLotSize',        widthPct: 0.06 },
 ];
 
 const TRANSACTION_COLUMNS = [
-  { header: 'Reference', key: 'reference' },
-  { header: 'Buyer', key: 'buyer' },
-  { header: 'Property', key: 'property' },
-  { header: 'Amount', key: 'amount', money: true },
-  { header: 'Status', key: 'status' },
-  { header: 'Notes', key: 'notes' },
-  { header: 'Created By', key: 'createdBy' },
-  { header: 'Created Date', key: 'createdAt' },
-  { header: 'Completed Date', key: 'completedAt' },
+  { header: 'Reference',      key: 'reference',  widthPct: 0.10 },
+  { header: 'Buyer',          key: 'buyer',       widthPct: 0.14 },
+  { header: 'Property',       key: 'property',    widthPct: 0.18 },
+  { header: 'Amount',         key: 'amount',      widthPct: 0.10, money: true, align: 'right' },
+  { header: 'Status',         key: 'status',      widthPct: 0.08 },
+  { header: 'Notes',          key: 'notes',       widthPct: 0.18 },
+  { header: 'Created By',     key: 'createdBy',   widthPct: 0.09 },
+  { header: 'Created Date',   key: 'createdAt',   widthPct: 0.08 },
+  { header: 'Completed Date', key: 'completedAt', widthPct: 0.05 },
 ];
 
 const ANALYTICS_COLUMNS = [
-  { header: 'Section', key: 'section' },
-  { header: 'Metric', key: 'metric' },
-  { header: 'Value', key: 'value' },
-  { header: 'Details', key: 'details' },
+  { header: 'Section',  key: 'section', widthPct: 0.18 },
+  { header: 'Metric',   key: 'metric',  widthPct: 0.28 },
+  { header: 'Value',    key: 'value',   widthPct: 0.14, align: 'right' },
+  { header: 'Details',  key: 'details', widthPct: 0.40 },
 ];
 
 const DATASETS = {
@@ -480,6 +589,7 @@ const DATASETS = {
     columns: PROPERTY_COLUMNS,
     buildRows: buildPropertyRows,
     pdfTitle: 'Property Listings Report',
+    landscape: true,
   },
   buyers: {
     label: 'Buyers',
@@ -539,6 +649,7 @@ export const exportDatasetPDF = async (datasetKey, res) => {
     rows,
     res,
     filename,
+    landscape: dataset.landscape ?? false,
   });
 };
 
