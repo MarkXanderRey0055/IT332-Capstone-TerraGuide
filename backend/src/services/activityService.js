@@ -1,6 +1,8 @@
 import Property from '../models/Property.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
+import Inquiry from '../models/Inquiry.js';
+import SiteVisit from '../models/SiteVisit.js';
 
 const STATUS_CHANGE_GRACE_MS = 2000;
 
@@ -37,7 +39,7 @@ function classifyTransactionEvent(transaction) {
 }
 
 export async function getRecentActivity(limit = 8) {
-  const [recentProperties, recentBuyers, recentTransactions] = await Promise.all([
+  const [recentProperties, recentBuyers, recentTransactions, recentInquiries, recentSiteVisits] = await Promise.all([
     Property.find().sort({ createdAt: -1 }).limit(limit).select('name createdAt'),
     User.find({ role: 'buyer' }).sort({ createdAt: -1 }).limit(limit).select('username createdAt'),
     Transaction.find()
@@ -45,6 +47,18 @@ export async function getRecentActivity(limit = 8) {
       .limit(limit)
       .populate('propertyId', 'name')
       .select('status createdAt updatedAt completedAt propertyId'),
+    Inquiry.find()
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate('buyerId', 'fullName username')
+      .populate('propertyId', 'name')
+      .select('buyerId propertyId createdAt'),
+    SiteVisit.find()
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate('buyerId', 'fullName username')
+      .populate('propertyId', 'name')
+      .select('buyerId propertyId createdAt'),
   ]);
 
   const events = [
@@ -61,6 +75,26 @@ export async function getRecentActivity(limit = 8) {
       timestamp: b.createdAt,
     })),
     ...recentTransactions.map(classifyTransactionEvent),
+    ...recentInquiries.map((inq) => {
+      const buyerName = inq.buyerId?.fullName || inq.buyerId?.username || 'A buyer';
+      const propertyName = inq.propertyId?.name || 'a property';
+      return {
+        type: 'inquiry_created',
+        title: 'New property inquiry',
+        description: `${buyerName} sent an inquiry about ${propertyName}.`,
+        timestamp: inq.createdAt,
+      };
+    }),
+    ...recentSiteVisits.map((visit) => {
+      const buyerName = visit.buyerId?.fullName || visit.buyerId?.username || 'A buyer';
+      const propertyName = visit.propertyId?.name || 'a property';
+      return {
+        type: 'site_visit_created',
+        title: 'New site visit request',
+        description: `${buyerName} requested a site visit for ${propertyName}.`,
+        timestamp: visit.createdAt,
+      };
+    }),
   ];
 
   events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());

@@ -15,7 +15,7 @@ import {
 import type { BuyerPreferences, Property } from '../../types/types';
 import { WelcomeModal } from '../../components/Buyer/WelcomeModal';
 import { BuyerMarketIntelligence } from '../../components/Buyer/BuyerMarketIntelligence';
-import PropertyExplorer from '../../components/Shared/PropertyExplorerFixed';
+import PropertyExplorer from '../../components/Shared/PropertyExplorer';
 import { PropertyDetails } from '../../components/Buyer/PropertyDetails';
 import { BuyerSearch, BuyerSuggestions, BuyerPreferencesView } from './BuyerPages';
 import {
@@ -24,17 +24,12 @@ import {
   saveBuyerPreferences,
 } from '../../services/buyerPrefs';
 import { getProperties } from '../../services/PropertyService';
-import {
-  addInquiry,
-  addSiteVisitRequest,
-  getInquiriesForBuyer,
-  getSiteVisitsForBuyer,
-  INQUIRIES_STORAGE_KEY,
-  SITE_VISITS_STORAGE_KEY,
-} from '../../services/buyerActivityStorage';
 import { notifyInquiry, notifySiteVisitRequest } from '../../services/notificationStorage';
 import { getCurrentUser } from '../../services/AuthService';
-import type { BuyerInquiry, SiteVisitRequest } from '../../types/types';
+import { submitInquiry, getMyInquiries } from '../../services/InquiryService';
+import type { Inquiry } from '../../services/InquiryService';
+import { submitSiteVisit, getMySiteVisits } from '../../services/SiteVisitService';
+import type { SiteVisit } from '../../services/SiteVisitService';
 import { COLORS } from '../../styles/buyerTheme';
 
 export { COLORS };
@@ -104,12 +99,12 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     >
       {variant === 'featured' && (
         <div className="absolute top-3 left-3 z-10 bg-[#285A48] text-[#FFFFFF] px-3 py-1 rounded-full text-[10px] font-bold shadow-md">
-          ★ Featured
+          Featured
         </div>
       )}
       {isSuggested && (
         <div className="absolute top-3 left-3 z-10 bg-[#408A71] text-[#FFFFFF] px-3 py-1 rounded-full text-[10px] font-bold shadow-md">
-          ✨ Suggested
+          Suggested
         </div>
       )}
 
@@ -136,13 +131,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             {property.title ?? property.name}
           </h3>
           <p className={`text-xs ${style.location} mt-0.5 flex items-center gap-1`}>
-            📍 {property.location}
+            {property.location}
           </p>
         </div>
 
         <div className={`mt-4 pt-3 border-t border-[rgba(40,90,72,0.1)] flex items-center justify-between ${variant === 'list' ? 'flex-wrap gap-2' : ''}`}>
           <span className={`${style.size} font-medium`}>
-            📐 {property.size?.toLocaleString()} sqm
+            {property.size?.toLocaleString()} sqm
           </span>
           <span className={`${style.price}`}>
             ₱{property.price.toLocaleString()}
@@ -200,10 +195,10 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       <div className="w-16 h-16 bg-[#0D1F1A] rounded-2xl flex items-center justify-center mb-4 border border-[rgba(40,90,72,0.15)] shadow-md">
         <Icon className="w-8 h-8 text-[#6A9F8A]" strokeWidth={1.5} />
       </div>
-      <h3 className="text-lg font-serif text-[#FFFFFF] font-semibold">
+      <h3 className="text-lg font-serif text-[#1A2D24] font-semibold">
         {title || defaults.title}
       </h3>
-      <p className="text-xs text-[#6A9F8A] mt-2 max-w-sm">
+      <p className="text-xs text-[#5C7A6E] mt-2 max-w-sm">
         {message || defaults.message}
       </p>
       {actionLabel && onAction && (
@@ -575,7 +570,9 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchLocation, setSearchLocation] = useState('');
   const [searchType, setSearchType] = useState('');
-  const [searchMaxPrice, setSearchMaxPrice] = useState<number>(5000000);
+  const [searchMinPrice, setSearchMinPrice] = useState<number | ''>('');
+  const [searchMaxPrice, setSearchMaxPrice] = useState<number | ''>('');
+  const [searchMinLotSize, setSearchMinLotSize] = useState<number | ''>('');
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [buyerName, setBuyerName] = useState('Valued Buyer');
   const [buyerUserId, setBuyerUserId] = useState('');
@@ -589,8 +586,8 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [visitPreferredDate, setVisitPreferredDate] = useState('');
   const [visitNotes, setVisitNotes] = useState('');
   const [inquiryMessage, setInquiryMessage] = useState('');
-  const [buyerInquiries, setBuyerInquiries] = useState<BuyerInquiry[]>([]);
-  const [buyerSiteVisits, setBuyerSiteVisits] = useState<SiteVisitRequest[]>([]);
+  const [buyerInquiries, setBuyerInquiries] = useState<Inquiry[]>([]);
+  const [buyerSiteVisits, setBuyerSiteVisits] = useState<SiteVisit[]>([]);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -631,48 +628,49 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     setIsInquiryModalOpen(true);
   };
 
-  const handleSubmitSiteVisit = () => {
+  const handleSubmitSiteVisit = async () => {
     if (!selectedProperty || !visitPreferredDate) return;
 
-    const buyer = buyerUserId || buyerName || 'guest';
-    const propertyName = selectedProperty.title ?? selectedProperty.name;
-    const visit = addSiteVisitRequest({
-      propertyId: selectedProperty.id,
-      propertyName,
-      buyer,
-      preferredDate: visitPreferredDate,
-      notes: visitNotes.trim(),
-    });
-
-    notifySiteVisitRequest(buyer, propertyName, visit.id);
-    setBuyerSiteVisits(getSiteVisitsForBuyer(buyer));
-    setIsVisitModalOpen(false);
-    setActionFeedback('Site visit request submitted. An admin will contact you soon.');
+    try {
+      const visit = await submitSiteVisit(
+        selectedProperty.id,
+        visitPreferredDate,
+        visitNotes.trim()
+      );
+      const propertyName = visit.propertyId?.name ?? selectedProperty.title ?? selectedProperty.name;
+      notifySiteVisitRequest(buyerName, propertyName, 0);
+      const updated = await getMySiteVisits();
+      setBuyerSiteVisits(updated);
+      setIsVisitModalOpen(false);
+      setActionFeedback('Site visit request submitted. An admin will contact you soon.');
+    } catch (err) {
+      setActionFeedback('Failed to submit site visit request. Please try again.');
+    }
   };
 
-  const handleSubmitInquiry = () => {
+  const handleSubmitInquiry = async () => {
     if (!selectedProperty || !inquiryMessage.trim()) return;
 
-    const buyer = buyerUserId || buyerName || 'guest';
-    const propertyName = selectedProperty.title ?? selectedProperty.name;
-    const inquiry = addInquiry({
-      propertyId: selectedProperty.id,
-      propertyName,
-      buyer,
-      message: inquiryMessage.trim(),
-    });
-
-    notifyInquiry(buyer, propertyName, inquiry.id);
-    setBuyerInquiries(getInquiriesForBuyer(buyer));
-    setIsInquiryModalOpen(false);
-    setActionFeedback('Inquiry sent successfully. Check My Inquiries for updates.');
+    try {
+      const inquiry = await submitInquiry(selectedProperty.id, inquiryMessage.trim());
+      const propertyName = inquiry.propertyId?.name ?? selectedProperty.title ?? selectedProperty.name;
+      notifyInquiry(buyerName, propertyName, 0);
+      const updated = await getMyInquiries();
+      setBuyerInquiries(updated);
+      setIsInquiryModalOpen(false);
+      setActionFeedback('Inquiry sent successfully. Check My Inquiries for updates.');
+    } catch (err) {
+      setActionFeedback('Failed to send inquiry. Please try again.');
+    }
   };
 
-  const handleSearchApply = (query: string, loc: string, type: string, maxPrice: number) => {
+  const handleSearchApply = (query: string, loc: string, type: string, maxPrice?: number) => {
     setSearchKeyword(query);
     setSearchLocation(loc);
     setSearchType(type);
-    setSearchMaxPrice(maxPrice);
+    setSearchMinPrice('');
+    setSearchMaxPrice(maxPrice ?? '');
+    setSearchMinLotSize('');
     setActiveTab('Search');
     setIsMobileMenuOpen(false);
   };
@@ -682,7 +680,26 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   };
 
   const handleQuickApply = () => {
-    handleSearchApply('', location, mapHomeTypeToFilter(propertyType), priceRange);
+    const hasQuickFilters =
+      Boolean(location) ||
+      Boolean(mapHomeTypeToFilter(propertyType)) ||
+      priceRange < 50000000;
+
+    handleSearchApply(
+      '',
+      location,
+      mapHomeTypeToFilter(propertyType),
+      hasQuickFilters ? priceRange : undefined,
+    );
+  };
+
+  const handleClearSearchFilters = () => {
+    setSearchKeyword('');
+    setSearchLocation('');
+    setSearchType('');
+    setSearchMinPrice('');
+    setSearchMaxPrice('');
+    setSearchMinLotSize('');
   };
 
   const isTabLocked = (tabId: string) => !isAuthenticated && AUTH_REQUIRED_TABS.includes(tabId);
@@ -757,32 +774,23 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   }, [actionFeedback]);
 
   useEffect(() => {
-    const syncBuyerActivity = () => {
+    const syncBuyerActivity = async () => {
       if (!isAuthenticated) {
         setBuyerInquiries([]);
         setBuyerSiteVisits([]);
         return;
       }
-      const buyer = buyerUserId || buyerName || 'guest';
-      setBuyerInquiries(getInquiriesForBuyer(buyer));
-      setBuyerSiteVisits(getSiteVisitsForBuyer(buyer));
-    };
-
-    syncBuyerActivity();
-
-    const handleStorage = (event: StorageEvent) => {
-      if (
-        event.key === INQUIRIES_STORAGE_KEY ||
-        event.key === SITE_VISITS_STORAGE_KEY ||
-        event.key === null
-      ) {
-        syncBuyerActivity();
+      try {
+        const [inquiries, visits] = await Promise.all([getMyInquiries(), getMySiteVisits()]);
+        setBuyerInquiries(inquiries);
+        setBuyerSiteVisits(visits);
+      } catch {
+        // Non-critical — leave existing state intact
       }
     };
 
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, [isAuthenticated, buyerUserId, buyerName]);
+    syncBuyerActivity();
+  }, [isAuthenticated]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -917,10 +925,19 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
           <BuyerSearch
             properties={properties}
             onSelectProperty={handleSelectProperty}
-            initialKeyword={searchKeyword}
-            initialLocation={searchLocation}
-            initialType={searchType}
-            initialMaxPrice={searchMaxPrice}
+            keyword={searchKeyword}
+            location={searchLocation}
+            type={searchType}
+            minPrice={searchMinPrice}
+            maxPrice={searchMaxPrice}
+            minLotSize={searchMinLotSize}
+            onKeywordChange={setSearchKeyword}
+            onLocationChange={setSearchLocation}
+            onTypeChange={setSearchType}
+            onMinPriceChange={setSearchMinPrice}
+            onMaxPriceChange={setSearchMaxPrice}
+            onMinLotSizeChange={setSearchMinLotSize}
+            onClearFilters={handleClearSearchFilters}
           />
         );
       case 'Suggested':
@@ -945,7 +962,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
               <div className="w-16 h-16 bg-[#0D1F1A] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[rgba(40,90,72,0.15)] shadow-md">
                 <Mail className="w-8 h-8 text-[#6A9F8A]" />
               </div>
-              <h2 className="font-serif text-2xl text-[#FFFFFF]">My Inquiries</h2>
+              <h2 className="font-serif text-2xl text-[#1A2D24]">My Inquiries</h2>
             </div>
             {buyerInquiries.length === 0 ? (
               <EmptyState variant="inquiries" />
@@ -958,7 +975,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="font-serif font-semibold text-[#FFFFFF]">{inquiry.propertyName}</h3>
+                        <h3 className="font-serif font-semibold text-[#FFFFFF]">{inquiry.propertyId?.name ?? 'Unknown property'}</h3>
                         <p className="text-xs text-[#6A9F8A] mt-1">
                           {new Date(inquiry.createdAt).toLocaleString('en-PH', {
                             month: 'short',
@@ -987,7 +1004,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
               <div className="w-16 h-16 bg-[#0D1F1A] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[rgba(40,90,72,0.15)] shadow-md">
                 <Calendar className="w-8 h-8 text-[#6A9F8A]" />
               </div>
-              <h2 className="font-serif text-2xl text-[#FFFFFF]">My Site Visits</h2>
+              <h2 className="font-serif text-2xl text-[#1A2D24]">My Site Visits</h2>
             </div>
             {buyerSiteVisits.length === 0 ? (
               <EmptyState variant="sitevisits" />
@@ -1000,7 +1017,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="font-serif font-semibold text-[#FFFFFF]">{visit.propertyName}</h3>
+                        <h3 className="font-serif font-semibold text-[#FFFFFF]">{visit.propertyId?.name ?? 'Unknown property'}</h3>
                         <p className="text-xs text-[#6A9F8A] mt-1">
                           Requested{' '}
                           {new Date(visit.createdAt).toLocaleString('en-PH', {

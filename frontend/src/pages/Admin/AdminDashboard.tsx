@@ -6,6 +6,7 @@ import {
   Landmark,
   BarChart3,
   Settings,
+  ClipboardList,
   LogOut,
   Menu,
   X,
@@ -31,6 +32,7 @@ import { AdminProperties } from './AdminProperties';
 import { AdminBuyers } from './AdminBuyers';
 import { AdminAnalytics } from './AdminAnalytics';
 import { AdminSettings } from './AdminSettings';
+import { AdminActivities } from './AdminActivities';
 import type { Property } from '../../types/types';
 
 type NavItem = {
@@ -50,6 +52,7 @@ const NAV_ITEMS: Omit<NavItem, 'badge'>[] = [
   { id: 'buyers', label: 'Buyers', icon: <Users className="w-5 h-5" /> },
   { id: 'transactions', label: 'Transactions', icon: <Landmark className="w-5 h-5" /> },
   { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="w-5 h-5" /> },
+  { id: 'activities', label: 'Activities', icon: <ClipboardList className="w-5 h-5" /> },
   { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
 ];
 
@@ -59,6 +62,7 @@ const PAGE_TITLES: Record<string, string> = {
   buyers: 'Buyers',
   transactions: 'Transactions',
   analytics: 'Analytics',
+  activities: 'Activities',
   settings: 'Settings',
 };
 
@@ -89,12 +93,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const activityStyle = (type: RecentActivityType) => {
     if (type === 'buyer_registered') return 'admin-panel-muted border-amber-700/20 bg-amber-100/40';
     if (type === 'property_added') return 'admin-panel-muted border-sky-700/20 bg-sky-100/35';
+    if (type === 'inquiry_created') return 'admin-panel-muted border-violet-700/20 bg-violet-100/35';
+    if (type === 'site_visit_created') return 'admin-panel-muted border-rose-700/20 bg-rose-100/35';
     return 'admin-panel-muted border-emerald-700/20 bg-emerald-100/35';
   };
 
   const activityLabel = (type: RecentActivityType) => {
     if (type === 'buyer_registered') return 'Buyer';
     if (type === 'property_added') return 'Property';
+    if (type === 'inquiry_created') return 'Inquiry';
+    if (type === 'site_visit_created') return 'Site Visit';
     return 'Transaction';
   };
 
@@ -645,6 +653,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             {activeNav === 'analytics' && <AdminAnalytics onToast={setToast} />}
 
             {activeNav === 'transactions' && <AdminTransactions onToast={setToast} onDataChanged={refreshDashboardCards} />}
+
+            {activeNav === 'activities' && <AdminActivities onToast={setToast} />}
 
             {activeNav === 'settings' && <AdminSettings onToast={setToast} />}
 

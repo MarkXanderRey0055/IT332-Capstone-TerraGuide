@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, Handshake } from 'lucide-react';
+import { Plus, Search, Handshake, Download, Loader2 } from 'lucide-react';
 import type { Property } from '../../types/types';
 import { getProperties } from '../../services/PropertyService';
 import type { Transaction, TransactionStatus } from '../../services/TransactionService.ts';
 import { getTransactions } from '../../services/TransactionService.ts';
 import { TransactionFormModal } from '../../components/Admin/TransactionFormModal';
 import { TransactionDetailModal } from '../../components/Admin/TransactionDetailModal';
+import { exportDataset } from '../../services/ExportService';
 
 interface AdminTransactionsProps {
   onToast?: (message: string) => void;
@@ -42,8 +43,21 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const showToast = (message: string) => onToast?.(message);
+
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    try {
+      await exportDataset('transactions', 'csv');
+      showToast('Transactions exported as CSV.');
+    } catch {
+      showToast('Export failed. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const loadAll = async () => {
     setError('');
@@ -118,6 +132,19 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
               className="admin-input pl-10 pr-4 py-2 rounded-xl text-xs focus:outline-none focus:border-emerald-700/50 w-48 sm:w-64 transition-all"
             />
           </div>
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            disabled={isExporting}
+            className="admin-button-secondary flex items-center gap-1.5 px-4 py-2 text-[#5d503f] font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {isExporting ? 'Exporting...' : 'Export CSV'}
+          </button>
           <button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
