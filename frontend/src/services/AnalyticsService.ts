@@ -176,7 +176,9 @@ export type RecentActivityType =
   | 'property_added'
   | 'transaction_created'
   | 'transaction_status_changed'
-  | 'transaction_completed';
+  | 'transaction_completed'
+  | 'inquiry_created'
+  | 'site_visit_created';
 
 export interface RecentActivityItem {
   type: RecentActivityType;

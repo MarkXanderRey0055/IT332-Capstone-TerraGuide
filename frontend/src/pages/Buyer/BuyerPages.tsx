@@ -7,7 +7,7 @@ import { getRecommendations } from '../../services/RecommendationService';
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
 
-const isAvailable = (property: PropertyListing) => property.status !== 'Sold';
+const isAvailable = (property: PropertyListing) => property.status === 'Available';
 
 const getUniqueLocations = (properties: PropertyListing[]) =>
   [...new Set(properties.map((property) => property.location))].sort();
@@ -18,36 +18,39 @@ const getUniqueTypes = (properties: PropertyListing[]) =>
 interface BuyerSearchProps {
   properties: PropertyListing[];
   onSelectProperty: (property: PropertyListing) => void;
-  initialKeyword: string;
-  initialLocation: string;
-  initialType: string;
-  initialMaxPrice: number;
+  keyword: string;
+  location: string;
+  type: string;
+  minPrice: number | '';
+  maxPrice: number | '';
+  minLotSize: number | '';
+  onKeywordChange: (value: string) => void;
+  onLocationChange: (value: string) => void;
+  onTypeChange: (value: string) => void;
+  onMinPriceChange: (value: number | '') => void;
+  onMaxPriceChange: (value: number | '') => void;
+  onMinLotSizeChange: (value: number | '') => void;
+  onClearFilters: () => void;
 }
 
 export const BuyerSearch: React.FC<BuyerSearchProps> = ({
   properties,
   onSelectProperty,
-  initialKeyword,
-  initialLocation,
-  initialType,
-  initialMaxPrice,
+  keyword,
+  location,
+  type,
+  minPrice,
+  maxPrice,
+  minLotSize,
+  onKeywordChange,
+  onLocationChange,
+  onTypeChange,
+  onMinPriceChange,
+  onMaxPriceChange,
+  onMinLotSizeChange,
+  onClearFilters,
 }) => {
-  const [keyword, setKeyword] = useState(initialKeyword);
-  const [location, setLocation] = useState(initialLocation);
-  const [type, setType] = useState(initialType);
-  const [minPrice, setMinPrice] = useState<number | ''>('');
-  const [maxPrice, setMaxPrice] = useState<number | ''>(initialMaxPrice || '');
-  const [minLotSize, setMinLotSize] = useState<number | ''>('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-
-  useEffect(() => {
-    setKeyword(initialKeyword);
-    setLocation(initialLocation);
-    setType(initialType);
-    if (initialMaxPrice) {
-      setMaxPrice(initialMaxPrice);
-    }
-  }, [initialKeyword, initialLocation, initialType, initialMaxPrice]);
 
   const locationOptions = getUniqueLocations(properties);
   const typeOptions = getUniqueTypes(properties);
@@ -72,15 +75,6 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
     if (minLotSize && getLotSize(property) < minLotSize) return false;
     return true;
   });
-
-  const handleClearFilters = () => {
-    setKeyword('');
-    setLocation('');
-    setType('');
-    setMinPrice('');
-    setMaxPrice('');
-    setMinLotSize('');
-  };
 
   const hasActiveFilters = keyword || location || type || minPrice || maxPrice || minLotSize;
 
@@ -119,11 +113,11 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
             </strong>
             <div className="flex items-center gap-2">
               {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={handleClearFilters}
-                  className="text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-transparent border-none cursor-pointer flex items-center gap-1"
-                >
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-transparent border-none cursor-pointer flex items-center gap-1"
+              >
                   <RotateCcw className="w-3 h-3" />
                   Clear
                 </button>
@@ -144,7 +138,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
                 type="text"
                 placeholder="Search name, location..."
                 value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
+                onChange={(e) => onKeywordChange(e.target.value)}
                 className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors placeholder:text-[#a89884]"
               />
             </div>
@@ -153,7 +147,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
               <label className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">Location</label>
               <select
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                onChange={(e) => onLocationChange(e.target.value)}
                 className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors"
               >
                 <option value="">All Locations</option>
@@ -169,7 +163,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
               <label className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">Property Type</label>
               <select
                 value={type}
-                onChange={(e) => setType(e.target.value)}
+                onChange={(e) => onTypeChange(e.target.value)}
                 className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors"
               >
                 <option value="">All Types</option>
@@ -188,7 +182,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
                   type="number"
                   placeholder="0"
                   value={minPrice || ''}
-                  onChange={(e) => setMinPrice(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                  onChange={(e) => onMinPriceChange(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                   className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors placeholder:text-[#a89884]"
                 />
               </div>
@@ -198,7 +192,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
                   type="number"
                   placeholder="Any"
                   value={maxPrice || ''}
-                  onChange={(e) => setMaxPrice(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                  onChange={(e) => onMaxPriceChange(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                   className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors placeholder:text-[#a89884]"
                 />
               </div>
@@ -212,7 +206,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
                 type="number"
                 placeholder="e.g. 500"
                 value={minLotSize || ''}
-                onChange={(e) => setMinLotSize(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                onChange={(e) => onMinLotSizeChange(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                 className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors placeholder:text-[#a89884]"
               />
             </div>
@@ -244,7 +238,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
               </p>
               <button
                 type="button"
-                onClick={handleClearFilters}
+                onClick={onClearFilters}
                 className="mt-5 px-5 py-2.5 text-xs font-bold text-white bg-[#1C3A27] rounded-xl shadow-sm hover:bg-[#254F35] transition-colors border-none cursor-pointer"
               >
                 Reset All Filters
@@ -328,9 +322,9 @@ export const BuyerSuggestions: React.FC<BuyerSuggestionsProps> = ({
         <span className="text-xs font-bold text-[#7c6a57] uppercase tracking-wider">Sort by:</span>
         {(
           [
-            ['recommended', '✨ Recommended'],
-            ['price', '💰 Lowest Price'],
-            ['location', '📍 Location A-Z'],
+            ['recommended', 'Recommended'],
+            ['price', 'Lowest Price'],
+            ['location', 'Location A-Z'],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -597,7 +591,6 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
 
         {savedMessage && (
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
-            <span>✓</span>
             {savedMessage}
           </div>
         )}
