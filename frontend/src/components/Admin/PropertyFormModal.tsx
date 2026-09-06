@@ -18,6 +18,16 @@ const PROPERTY_TYPES: Property['type'][] = [
   'House & Lot',
 ];
 
+// Same five values as the buyer's intendedUse preference in WelcomeModal —
+// this vocabulary must stay in sync so recommendation matching stays exact.
+const SUITABLE_FOR_OPTIONS: NonNullable<Property['suitableFor']>[number][] = [
+  'Primary Residence',
+  'Investment',
+  'Business',
+  'Farming',
+  'Vacation Home',
+];
+
 export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   isOpen,
   property,
@@ -30,6 +40,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const [lotSize, setLotSize] = useState<number | ''>('');
   const [location, setLocation] = useState('');
   const [type, setType] = useState<Property['type'] | ''>('');
+  const [suitableFor, setSuitableFor] = useState<NonNullable<Property['suitableFor']>>([]);
   const [image, setImage] = useState('');
   const [docTax, setDocTax] = useState<'pending' | 'verified' | 'missing'>('pending');
   const [docDeed, setDocDeed] = useState<'pending' | 'verified' | 'missing'>('pending');
@@ -48,6 +59,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       setLotSize(getLotSize(property) || '');
       setLocation(property.location);
       setType(property.type);
+      setSuitableFor(property.suitableFor ?? []);
       setImage(property.images?.[0] || '');
       setDocTax(property.documents?.tax || 'pending');
       setDocDeed(property.documents?.deed || 'pending');
@@ -62,6 +74,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       setLotSize('');
       setLocation('');
       setType('');
+      setSuitableFor([]);
       setImage('');
       setDocTax('pending');
       setDocDeed('pending');
@@ -85,6 +98,12 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     if (!isNaN(parsed)) {
       setPrice(parsed.toLocaleString());
     }
+  };
+
+  const toggleSuitableFor = (option: NonNullable<Property['suitableFor']>[number]) => {
+    setSuitableFor((prev) =>
+      prev.includes(option) ? prev.filter((o) => o !== option) : [...prev, option]
+    );
   };
 
   const handleSave = async () => {
@@ -140,6 +159,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
         lotSize: size,
         location: location.trim(),
         type,
+        suitableFor,
         status,
         pricePerSqm: Math.round(parsedPrice / size),
         images: image.trim() ? [image.trim()] : [],
@@ -270,6 +290,35 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+              Suitable For <span className="normal-case font-medium text-neutral-400">(optional)</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {SUITABLE_FOR_OPTIONS.map((option) => {
+                const checked = suitableFor.includes(option);
+                return (
+                  <label
+                    key={option}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer transition-colors ${
+                      checked
+                        ? 'bg-sage-100 border-sage-300 text-forest-900'
+                        : 'bg-white/70 border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleSuitableFor(option)}
+                      className="cursor-pointer"
+                    />
+                    {option}
+                  </label>
+                );
+              })}
             </div>
           </div>
 
