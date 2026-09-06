@@ -18,6 +18,7 @@ export interface PropertyApiRecord {
   owner?: string;
   description?: string;
   type: string;
+  suitableFor?: string[];
   location: string;
   price: number;
   size?: number;
@@ -68,6 +69,7 @@ export function mapToProperty(raw: PropertyApiRecord): Property {
     owner: raw.owner,
     description: raw.description,
     type: raw.type as Property['type'],
+    suitableFor: (raw.suitableFor ?? []) as Property['suitableFor'],
     location: raw.location,
     price: raw.price,
     size: raw.size,

@@ -5,6 +5,9 @@ export interface Property {
   owner?: string;
   description?: string;
   type: 'Residential' | 'Commercial' | 'Agricultural' | 'Condominium' | 'House & Lot' | string;
+  // Uses this property is tagged as suitable for, compared against a buyer's
+  // intendedUse preference during recommendation scoring. Optional.
+  suitableFor?: ('Primary Residence' | 'Investment' | 'Business' | 'Farming' | 'Vacation Home')[];
   location: string;
   price: number;
   size?: number;

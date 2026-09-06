@@ -22,6 +22,14 @@ const propertySchema = new mongoose.Schema(
       enum: ['Residential', 'House & Lot', 'Agricultural', 'Commercial', 'Condominium'],
       required: [true, 'Property type is required'],
     },
+    // Admin-tagged suitable uses, compared against BuyerPreference.intendedUse
+    // during recommendation scoring. Optional — properties without this tag
+    // simply score 0 on the intended-use criterion, never excluded.
+    suitableFor: {
+      type: [String],
+      enum: ['Primary Residence', 'Investment', 'Business', 'Farming', 'Vacation Home'],
+      default: [],
+    },
     
     title: {
       type: String,

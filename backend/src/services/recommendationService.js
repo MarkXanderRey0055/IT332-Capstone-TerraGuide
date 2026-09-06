@@ -53,6 +53,16 @@ const scoreLotSizeMatch = (propertyLotSize, minLotSize) => {
   return Math.max(0, size / min);
 };
 
+// Exact-match only, never a hard filter. Missing data on either side
+// (buyer intendedUse, or property suitableFor) simply scores 0 — the
+// property still stays in the results, it just doesn't get the intended-use
+// bonus. No AI/guessing involved, purely a direct value comparison.
+const scoreIntendedUseMatch = (suitableFor, intendedUse) => {
+  if (!intendedUse) return 0;
+  if (!Array.isArray(suitableFor) || suitableFor.length === 0) return 0;
+  return suitableFor.includes(intendedUse) ? 1 : 0;
+};
+
 export const getBuyerRecommendations = async (userId) => {
   // 1. Fetch saved preferences for the logged-in buyer using 'userId'
   const preferences = await BuyerPreference.findOne({ userId: userId });
@@ -79,8 +89,13 @@ export const getBuyerRecommendations = async (userId) => {
     );
     const locationScore = scoreLocationMatch(property.location, preferences.location);
     const lotSizeScore = scoreLotSizeMatch(property.lotSize, preferences.minLotSize);
+    const intendedUseScore = scoreIntendedUseMatch(property.suitableFor, preferences.intendedUse);
 
-    const totalScore = budgetScore * 0.4 + locationScore * 0.35 + lotSizeScore * 0.25;
+    const totalScore =
+      budgetScore * 0.35 +
+      locationScore * 0.3 +
+      lotSizeScore * 0.2 +
+      intendedUseScore * 0.15;
 
     return { property, totalScore };
   });
