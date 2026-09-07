@@ -319,12 +319,13 @@ const BuyerLogin: React.FC<LoginProps> = ({ onBack, onSuccess }) => {
                     ? "Create a password"
                     : "Enter your password"
                 }
-                className="w-full pl-12 pr-12 py-3.5 rounded-xl border border-white/10 bg-white/[0.04] text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/30 transition text-sm"
+                className="w-full pl-12 pr-12 py-3.5 rounded-xl border border-white/10 bg-white/[0.04] text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/30 transition text-sm [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
               />
 
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
                 className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-300 transition"
               >
                 <svg

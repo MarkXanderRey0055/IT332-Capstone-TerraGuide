@@ -11,7 +11,7 @@ interface PropertyCardProps {
 
 const formatPrice = (num: number) => '₱' + num.toLocaleString();
 
-const getLabel = (property: Property) => property.title ?? property.name;
+const getLabel = (property: Property) => property.title?.trim() || property.name;
 
 const getLotSize = (property: Property) => property.size ?? property.lotSize ?? 0;
 
