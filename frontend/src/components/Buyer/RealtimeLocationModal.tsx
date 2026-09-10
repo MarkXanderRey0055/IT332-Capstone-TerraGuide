@@ -30,7 +30,7 @@ export const PropertyLocationModal: React.FC<PropertyLocationModalProps> = ({
             </h2>
             <p className="text-sm text-neutral-500 mt-1">
               Displaying map location and surrounding listings for{' '}
-              <span className="font-semibold text-[#1C3A27]">{property.title ?? property.name}</span>
+              <span className="font-semibold text-[#1C3A27]">{property.title?.trim() || property.name}</span>
             </p>
           </div>
 
@@ -51,7 +51,7 @@ export const PropertyLocationModal: React.FC<PropertyLocationModalProps> = ({
             initialMapStyle="satellite"
             mapTitle="Satellite & Map View"
             mapSubtitle="Geographic coordinates & surrounding area"
-            recenterLabel={`Re-center on ${property.title ?? property.name}`}
+            recenterLabel={`Re-center on ${property.title?.trim() || property.name}`}
             focusZoom={18}
             scrollWheelZoom
           />

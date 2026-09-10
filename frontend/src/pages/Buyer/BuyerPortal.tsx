@@ -11,6 +11,9 @@ import {
   Lock,
   X,
   Menu,
+  Trees,
+  Building2,
+  Landmark,
 } from 'lucide-react';
 import type { BuyerPreferences, Property } from '../../types/types';
 import { WelcomeModal } from '../../components/Buyer/WelcomeModal';
@@ -24,7 +27,6 @@ import {
   saveBuyerPreferences,
 } from '../../services/buyerPrefs';
 import { getProperties } from '../../services/PropertyService';
-import { notifyInquiry, notifySiteVisitRequest } from '../../services/notificationStorage';
 import { getCurrentUser } from '../../services/AuthService';
 import { submitInquiry, getMyInquiries } from '../../services/InquiryService';
 import type { Inquiry } from '../../services/InquiryService';
@@ -33,6 +35,15 @@ import type { SiteVisit } from '../../services/SiteVisitService';
 import { COLORS } from '../../styles/buyerTheme';
 
 export { COLORS };
+
+const TYPE_ICON: Record<string, React.ElementType> = {
+  Agricultural: Trees,
+  Commercial: Building2,
+  Condominium: Building2,
+  'House & Lot': Home,
+  Residential: Home,
+};
+const getTypeIcon = (type: string) => TYPE_ICON[type] || Landmark;
 
 //property card
 // Property Card - LIGHT THEME VERSION
@@ -51,6 +62,11 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   onClick,
   className = '',
 }) => {
+  const [imgFailed, setImgFailed] = useState(false);
+  const imageUrl = property.images?.[0];
+  const TypeIcon = getTypeIcon(property.type);
+  const propertyLabel = property.title?.trim() || property.name;
+
   const variants = {
     grid: {
       containerClass: `bg-[#FFFFFF] rounded-xl overflow-hidden border border-[rgba(40,90,72,0.12)] shadow-sm transition-all duration-300 group cursor-pointer hover:shadow-md hover:border-[#285A48] hover:-translate-y-1`,
@@ -109,15 +125,20 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       )}
 
       <div className={`${style.image} bg-[#F5F2EF] overflow-hidden relative`}>
-        {property.images?.[0] ? (
+        {imageUrl && !imgFailed ? (
           <img
-            src={property.images[0]}
-            alt={property.name}
+            src={imageUrl}
+            alt=""
+            aria-hidden="true"
+            onError={() => setImgFailed(true)}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-[#A89884] text-xs">
-            No Image
+          <div className="w-full h-full flex flex-col items-center justify-center text-[#5A7A6A] gap-1.5 bg-[#EAE6DF]">
+            <TypeIcon className="w-8 h-8 text-[#285A48]/50" />
+            <span className="text-[10px] font-semibold text-[#5A7A6A] uppercase tracking-wider">
+              {property.type}
+            </span>
           </div>
         )}
         <div className="absolute top-3 right-3 bg-[#FFFFFF]/90 backdrop-blur-sm px-2.5 py-1 rounded-md text-[10px] font-medium text-[#1A2D24] border border-[rgba(40,90,72,0.15)] shadow-sm">
@@ -128,7 +149,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       <div className={style.content}>
         <div>
           <h3 className={`font-serif font-semibold text-base ${style.title} line-clamp-1 group-hover:text-[#285A48] transition-colors`}>
-            {property.title ?? property.name}
+            {propertyLabel}
           </h3>
           <p className={`text-xs ${style.location} mt-0.5 flex items-center gap-1`}>
             {property.location}
@@ -632,13 +653,11 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     if (!selectedProperty || !visitPreferredDate) return;
 
     try {
-      const visit = await submitSiteVisit(
+      await submitSiteVisit(
         selectedProperty.id,
         visitPreferredDate,
         visitNotes.trim()
       );
-      const propertyName = visit.propertyId?.name ?? selectedProperty.title ?? selectedProperty.name;
-      notifySiteVisitRequest(buyerName, propertyName, 0);
       const updated = await getMySiteVisits();
       setBuyerSiteVisits(updated);
       setIsVisitModalOpen(false);
@@ -652,9 +671,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     if (!selectedProperty || !inquiryMessage.trim()) return;
 
     try {
-      const inquiry = await submitInquiry(selectedProperty.id, inquiryMessage.trim());
-      const propertyName = inquiry.propertyId?.name ?? selectedProperty.title ?? selectedProperty.name;
-      notifyInquiry(buyerName, propertyName, 0);
+      await submitInquiry(selectedProperty.id, inquiryMessage.trim());
       const updated = await getMyInquiries();
       setBuyerInquiries(updated);
       setIsInquiryModalOpen(false);
@@ -873,7 +890,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   }, [isAuthenticated]);
 
   if (selectedProperty) {
-    const propertyName = selectedProperty.title ?? selectedProperty.name;
+    const propertyName = selectedProperty.title?.trim() || selectedProperty.name;
     return (
       <>
         <LoginRequiredModal

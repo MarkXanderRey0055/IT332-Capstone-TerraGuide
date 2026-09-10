@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapPin, Square } from 'lucide-react';
+import React, { useState } from 'react';
+import { MapPin, Square, Trees, Building2, Home, Landmark } from 'lucide-react';
 import type { Property } from '../../types/types';
 
 interface PropertyCardProps {
@@ -8,6 +8,15 @@ interface PropertyCardProps {
   matchScore?: number | null;
   onClick: (property: Property) => void;
 }
+
+const TYPE_ICON: Record<string, React.ElementType> = {
+  Agricultural: Trees,
+  Commercial: Building2,
+  Condominium: Building2,
+  'House & Lot': Home,
+  Residential: Home,
+};
+const getTypeIcon = (type: string) => TYPE_ICON[type] || Landmark;
 
 const formatPrice = (num: number) => '₱' + num.toLocaleString();
 
@@ -21,9 +30,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   matchScore = null,
   onClick,
 }) => {
-  const imageUrl =
-    property.images?.[0] ??
-    'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80';
+  const [imgFailed, setImgFailed] = useState(false);
+  const imageUrl = property.images?.[0];
+  const TypeIcon = getTypeIcon(property.type);
 
   return (
     <div
@@ -31,15 +40,22 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       className="relative flex flex-col overflow-hidden cursor-pointer rounded-2xl border border-neutral-200/50 bg-white shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md group"
     >
       <div className="relative h-48 w-full overflow-hidden shrink-0 bg-neutral-100">
-        <img
-          src={imageUrl}
-          alt={getLabel(property)}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).src =
-              'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80';
-          }}
-        />
+        {imageUrl && !imgFailed ? (
+          <img
+            src={imageUrl}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-100 text-neutral-400 gap-1.5">
+            <TypeIcon className="w-10 h-10 text-emerald-800/40" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+              {property.type}
+            </span>
+          </div>
+        )}
         {property.status && property.status !== 'Available' && (
           <div
             className={`absolute top-3 left-3 px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase rounded-md text-white ${

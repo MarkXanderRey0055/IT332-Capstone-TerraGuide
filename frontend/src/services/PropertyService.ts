@@ -81,6 +81,8 @@ export function mapToProperty(raw: PropertyApiRecord): Property {
     images: raw.images ?? [],
     documents: raw.documents,
     cabinetId: raw.cabinetId ?? null,
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
   };
 }
 

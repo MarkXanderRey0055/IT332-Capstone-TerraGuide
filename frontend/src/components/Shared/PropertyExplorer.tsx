@@ -39,6 +39,8 @@ const TYPE_ICON: Record<string, React.ElementType> = {
 };
 const getTypeIcon = (type: string) => TYPE_ICON[type] || Landmark;
 
+const getPropertyLabel = (property: Property) => property.title?.trim() || property.name;
+
 // Shows the admin-entered property image if one exists and loads successfully;
 // falls back to the type icon otherwise. No external/stock image is ever used.
 const PropertyThumb: React.FC<{
@@ -55,7 +57,8 @@ const PropertyThumb: React.FC<{
     return (
       <img
         src={imageUrl}
-        alt={property.name}
+        alt=""
+        aria-hidden="true"
         onError={() => setImgFailed(true)}
         className={`${className} object-cover`}
       />
@@ -85,11 +88,12 @@ const MapCenterController: React.FC<{ center: [number, number] | null; zoom: num
 
 const getCustomIcon = (property: Property, isFocused: boolean) => {
   const circleColor = isFocused ? '#10B981' : '#3E5C4D';
+  const label = getPropertyLabel(property);
   return L.divIcon({
     html: `
       <div class="flex flex-col items-center select-none cursor-pointer">
         <div class="px-3 py-1 bg-[#121E29] text-white text-[10px] font-bold rounded-lg shadow-md border border-neutral-800 whitespace-nowrap mb-1.5 transition-all text-center">
-          ${property.name}
+          ${label}
         </div>
         <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-lg transition-all ${isFocused ? 'scale-110 ring-4 ring-emerald-500/30' : 'hover:scale-110'}" style="background-color: ${circleColor};">
           <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke-width="2.5">
@@ -222,7 +226,7 @@ export const PropertyExplorer: React.FC<PropertyExplorerProps> = ({ properties, 
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <h4 className="font-serif font-black text-xs text-neutral-900 truncate leading-tight group-hover:text-[#1C3A27] transition-colors">{property.name}</h4>
+                      <h4 className="font-serif font-black text-xs text-neutral-900 truncate leading-tight group-hover:text-[#1C3A27] transition-colors">{getPropertyLabel(property)}</h4>
                       <span className="text-[10px] font-black text-emerald-800 shrink-0">{formatPrice(property.price)}</span>
                     </div>
                     <p className="text-[9px] text-neutral-400 font-medium truncate mt-0.5">{property.location}</p>
@@ -319,7 +323,7 @@ export const PropertyExplorer: React.FC<PropertyExplorerProps> = ({ properties, 
                   />
                 </div>
                 <div className="min-w-0">
-                  <h4 className="font-serif font-black text-sm text-neutral-900 leading-tight truncate">{selectedMapProperty.name}</h4>
+                  <h4 className="font-serif font-black text-sm text-neutral-900 leading-tight truncate">{getPropertyLabel(selectedMapProperty)}</h4>
                   <p className="text-[10px] text-neutral-500 flex items-center gap-1 mt-0.5 truncate">
                     <MapPin className="w-3 h-3 text-rose-500 shrink-0" /> {selectedMapProperty.location}
                   </p>

@@ -113,5 +113,5 @@ export function getLotSize(property: { size?: number; lotSize?: number }) {
 }
 
 export function getPropertyLabel(property: { name: string; title?: string }) {
-  return property.title ?? property.name;
+  return property.title?.trim() || property.name;
 }
