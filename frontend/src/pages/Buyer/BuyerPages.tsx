@@ -2,12 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Search, Sliders, HelpCircle, X, Filter, RotateCcw } from 'lucide-react';
 import type { Property as PropertyListing, BuyerPreferences } from '../../types/types';
 import { PropertyCard } from '../../components/Buyer/PropertyCard';
-import { getLotSize } from '../../services/buyerPrefs';
 import { getRecommendations } from '../../services/RecommendationService';
+import { searchProperties, type PropertySearchResult } from '../../services/PropertyService';
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
-
-const isAvailable = (property: PropertyListing) => property.status === 'Available';
 
 const getUniqueLocations = (properties: PropertyListing[]) =>
   [...new Set(properties.map((property) => property.location))].sort();
@@ -33,6 +31,8 @@ interface BuyerSearchProps {
   onClearFilters: () => void;
 }
 
+const PAGE_SIZE = 9;
+
 export const BuyerSearch: React.FC<BuyerSearchProps> = ({
   properties,
   onSelectProperty,
@@ -51,32 +51,90 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
   onClearFilters,
 }) => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [results, setResults] = useState<PropertyListing[]>([]);
+  const [pagination, setPagination] = useState<PropertySearchResult['pagination']>({
+    total: 0,
+    page: 1,
+    limit: PAGE_SIZE,
+    totalPages: 1,
+  });
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
+  // Location/Type dropdown options still come from the full in-memory list —
+  // that's just populating a filter dropdown, not the actual search itself.
   const locationOptions = getUniqueLocations(properties);
   const typeOptions = getUniqueTypes(properties);
 
-  const filtered = properties.filter(isAvailable).filter((property) => {
-    if (keyword.trim()) {
-      const query = keyword.toLowerCase();
-      const haystack = [
-        property.name,
-        property.title ?? '',
-        property.description ?? '',
-        property.location,
-      ]
-        .join(' ')
-        .toLowerCase();
-      if (!haystack.includes(query)) return false;
+  // Tracks the previous filter values so we can tell "a filter changed"
+  // apart from "the page changed" inside the single effect below.
+  const prevFiltersRef = useRef({ keyword, location, type, minPrice, maxPrice, minLotSize });
+
+  useEffect(() => {
+    const prev = prevFiltersRef.current;
+    const filtersChanged =
+      prev.keyword !== keyword ||
+      prev.location !== location ||
+      prev.type !== type ||
+      prev.minPrice !== minPrice ||
+      prev.maxPrice !== maxPrice ||
+      prev.minLotSize !== minLotSize;
+
+    prevFiltersRef.current = { keyword, location, type, minPrice, maxPrice, minLotSize };
+
+    // Any filter change goes back to page 1. If we're not already there,
+    // just update the page — that state change re-runs this same effect,
+    // which then fetches with the reset page and the new filters.
+    if (filtersChanged && page !== 1) {
+      setPage(1);
+      return;
     }
-    if (location && property.location !== location) return false;
-    if (type && property.type !== type) return false;
-    if (minPrice && property.price < minPrice) return false;
-    if (maxPrice && property.price > maxPrice) return false;
-    if (minLotSize && getLotSize(property) < minLotSize) return false;
-    return true;
-  });
+
+    let isCancelled = false;
+    const timer = window.setTimeout(async () => {
+      setIsLoading(true);
+      setLoadError('');
+      try {
+        const result = await searchProperties({
+          search: keyword.trim() || undefined,
+          location: location || undefined,
+          type: type || undefined,
+          status: 'Available',
+          minPrice: minPrice || undefined,
+          maxPrice: maxPrice || undefined,
+          minLotSize: minLotSize || undefined,
+          page,
+          limit: PAGE_SIZE,
+        });
+        if (isCancelled) return;
+        setResults(result.properties);
+        setPagination(result.pagination);
+      } catch (error) {
+        if (isCancelled) return;
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : 'Could not load properties. Please try again.'
+        );
+      } finally {
+        if (!isCancelled) setIsLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyword, location, type, minPrice, maxPrice, minLotSize, page]);
 
   const hasActiveFilters = keyword || location || type || minPrice || maxPrice || minLotSize;
+
+  const handleClearFilters = () => {
+    onClearFilters();
+    setPage(1);
+  };
 
   return (
     <div className="max-w-[1500px] mx-auto px-4 sm:px-8 py-6 sm:py-10 space-y-6">
@@ -115,7 +173,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
               {hasActiveFilters && (
               <button
                 type="button"
-                onClick={onClearFilters}
+                onClick={handleClearFilters}
                 className="text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-transparent border-none cursor-pointer flex items-center gap-1"
               >
                   <RotateCcw className="w-3 h-3" />
@@ -217,8 +275,8 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
         <div className="md:col-span-3 space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs text-[#7c6a57] font-medium">
-              Showing <span className="font-bold text-[#1C3A27]">{filtered.length}</span> of{' '}
-              {properties.filter(isAvailable).length} listings
+              Showing <span className="font-bold text-[#1C3A27]">{results.length}</span> of{' '}
+              <span className="font-bold text-[#1C3A27]">{pagination.total}</span> listings
             </span>
             {hasActiveFilters && (
               <span className="text-[10px] text-[#7c6a57] bg-[#f0ebe3] px-3 py-1 rounded-full">
@@ -227,7 +285,18 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
             )}
           </div>
 
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-16 bg-white border border-[#d6c7b2] rounded-2xl">
+              <div className="w-8 h-8 border-4 border-[#d6c7b2] border-t-[#1C3A27] rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-xs text-[#7c6a57]">Loading listings...</p>
+            </div>
+          ) : loadError ? (
+            <div className="text-center py-16 bg-white border border-[#d6c7b2] rounded-2xl">
+              <HelpCircle className="w-10 h-10 text-[#a89884] mx-auto mb-3" />
+              <strong className="text-sm font-serif text-[#1C3A27]">Couldn't load listings</strong>
+              <p className="text-xs text-[#7c6a57] mt-1">{loadError}</p>
+            </div>
+          ) : results.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center bg-white border border-[#d6c7b2] rounded-2xl shadow-sm">
               <div className="w-16 h-16 rounded-full bg-[#f0ebe3] flex items-center justify-center mb-4">
                 <Search className="w-8 h-8 text-[#a89884]" />
@@ -238,18 +307,45 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
               </p>
               <button
                 type="button"
-                onClick={onClearFilters}
+                onClick={handleClearFilters}
                 className="mt-5 px-5 py-2.5 text-xs font-bold text-white bg-[#1C3A27] rounded-xl shadow-sm hover:bg-[#254F35] transition-colors border-none cursor-pointer"
               >
                 Reset All Filters
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filtered.map((property) => (
-                <PropertyCard key={property.id} property={property} onClick={onSelectProperty} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {results.map((property) => (
+                  <PropertyCard key={property.id} property={property} onClick={onSelectProperty} />
+                ))}
+              </div>
+
+              {pagination.totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                    className="px-4 py-2 text-xs font-bold rounded-xl border border-[#d6c7b2] text-[#1C3A27] bg-white hover:border-[#1C3A27] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-xs font-medium text-[#7c6a57]">
+                    Page <span className="font-bold text-[#1C3A27]">{pagination.page}</span> of{' '}
+                    <span className="font-bold text-[#1C3A27]">{pagination.totalPages}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                    disabled={page >= pagination.totalPages}
+                    className="px-4 py-2 text-xs font-bold rounded-xl border border-[#d6c7b2] text-[#1C3A27] bg-white hover:border-[#1C3A27] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
