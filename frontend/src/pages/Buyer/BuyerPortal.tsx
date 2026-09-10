@@ -1201,74 +1201,27 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
               />
             </section>
 
-            {/* Map & Documents */}
-            <section className="max-w-[1500px] mx-auto px-4 sm:px-8 pb-16 sm:pb-24 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-              <div className="lg:col-span-8 flex flex-col gap-4">
-                <div className="flex items-center justify-between pb-4 border-b border-[rgba(40,90,72,0.2)]">
-                  <div>
-                    <h2 className="font-serif text-2xl font-normal text-[#1A2D24]">Interactive Map</h2>
-                    <p className="text-xs text-[#5C7A6E] mt-1">
-                      Explore property boundaries and nearby landmarks.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-[#0D1F1A] p-2 rounded-xl shadow-md border border-[rgba(40,90,72,0.15)] h-[500px] w-full relative z-10 overflow-hidden">
-                  <div className="w-full h-full rounded-lg overflow-hidden">
-                    <PropertyExplorer 
-                      properties={properties} 
-                      onSelectProperty={(id) => {
-                        const p = properties.find((x) => x.id === id);
-                        if (p) handleSelectProperty(p);
-                      }} 
-                      focusProperty={null} 
-                    />
-                  </div>
+            {/* Interactive Map */}
+            <section className="max-w-[1500px] mx-auto px-4 sm:px-8 pb-16 sm:pb-24 flex flex-col gap-4">
+              <div className="flex items-center justify-between pb-4 border-b border-[rgba(40,90,72,0.2)]">
+                <div>
+                  <h2 className="font-serif text-2xl font-normal text-[#1A2D24]">Interactive Map</h2>
+                  <p className="text-xs text-[#5C7A6E] mt-1">
+                    Explore property locations and surrounding areas.
+                  </p>
                 </div>
               </div>
 
-              <div className="lg:col-span-4 flex flex-col gap-4">
-                <div className="flex items-center justify-between pb-4 border-b border-[rgba(40,90,72,0.2)]">
-                  <div>
-                    <h2 className="font-serif text-2xl font-normal text-[#1A2D24]">Active Documents</h2>
-                    <p className="text-xs text-[#5C7A6E] mt-1">Track your ongoing transactions.</p>
-                  </div>
-                </div>
-
-                <div className="bg-[#0D1F1A] rounded-xl p-5 flex flex-col gap-3 shadow-md border border-[rgba(40,90,72,0.15)]">
-                  {[
-                    { id: 1, name: 'Letter of Intent - Balayan Plot', status: 'Approved', date: 'Today, 9:00 AM' },
-                    { id: 2, name: 'Deed of Sale Draft', status: 'In Progress', date: 'Yesterday' },
-                    { id: 3, name: 'Site Tripping Waiver', status: 'Pending Review', date: 'Oct 12, 2024' },
-                  ].map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="p-3 bg-[#091413] rounded-lg border border-[rgba(40,90,72,0.1)] flex flex-col gap-2 hover:border-[rgba(40,90,72,0.3)] transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <h4 className="text-xs font-semibold text-[#E8F5EF] leading-tight">{doc.name}</h4>
-                        <span
-                          className={`text-[9px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap ${
-                            doc.status === 'Approved'
-                              ? 'bg-[#B0E4CC]/20 text-[#B0E4CC] border border-[#B0E4CC]/30'
-                              : doc.status === 'In Progress'
-                                ? 'bg-[#E4C7A0]/20 text-[#E4C7A0] border border-[#E4C7A0]/30'
-                                : 'bg-[#6A9F8A]/20 text-[#6A9F8A] border border-[#6A9F8A]/30'
-                          }`}
-                        >
-                          {doc.status}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-[#6A9F8A] font-medium">Last updated: {doc.date}</p>
-                    </div>
-                  ))}
-
-                  <button
-                    type="button"
-                    className="mt-2 w-full py-2.5 rounded-lg border border-dashed border-[rgba(40,90,72,0.3)] text-xs font-medium text-[#6A9F8A] hover:text-[#E8F5EF] hover:border-[#408A71] hover:bg-[rgba(40,90,72,0.05)] transition-all cursor-pointer bg-transparent"
-                  >
-                    View All Documents
-                  </button>
+              <div className="bg-[#0D1F1A] p-2 rounded-xl shadow-md border border-[rgba(40,90,72,0.15)] h-[500px] w-full relative z-10 overflow-hidden">
+                <div className="w-full h-full rounded-lg overflow-hidden">
+                  <PropertyExplorer 
+                    properties={properties} 
+                    onSelectProperty={(id) => {
+                      const p = properties.find((x) => x.id === id);
+                      if (p) handleSelectProperty(p);
+                    }} 
+                    focusProperty={null} 
+                  />
                 </div>
               </div>
             </section>

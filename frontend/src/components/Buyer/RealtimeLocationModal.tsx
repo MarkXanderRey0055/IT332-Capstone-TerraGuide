@@ -2,14 +2,14 @@ import { X, MapPin } from 'lucide-react';
 import { PropertyMap } from './PropertyMap';
 import type { Property } from '../../types/types';
 
-interface RealtimeLocationModalProps {
+interface PropertyLocationModalProps {
   isOpen: boolean;
   property: Property | null;
   properties: Property[];
   onClose: () => void;
 }
 
-export const RealtimeLocationModal: React.FC<RealtimeLocationModalProps> = ({
+export const PropertyLocationModal: React.FC<PropertyLocationModalProps> = ({
   isOpen,
   property,
   properties,
@@ -26,10 +26,10 @@ export const RealtimeLocationModal: React.FC<RealtimeLocationModalProps> = ({
           <div className="flex-1">
             <h2 className="text-lg font-bold text-[#1C3A27] flex items-center gap-2">
               <MapPin className="w-5 h-5 text-emerald-600" />
-              Realtime Proximity Map
+              Property Location Map
             </h2>
             <p className="text-sm text-neutral-500 mt-1">
-              Displaying geographic coordinates and surrounding real estate comparisons for{' '}
+              Displaying map location and surrounding listings for{' '}
               <span className="font-semibold text-[#1C3A27]">{property.title ?? property.name}</span>
             </p>
           </div>
@@ -38,7 +38,7 @@ export const RealtimeLocationModal: React.FC<RealtimeLocationModalProps> = ({
             type="button"
             onClick={onClose}
             className="p-2 hover:bg-neutral-100 rounded-lg transition-colors border-none bg-transparent cursor-pointer"
-            aria-label="Close realtime proximity map"
+            aria-label="Close property location map"
           >
             <X className="w-5 h-5 text-neutral-500" />
           </button>
@@ -49,8 +49,8 @@ export const RealtimeLocationModal: React.FC<RealtimeLocationModalProps> = ({
             properties={properties}
             focusProperty={property}
             initialMapStyle="satellite"
-            mapTitle="Google Satellite Feeds"
-            mapSubtitle="Live coordinates & rooftop precision"
+            mapTitle="Satellite & Map View"
+            mapSubtitle="Geographic coordinates & surrounding area"
             recenterLabel={`Re-center on ${property.title ?? property.name}`}
             focusZoom={18}
             scrollWheelZoom
@@ -61,4 +61,5 @@ export const RealtimeLocationModal: React.FC<RealtimeLocationModalProps> = ({
   );
 };
 
-export default RealtimeLocationModal;
+export const RealtimeLocationModal = PropertyLocationModal;
+export default PropertyLocationModal;
