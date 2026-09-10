@@ -5,7 +5,7 @@ import * as AuthService from './services/AuthService';
 import { AUTH_UNAUTHORIZED_EVENT } from './utils/api';
 
 type AppView = 'login' | 'buyerPortal';
-type LoginInitialView = 'selection' | 'buyer';
+type LoginInitialView = 'selection' | 'buyer' | 'admin';
 
 export default function App() {
   const [view, setView] = useState<AppView>('login');
@@ -73,6 +73,11 @@ export default function App() {
     setView('login');
   };
 
+  const handleGoToAdminLogin = () => {
+    setLoginInitialView('admin');
+    setView('login');
+  };
+
   const handleSignOut = () => {
     AuthService.logout();
     setIsAuthenticated(false);
@@ -88,10 +93,11 @@ export default function App() {
     );
   }
 
-  if (view === 'buyerPortal' || isAuthenticated) {
+  if (view === 'buyerPortal') {
     return (
       <BuyerPortal
         onGoToLogin={handleGoToLogin}
+        onGoToAdminLogin={handleGoToAdminLogin}
         onSignOut={handleSignOut}
         isAuthenticated={isAuthenticated}
       />

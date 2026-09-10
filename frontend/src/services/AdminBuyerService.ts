@@ -5,12 +5,12 @@ import { apiRequest } from '../utils/api';
 // here is admin-only on the backend.
 
 export interface BuyerPreferenceSummary {
-  landType: string;
-  intendedUse: string;
-  budgetMin: number;
-  budgetMax: number;
-  location: string;
-  minLotSize: number;
+  landType: string | null;
+  intendedUse: string | null;
+  budgetMin: number | null;
+  budgetMax: number | null;
+  location: string | null;
+  minLotSize: number | null;
   updatedAt: string;
 }
 
@@ -44,12 +44,12 @@ export interface UpdateBuyerPayload {
   fullName?: string;
   email?: string;
   address?: string;
-  landType?: string;
-  intendedUse?: string;
-  budgetMin?: number;
-  budgetMax?: number;
-  location?: string;
-  minLotSize?: number;
+  landType?: string | null;
+  intendedUse?: string | null;
+  budgetMin?: number | null;
+  budgetMax?: number | null;
+  location?: string | null;
+  minLotSize?: number | null;
 }
 
 interface ApiEnvelope<T> {

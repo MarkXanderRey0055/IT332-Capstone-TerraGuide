@@ -103,12 +103,45 @@ export const updateBuyer = async (userId, payload) => {
     await buyer.save();
   }
 
-  const prefUpdates = pick(payload, EDITABLE_PREFERENCE_FIELDS);
-  if (Object.keys(prefUpdates).length > 0) {
-  
+  const prefKeysInPayload = EDITABLE_PREFERENCE_FIELDS.filter(
+    (key) => payload[key] !== undefined
+  );
+
+  if (prefKeysInPayload.length > 0) {
     const existing = await BuyerPreference.findOne({ userId });
-    const merged = existing ? { ...existing.toObject(), ...prefUpdates } : prefUpdates;
-    await createOrUpdatePreference(userId, merged);
+
+    const existingData = {};
+    if (existing) {
+      for (const field of EDITABLE_PREFERENCE_FIELDS) {
+        if (existing[field] !== undefined) {
+          existingData[field] = existing[field];
+        }
+      }
+    }
+
+    const prefUpdates = {};
+    for (const key of prefKeysInPayload) {
+      const val = payload[key];
+      if (val === null || val === undefined || (typeof val === 'string' && val.trim() === '')) {
+        prefUpdates[key] = null;
+      } else {
+        prefUpdates[key] = val;
+      }
+    }
+
+    const merged = { ...existingData, ...prefUpdates };
+
+    const hasAnyActivePreference = EDITABLE_PREFERENCE_FIELDS.some(
+      (key) => merged[key] !== null && merged[key] !== undefined && merged[key] !== ''
+    );
+
+    if (!hasAnyActivePreference) {
+      if (existing) {
+        await BuyerPreference.findOneAndDelete({ userId });
+      }
+    } else {
+      await createOrUpdatePreference(userId, merged);
+    }
   }
 
   const updatedPref = await BuyerPreference.findOne({ userId });

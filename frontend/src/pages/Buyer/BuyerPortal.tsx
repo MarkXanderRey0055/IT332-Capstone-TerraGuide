@@ -572,12 +572,14 @@ const mapHomeTypeToFilter = (propertyType: string) => {
 
 interface BuyerPortalProps {
   onGoToLogin?: () => void;
+  onGoToAdminLogin?: () => void;
   onSignOut?: () => void;
   isAuthenticated?: boolean;
 }
 
 export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   onGoToLogin,
+  onGoToAdminLogin,
   onSignOut,
   isAuthenticated = false,
 }) => {
@@ -1330,6 +1332,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
           <div className="flex items-center gap-3 sm:gap-4">
             <button
               type="button"
+              onClick={() => onGoToAdminLogin?.()}
               className="text-xs font-medium text-[#6A9F8A] hover:text-[#E8F5EF] cursor-pointer underline decoration-dotted underline-offset-4 bg-transparent border-none"
             >
               Staff Portal

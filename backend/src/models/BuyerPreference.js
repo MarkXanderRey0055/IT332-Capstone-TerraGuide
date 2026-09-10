@@ -11,17 +11,16 @@ const buyerPreferenceSchema = new mongoose.Schema(
 
     budgetMin: {
       type: Number,
-      required: true,
+      default: null,
     },
 
     budgetMax: {
       type: Number,
-      required: true,
+      default: null,
     },
 
     landType: {
       type: String,
-      required: true,
       enum: [
         "Residential",
         "Commercial",
@@ -29,11 +28,11 @@ const buyerPreferenceSchema = new mongoose.Schema(
         "Condominium",
         "House & Lot",
       ],
+      default: null,
     },
 
     intendedUse: {
       type: String,
-      required: true,
       enum: [
         "Primary Residence",
         "Investment",
@@ -41,17 +40,17 @@ const buyerPreferenceSchema = new mongoose.Schema(
         "Farming",
         "Vacation Home",
       ],
+      default: null,
     },
 
     location: {
       type: String,
-      required: true,
+      default: null,
     },
 
     minLotSize: {
       type: Number,
-      required: true,
-      default: 0,
+      default: null,
     },
   },
   {

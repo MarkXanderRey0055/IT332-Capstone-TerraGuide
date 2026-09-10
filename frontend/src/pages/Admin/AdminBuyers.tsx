@@ -27,8 +27,8 @@ const INTENDED_USES = ['Primary Residence', 'Investment', 'Business', 'Farming',
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
 
-const formatBudget = (min?: number, max?: number) => {
-  if (min === undefined || max === undefined) return 'Not provided';
+const formatBudget = (min?: number | null, max?: number | null) => {
+  if (min === undefined || min === null || max === undefined || max === null) return 'Not provided';
   return `₱${Math.round(min).toLocaleString()} – ₱${Math.round(max).toLocaleString()}`;
 };
 
@@ -187,13 +187,13 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast, onDataChanged
           fullName: formState.fullName.trim(),
           email: formState.email.trim(),
           address: formState.address.trim(),
+          landType: formState.landType || null,
+          intendedUse: formState.intendedUse || null,
+          budgetMin: formState.budgetMin.trim() !== '' ? Number(formState.budgetMin) : null,
+          budgetMax: formState.budgetMax.trim() !== '' ? Number(formState.budgetMax) : null,
+          location: formState.location.trim() || null,
+          minLotSize: formState.minLotSize.trim() !== '' ? Number(formState.minLotSize) : null,
         };
-        if (formState.landType) payload.landType = formState.landType;
-        if (formState.intendedUse) payload.intendedUse = formState.intendedUse;
-        if (formState.budgetMin) payload.budgetMin = Number(formState.budgetMin);
-        if (formState.budgetMax) payload.budgetMax = Number(formState.budgetMax);
-        if (formState.location) payload.location = formState.location.trim();
-        if (formState.minLotSize) payload.minLotSize = Number(formState.minLotSize);
 
         await updateBuyer(selectedBuyer.userId, payload);
         showToast(`Buyer profile "${selectedBuyer.username}" updated.`);
@@ -335,7 +335,7 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast, onDataChanged
                     </td>
                     <td className="p-4 text-[#5d503f] break-all">{buyer.email}</td>
                     <td className="p-4">
-                      {buyer.preferences ? (
+                      {buyer.preferences?.landType ? (
                         <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/15 text-emerald-400">
                           {buyer.preferences.landType}
                         </span>
