@@ -13,6 +13,7 @@ import { COLORS } from '../../styles/buyerTheme';
 interface BuyerMarketIntelligenceProps {
   properties: Property[];
   onSelectProperty: (property: Property) => void;
+  isAuthenticated?: boolean;
 }
 
 // Pill variants map to semantic meaning — green for positive signals,
@@ -101,9 +102,10 @@ function highlightSentence(
 export const BuyerMarketIntelligence: React.FC<BuyerMarketIntelligenceProps> = ({
   properties,
   onSelectProperty,
+  isAuthenticated = true,
 }) => {
   const [trends, setTrends] = useState<BuyerMarketTrends | null>(null);
-  const [isLoadingTrends, setIsLoadingTrends] = useState(true);
+  const [isLoadingTrends, setIsLoadingTrends] = useState(false);
   const [trendsError, setTrendsError] = useState('');
 
   const [insightResult, setInsightResult] = useState<BuyerMarketInsightResult | null>(null);
@@ -111,6 +113,12 @@ export const BuyerMarketIntelligence: React.FC<BuyerMarketIntelligenceProps> = (
   const [insightError, setInsightError] = useState('');
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setTrends(null);
+      setIsLoadingTrends(false);
+      return;
+    }
+
     let cancelled = false;
     const loadTrends = async () => {
       setIsLoadingTrends(true);
@@ -132,9 +140,13 @@ export const BuyerMarketIntelligence: React.FC<BuyerMarketIntelligenceProps> = (
     };
     loadTrends();
     return () => { cancelled = true; };
-  }, []);
+  }, [isAuthenticated]);
 
   const handleGenerateInsight = async () => {
+    if (!isAuthenticated) {
+      setInsightError('Sign in as a buyer to generate AI market insights.');
+      return;
+    }
     setIsGeneratingInsight(true);
     setInsightError('');
     try {
@@ -240,9 +252,11 @@ export const BuyerMarketIntelligence: React.FC<BuyerMarketIntelligenceProps> = (
 
           {!isLoadingTrends && trendsError && <MiniError message={trendsError} />}
 
-          {!isLoadingTrends && !trendsError && trends && trends.trendingTypes.length === 0 && (
+          {!isLoadingTrends && !trendsError && (!trends || trends.trendingTypes.length === 0) && (
             <p className="text-xs" style={{ color: COLORS.textHint }}>
-              No buyer preference data yet. Trends will appear once buyers set their preferences.
+              {!isAuthenticated
+                ? 'Sign in as a buyer to view trending property types.'
+                : 'No buyer preference data yet. Trends will appear once buyers set their preferences.'}
             </p>
           )}
 
@@ -292,9 +306,11 @@ export const BuyerMarketIntelligence: React.FC<BuyerMarketIntelligenceProps> = (
 
           {!isLoadingTrends && trendsError && <MiniError message={trendsError} />}
 
-          {!isLoadingTrends && !trendsError && trends && trends.topListings.length === 0 && (
+          {!isLoadingTrends && !trendsError && (!trends || trends.topListings.length === 0) && (
             <p className="text-xs" style={{ color: COLORS.textHint }}>
-              No ranked listings yet. Check back once properties have been reviewed.
+              {!isAuthenticated
+                ? 'Sign in as a buyer to view top market listings.'
+                : 'No ranked listings yet. Check back once properties have been reviewed.'}
             </p>
           )}
 

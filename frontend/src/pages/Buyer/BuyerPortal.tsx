@@ -1277,6 +1277,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             <BuyerMarketIntelligence
               properties={properties}
               onSelectProperty={handleSelectProperty}
+              isAuthenticated={isAuthenticated}
             />
           </>
         );

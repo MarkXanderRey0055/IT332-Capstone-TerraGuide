@@ -103,6 +103,59 @@ export async function getProperties(): Promise<Property[]> {
   return response.data.properties.map(mapToProperty);
 }
 
+// Backend-driven search — forwards filters/sort/pagination straight to
+// GET /api/properties instead of pulling everything and filtering in
+// React. propertyService.js already supports every one of these params.
+export interface PropertySearchParams {
+  search?: string;
+  location?: string;
+  type?: string;
+  status?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minLotSize?: number;
+  sort?: 'latest' | 'priceAsc' | 'priceDesc';
+  page?: number;
+  limit?: number;
+}
+
+export interface PropertySearchResult {
+  properties: Property[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export async function searchProperties(
+  params: PropertySearchParams = {}
+): Promise<PropertySearchResult> {
+  const query = new URLSearchParams();
+
+  if (params.search) query.set('search', params.search);
+  if (params.location) query.set('location', params.location);
+  if (params.type) query.set('type', params.type);
+  if (params.status) query.set('status', params.status);
+  if (params.minPrice !== undefined) query.set('minPrice', String(params.minPrice));
+  if (params.maxPrice !== undefined) query.set('maxPrice', String(params.maxPrice));
+  if (params.minLotSize !== undefined) query.set('minLotSize', String(params.minLotSize));
+  if (params.sort) query.set('sort', params.sort);
+  if (params.page !== undefined) query.set('page', String(params.page));
+  if (params.limit !== undefined) query.set('limit', String(params.limit));
+
+  const qs = query.toString();
+  const response = (await apiRequest(
+    `/properties${qs ? `?${qs}` : ''}`
+  )) as PropertyListResponse;
+
+  return {
+    properties: response.data.properties.map(mapToProperty),
+    pagination: response.data.pagination,
+  };
+}
+
 /**
  * Fetch one property by its Mongo id. Not really used yet since the
  * portal keeps the full list in memory, but it's here for when a
