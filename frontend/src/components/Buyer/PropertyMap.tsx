@@ -93,7 +93,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
   focusProperty,
   onSelectProperty,
   initialMapStyle = 'standard',
-  mapTitle = 'Live Property View',
+  mapTitle = 'Property Map View',
   mapSubtitle = 'Click markers to inspect nearby listings',
   recenterLabel = 'Re-center map',
   focusZoom = 15,
@@ -131,7 +131,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
       {/* Top controls */}
       <div className="absolute top-4 left-4 right-4 z-[1000] flex flex-wrap gap-2 pointer-events-none">
         <div className="bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl shadow-xl flex items-center gap-3 border border-neutral-100 pointer-events-auto select-none">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
           <div className="min-w-0">
             <h4 className="text-[11px] font-extrabold text-[#1C3A27] uppercase tracking-wide truncate">{mapTitle}</h4>
             <p className="text-[9px] text-neutral-500 truncate">{mapSubtitle}</p>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Calendar, Mail, MapPin, Eye } from 'lucide-react';
 import type { Property } from '../../types/types';
-import { RealtimeLocationModal } from './RealtimeLocationModal';
+import { PropertyLocationModal } from './RealtimeLocationModal';
 
 interface PropertyDetailsProps {
   property: Property | null;
@@ -21,7 +21,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
   onRequestVisit,
   onSendInquiry,
 }) => {
-  const [isRealtimeModalOpen, setIsRealtimeModalOpen] = useState(false);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
 
   if (!property) {
     return null;
@@ -29,11 +29,11 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
 
   return (
     <div className="min-h-screen bg-[#F7F4ED] text-[#1E2E24] font-sans px-6 py-8">
-      <RealtimeLocationModal
-        isOpen={isRealtimeModalOpen}
+      <PropertyLocationModal
+        isOpen={isMapModalOpen}
         property={property}
         properties={properties}
-        onClose={() => setIsRealtimeModalOpen(false)}
+        onClose={() => setIsMapModalOpen(false)}
       />
       <div className="max-w-6xl mx-auto space-y-6">
         <button
@@ -150,11 +150,11 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                 </div>
 
                 <button
-                  onClick={() => setIsRealtimeModalOpen(true)}
+                  onClick={() => setIsMapModalOpen(true)}
                   className="w-full mt-4 flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-3 text-sm font-bold transition-all active:translate-y-0.5 shadow-md"
                 >
                   <Eye className="w-4 h-4" />
-                  View Realtime Location
+                  View on Map
                 </button>
 
                 <div className="mt-6 rounded-3xl bg-white p-4 shadow-sm">
