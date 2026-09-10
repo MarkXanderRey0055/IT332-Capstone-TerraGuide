@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Calendar, Mail, MapPin, Eye } from 'lucide-react';
+import { ArrowLeft, Calendar, Mail, MapPin, Eye, Trees, Building2, Home, Landmark } from 'lucide-react';
 import type { Property } from '../../types/types';
 import { PropertyLocationModal } from './RealtimeLocationModal';
 
@@ -10,6 +10,15 @@ interface PropertyDetailsProps {
   onRequestVisit?: () => void;
   onSendInquiry?: () => void;
 }
+
+const TYPE_ICON: Record<string, React.ElementType> = {
+  Agricultural: Trees,
+  Commercial: Building2,
+  Condominium: Building2,
+  'House & Lot': Home,
+  Residential: Home,
+};
+const getTypeIcon = (type: string) => TYPE_ICON[type] || Landmark;
 
 const formatPrice = (price: number) =>
   `₱${price.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
@@ -22,10 +31,15 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
   onSendInquiry,
 }) => {
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
 
   if (!property) {
     return null;
   }
+
+  const imageUrl = property.images?.[0];
+  const TypeIcon = getTypeIcon(property.type);
+  const propertyLabel = property.title?.trim() || property.name;
 
   const lotSize = property.size ?? property.lotSize ?? 0;
   const pricePerSqm =
@@ -54,11 +68,22 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
 
         <div className="rounded-[32px] bg-white border border-neutral-200 shadow-xl overflow-hidden">
           <div className="relative bg-neutral-100 h-72 sm:h-96">
-            <img
-              src={property.images?.[0] ?? 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80'}
-              alt={property.name}
-              className="w-full h-full object-cover"
-            />
+            {imageUrl && !imgFailed ? (
+              <img
+                src={imageUrl}
+                alt=""
+                aria-hidden="true"
+                onError={() => setImgFailed(true)}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-[#EAE8E2] flex flex-col items-center justify-center text-[#5A7A6A] gap-2">
+                <TypeIcon className="w-16 h-16 text-[#5A7A6A]/60" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#5A7A6A]">
+                  {property.type} Listing
+                </span>
+              </div>
+            )}
             <div className="absolute inset-x-0 top-0 flex items-center justify-between px-6 py-4">
               <div className="rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-slate-700">
                 {property.type}
@@ -74,7 +99,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
               <div className="space-y-3">
                 <div className="text-xs uppercase tracking-[0.3em] text-emerald-500 font-bold">Property Details</div>
                 <h1 className="text-3xl sm:text-4xl font-serif font-bold text-[#1C3A27]">
-                  {property.title ?? property.name}
+                  {propertyLabel}
                 </h1>
                 <p className="text-sm text-neutral-500 max-w-2xl">
                   {property.description?.trim() ? property.description : 'No property description provided.'}

@@ -51,6 +51,8 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  const [imgPreviewFailed, setImgPreviewFailed] = useState(false);
+
   useEffect(() => {
     if (property) {
       setName(property.name);
@@ -61,6 +63,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       setType(property.type);
       setSuitableFor(property.suitableFor ?? []);
       setImage(property.images?.[0] || '');
+      setImgPreviewFailed(false);
       setDocTax(property.documents?.tax || 'pending');
       setDocDeed(property.documents?.deed || 'pending');
       setDocSurvey(property.documents?.survey || 'pending');
@@ -404,20 +407,27 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               type="text"
               placeholder="https://example.com/image.jpg"
               value={image}
-              onChange={(e) => setImage(e.target.value)}
+              onChange={(e) => {
+                setImage(e.target.value);
+                setImgPreviewFailed(false);
+              }}
               className="w-full p-2.5 bg-white/70 border border-neutral-200 rounded-lg text-sm text-neutral-800 focus:outline-none focus:border-sage-400 focus:bg-white"
             />
             {image.trim() && (
-              <div className="mt-2 h-36 w-full rounded-xl overflow-hidden border border-neutral-200 bg-neutral-50">
-                <img
-                  src={image}
-                  alt="Property Preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src =
-                      'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80';
-                  }}
-                />
+              <div className="mt-2 h-36 w-full rounded-xl overflow-hidden border border-neutral-200 bg-neutral-50 flex items-center justify-center">
+                {!imgPreviewFailed ? (
+                  <img
+                    src={image}
+                    alt="Property Preview"
+                    className="w-full h-full object-cover"
+                    onError={() => setImgPreviewFailed(true)}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-neutral-400 gap-1 p-3 text-center">
+                    <ImageIcon className="w-6 h-6 text-neutral-300" />
+                    <span className="text-xs">Unable to load image from URL</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

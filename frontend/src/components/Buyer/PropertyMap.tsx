@@ -29,7 +29,8 @@ interface PropertyMapProps {
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
 
-const getPropertyLabel = (property: Property) => property.title ?? property.name ?? 'Property';
+const getPropertyLabel = (property: Property) =>
+  property.title?.trim() || property.name || 'Property';
 
 const getLotSize = (property: Property) => property.size ?? property.lotSize ?? 0;
 
