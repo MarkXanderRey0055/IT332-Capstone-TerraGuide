@@ -25,6 +25,8 @@ export interface Property {
   // Which Filing Cabinet this property is currently organized under.
   // null/undefined means the property is Unassigned.
   cabinetId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface BuyerPreferences {

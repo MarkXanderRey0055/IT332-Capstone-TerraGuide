@@ -27,6 +27,14 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
     return null;
   }
 
+  const lotSize = property.size ?? property.lotSize ?? 0;
+  const pricePerSqm =
+    property.pricePerSqm && property.pricePerSqm > 0
+      ? property.pricePerSqm
+      : lotSize > 0
+        ? property.price / lotSize
+        : 0;
+
   return (
     <div className="min-h-screen bg-[#F7F4ED] text-[#1E2E24] font-sans px-6 py-8">
       <PropertyLocationModal
@@ -69,7 +77,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                   {property.title ?? property.name}
                 </h1>
                 <p className="text-sm text-neutral-500 max-w-2xl">
-                  {property.description ?? `A premium listing located in ${property.location}, featuring an expansive lot size and strong investment potential.`}
+                  {property.description?.trim() ? property.description : 'No property description provided.'}
                 </p>
               </div>
 
@@ -84,12 +92,18 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Lot Size</span>
-                    <span className="text-neutral-500">{(property.size ?? property.lotSize ?? 0).toLocaleString()} sqm</span>
+                    <span className="text-neutral-500">{lotSize.toLocaleString()} sqm</span>
                   </div>
-                  {/* <div className="flex items-center justify-between">
-                    <span className="font-medium">Price / sqm</span>
-                    <span className="text-neutral-500">₱{(property.pricePerSqm ?? 0).toLocaleString()}</span>
-                  </div> */}
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">Status</span>
+                    <span className="text-neutral-500">{property.status}</span>
+                  </div>
+                  {pricePerSqm > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Price / sqm</span>
+                      <span className="text-neutral-500">₱{Math.round(pricePerSqm).toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -101,9 +115,6 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                     Property Overview
                   </div>
                   <div className="space-y-4">
-                    <p>
-                      This listing is ideal for buyers looking for a strategic estate in Batangas. The property combines accessible location data with modern acreage ready for residential or agricultural development.
-                    </p>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="rounded-2xl bg-[#F4F9F6] p-4">
                         <div className="text-[11px] uppercase tracking-[0.24em] text-neutral-500">Location</div>
@@ -111,8 +122,28 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                       </div>
                       <div className="rounded-2xl bg-[#F4F9F6] p-4">
                         <div className="text-[11px] uppercase tracking-[0.24em] text-neutral-500">Lot Size</div>
-                        <div className="mt-2 font-semibold text-[#1C3A27]">{(property.size ?? property.lotSize ?? 0).toLocaleString()} sqm</div>
+                        <div className="mt-2 font-semibold text-[#1C3A27]">{lotSize.toLocaleString()} sqm</div>
                       </div>
+                      <div className="rounded-2xl bg-[#F4F9F6] p-4">
+                        <div className="text-[11px] uppercase tracking-[0.24em] text-neutral-500">Status</div>
+                        <div className="mt-2 font-semibold text-[#1C3A27]">{property.status}</div>
+                      </div>
+                      <div className="rounded-2xl bg-[#F4F9F6] p-4">
+                        <div className="text-[11px] uppercase tracking-[0.24em] text-neutral-500">Property Type</div>
+                        <div className="mt-2 font-semibold text-[#1C3A27]">{property.type}</div>
+                      </div>
+                      {property.suitableFor && property.suitableFor.length > 0 && (
+                        <div className="rounded-2xl bg-[#F4F9F6] p-4 sm:col-span-2">
+                          <div className="text-[11px] uppercase tracking-[0.24em] text-neutral-500">Suitable Uses</div>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {property.suitableFor.map((use) => (
+                              <span key={use} className="px-2.5 py-1 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-lg border border-emerald-200">
+                                {use}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -159,16 +190,30 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
 
                 <div className="mt-6 rounded-3xl bg-white p-4 shadow-sm">
                   <div className="flex items-center justify-between text-xs uppercase tracking-[0.24em] text-neutral-500 font-semibold mb-3">
-                    <span>Additional Stats</span>
-                    <span className="text-neutral-400">Updated now</span>
+                    <span>Additional Details</span>
+                    {property.updatedAt && (
+                      <span className="text-neutral-400 normal-case text-[11px] tracking-normal">
+                        Updated {new Date(property.updatedAt).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
                   <div className="space-y-3 text-sm text-[#334032]">
                     <div className="flex justify-between">
-                      <span className="font-medium">Estimated value</span>
-                      <span>{formatPrice(property.price)}</span>
+                      <span className="font-medium">Price</span>
+                      <span className="font-semibold text-emerald-800">{formatPrice(property.price)}</span>
+                    </div>
+                    {pricePerSqm > 0 && (
+                      <div className="flex justify-between">
+                        <span className="font-medium">Price per sqm</span>
+                        <span>₱{Math.round(pricePerSqm).toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="font-medium">Status</span>
+                      <span>{property.status}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-medium">Area type</span>
+                      <span className="font-medium">Property Type</span>
                       <span>{property.type}</span>
                     </div>
                   </div>
