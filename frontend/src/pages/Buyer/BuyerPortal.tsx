@@ -27,7 +27,6 @@ import {
   saveBuyerPreferences,
 } from '../../services/buyerPrefs';
 import { getProperties } from '../../services/PropertyService';
-import { notifyInquiry, notifySiteVisitRequest } from '../../services/notificationStorage';
 import { getCurrentUser } from '../../services/AuthService';
 import { submitInquiry, getMyInquiries } from '../../services/InquiryService';
 import type { Inquiry } from '../../services/InquiryService';
@@ -654,13 +653,11 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     if (!selectedProperty || !visitPreferredDate) return;
 
     try {
-      const visit = await submitSiteVisit(
+      await submitSiteVisit(
         selectedProperty.id,
         visitPreferredDate,
         visitNotes.trim()
       );
-      const propertyName = visit.propertyId?.name ?? (selectedProperty.title?.trim() || selectedProperty.name);
-      notifySiteVisitRequest(buyerName, propertyName, 0);
       const updated = await getMySiteVisits();
       setBuyerSiteVisits(updated);
       setIsVisitModalOpen(false);
@@ -674,9 +671,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     if (!selectedProperty || !inquiryMessage.trim()) return;
 
     try {
-      const inquiry = await submitInquiry(selectedProperty.id, inquiryMessage.trim());
-      const propertyName = inquiry.propertyId?.name ?? (selectedProperty.title?.trim() || selectedProperty.name);
-      notifyInquiry(buyerName, propertyName, 0);
+      await submitInquiry(selectedProperty.id, inquiryMessage.trim());
       const updated = await getMyInquiries();
       setBuyerInquiries(updated);
       setIsInquiryModalOpen(false);
