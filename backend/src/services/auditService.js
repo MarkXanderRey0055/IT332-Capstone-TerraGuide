@@ -72,7 +72,7 @@ export async function generateAudit(propertyId, adminUserId) {
   // 5. Save complete record to MongoDB
   const audit = await Audit.create({
     propertyId: property._id,
-    model: 'meta/llama-3.1-8b-instruct',
+    model: 'meta/llama-3.2-11b-vision-instruct',
     complianceScore,
     estimatedSuccessRate,
     potentialSuccessRate,

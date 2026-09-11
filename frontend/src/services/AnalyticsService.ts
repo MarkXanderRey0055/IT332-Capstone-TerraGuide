@@ -23,7 +23,6 @@ export interface ChartPoint {
 export interface ChartData {
   propertyStatusDistribution: ChartPoint[];
   propertyTypeDistribution: ChartPoint[];
-  buyerPreferredTypes: ChartPoint[];
   complianceScoreDistribution: ChartPoint[];
 }
 

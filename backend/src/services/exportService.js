@@ -392,9 +392,9 @@ async function buildAnalyticsRows() {
     },
     {
       section: 'Executive Summary',
-      metric: 'Average Success Rate',
+      metric: 'Compliance Pass Rate',
       value: `${summary.averageSuccessRate}%`,
-      details: 'Share of audited properties at or above compliance-ready threshold.',
+      details: 'Share of audited properties at or above compliance-ready threshold (≥70%).',
     },
     {
       section: 'Executive Summary',

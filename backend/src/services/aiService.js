@@ -126,7 +126,7 @@ async function callNvidiaModel(apiKey, prompt) {
   const url = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
   const payload = {
-    model: 'meta/llama-3.1-8b-instruct', // Ultra-fast inference model
+    model: 'meta/llama-3.2-11b-vision-instruct', // Active Llama 3.2 model on NVIDIA NIM
     messages: [
       {
         role: 'system',
@@ -219,8 +219,8 @@ function buildPortfolioPrompt(snapshot) {
 
   const salesLine =
     salesPerformance && salesPerformance.totalRevenue > 0
-      ? `Total revenue from Sold properties: ₱${salesPerformance.totalRevenue.toLocaleString()}. Monthly average: ₱${salesPerformance.monthlyAverage.toLocaleString()}. Simple next-month projection: ₱${salesPerformance.forecastNextMonth.toLocaleString()} (${salesPerformance.note})`
-      : 'No properties have been marked Sold yet, so there is no sales history.';
+      ? `Total realized revenue from Completed transactions: ₱${salesPerformance.totalRevenue.toLocaleString()}. Monthly average: ₱${salesPerformance.monthlyAverage.toLocaleString()}. Simple next-month projection: ₱${salesPerformance.forecastNextMonth.toLocaleString()}${salesPerformance.note ? ` (${salesPerformance.note})` : ''}`
+      : 'No completed transactions recorded yet, so there is no sales history.';
 
   return `You are writing an executive business intelligence report for the administrators of TerraGuide. Write in a professional, confident, advisory tone. Every section should read as a short paragraph (2-4 sentences).
 
@@ -229,7 +229,7 @@ PORTFOLIO FACTS:
 - Estimated portfolio value: ₱${summary.estimatedPortfolioValue.toLocaleString()}
 - Total registered buyers: ${summary.totalBuyers}
 - Average compliance score across ${summary.auditedPropertiesCount} audited properties: ${summary.averageComplianceScore}%
-- Average success rate: ${summary.averageSuccessRate}%
+- Compliance pass rate (audited properties with score ≥ 70%): ${summary.averageSuccessRate}%
 
 RISK BREAKDOWN:
 - High risk: ${riskCounts.High}
