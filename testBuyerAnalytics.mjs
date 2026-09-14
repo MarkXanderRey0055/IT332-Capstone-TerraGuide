@@ -130,7 +130,7 @@ const originalFetch = global.fetch;
 global.fetch = async (url, options) => {
   assert.equal(url, 'https://integrate.api.nvidia.com/v1/chat/completions');
   const body = JSON.parse(options.body);
-  assert.equal(body.model, 'meta/llama-3.1-8b-instruct');
+  assert.equal(body.model, 'meta/llama-3.2-11b-vision-instruct');
   assert.ok(body.messages[1].content.includes('buyers browsing TerraGuide'), 'prompt should be buyer-facing');
   return {
     ok: true,
@@ -139,8 +139,9 @@ global.fetch = async (url, options) => {
         {
           message: {
             content: JSON.stringify({
-              summary:
-                'Residential and Agricultural properties are drawing the most buyer interest this period. Two of three listings remain Available, suggesting healthy supply relative to demand. Buyers with budgets near the average may want to act while comparable listings remain on the market.',
+              buyerDemand: 'Residential and Agricultural properties are drawing the most buyer interest.',
+              topListings: 'Balayan Farm Lot and Tagaytay Residential lead buyer attention.',
+              marketContext: 'Healthy supply relative to demand with average budget alignment.',
             }),
           },
         },
@@ -151,7 +152,7 @@ global.fetch = async (url, options) => {
 
 const result = await analyticsService.generateBuyerMarketInsight();
 console.log('generateBuyerMarketInsight() ->', JSON.stringify(result, null, 2));
-assert.ok(result.insight.summary.length > 0);
+assert.ok(result.insight.buyerDemand.length > 0);
 assert.equal(result.snapshot.totalProperties, 3);
 console.log('✅ Scenario 3 (AI insight generation, mocked NVIDIA call) passed');
 

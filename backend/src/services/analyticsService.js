@@ -132,10 +132,9 @@ export async function getDashboardSummary() {
 }
 
 export async function getChartData() {
-  const [statusAgg, typeAgg, preferredTypeAgg, latestAudits] = await Promise.all([
+  const [statusAgg, typeAgg, latestAudits] = await Promise.all([
     Property.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
     Property.aggregate([{ $group: { _id: '$type', count: { $sum: 1 } } }]),
-    BuyerPreference.aggregate([{ $group: { _id: '$landType', count: { $sum: 1 } } }]),
     getLatestAuditsByProperty(),
   ]);
 
@@ -167,7 +166,6 @@ export async function getChartData() {
   return {
     propertyStatusDistribution: toChartPoints(statusAgg),
     propertyTypeDistribution: toChartPoints(typeAgg),
-    buyerPreferredTypes: toChartPoints(preferredTypeAgg),
     complianceScoreDistribution,
   };
 }
@@ -349,8 +347,8 @@ export async function getBuyerIntelligence() {
 export async function getSalesPerformance() {
   const { start, end } = getManilaYearBounds();
 
-  const [soldProperties, ytdAgg] = await Promise.all([
-    Property.find({ status: 'Sold' }).select('price updatedAt'),
+  const [completedTransactions, ytdAgg] = await Promise.all([
+    Transaction.find({ status: 'Completed' }).select('amount completedAt updatedAt createdAt'),
     Transaction.aggregate([
       { $match: { status: 'Completed', completedAt: { $gte: start, $lt: end } } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
@@ -359,46 +357,65 @@ export async function getSalesPerformance() {
 
   const revenueYTD = ytdAgg[0]?.total || 0;
 
-  if (soldProperties.length === 0) {
+  if (completedTransactions.length === 0) {
     return {
       monthlyTrend: [],
       totalRevenue: 0,
       monthlyAverage: 0,
       forecastNextMonth: 0,
-      isApproximate: true,
-      note: "No properties are marked Sold yet, so there's no sales history to show.",
+      isApproximate: false,
+      note: '',
       revenueYTD,
       revenueYTDSource: 'transactions',
     };
   }
 
+  let hasUnrecordedCompletionDates = false;
   const monthlyTotals = new Map();
-  soldProperties.forEach((property) => {
-    const date = new Date(property.updatedAt);
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    monthlyTotals.set(key, (monthlyTotals.get(key) || 0) + property.price);
+
+  completedTransactions.forEach((txn) => {
+    let date = txn.completedAt;
+    if (!date) {
+      hasUnrecordedCompletionDates = true;
+      date = txn.updatedAt || txn.createdAt;
+    }
+    const d = new Date(date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    monthlyTotals.set(key, (monthlyTotals.get(key) || 0) + (txn.amount || 0));
   });
 
   const monthlyTrend = Array.from(monthlyTotals.entries())
     .sort(([a], [b]) => (a > b ? 1 : -1))
     .map(([month, total]) => ({ month, total }));
 
-  const totalRevenue = soldProperties.reduce((sum, property) => sum + property.price, 0);
-  const monthlyAverage = Math.round(totalRevenue / monthlyTrend.length);
+  const totalRevenue = completedTransactions.reduce(
+    (sum, txn) => sum + (txn.amount || 0),
+    0
+  );
+  const monthlyAverage =
+    monthlyTrend.length > 0 ? Math.round(totalRevenue / monthlyTrend.length) : 0;
 
   const recentMonths = monthlyTrend.slice(-3);
-  const forecastNextMonth = Math.round(
-    recentMonths.reduce((sum, month) => sum + month.total, 0) / recentMonths.length
-  );
+  const forecastNextMonth =
+    recentMonths.length > 0
+      ? Math.round(
+          recentMonths.reduce((sum, month) => sum + month.total, 0) /
+            recentMonths.length
+        )
+      : 0;
+
+  const isApproximate = hasUnrecordedCompletionDates;
+  const note = isApproximate
+    ? 'Some completed transactions lack an explicit completion timestamp and use their record update date.'
+    : '';
 
   return {
     monthlyTrend,
     totalRevenue,
     monthlyAverage,
     forecastNextMonth,
-    isApproximate: true,
-    note:
-      "Based on each property's last-updated date as a stand-in for its sale date, since the system doesn't record a dedicated sale date separately from general edits.",
+    isApproximate,
+    note,
     revenueYTD,
     revenueYTDSource: 'transactions',
   };

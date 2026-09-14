@@ -51,12 +51,12 @@ assert.equal(summary.totalProperties, 5);
 assert.equal(summary.totalBuyers, 10);
 console.log('✅ Scenario 1 (getDashboardSummary reports real this-month counts) passed');
 
-// ---- Scenario 2: getSalesPerformance computes Revenue YTD from completed transactions only ----
+// ---- Scenario 2: getSalesPerformance computes Revenue from completed transactions only ----
 const { start: yearStart, end: yearEnd } = getManilaYearBounds();
 const midYear = new Date(yearStart.getTime() + (yearEnd.getTime() - yearStart.getTime()) / 2);
 const lastYear = new Date(yearStart.getTime() - 1000 * 60 * 60 * 24 * 30);
 
-Property.find = () => mockQuery([{ price: 500000, updatedAt: midYear }]);
+Transaction.find = () => mockQuery([{ amount: 500000, completedAt: midYear }]);
 Transaction.aggregate = async (pipeline) => {
   const match = pipeline[0].$match;
   assert.equal(match.status, 'Completed');
@@ -67,16 +67,17 @@ Transaction.aggregate = async (pipeline) => {
 const sales = await analyticsService.getSalesPerformance();
 assert.equal(sales.revenueYTD, 750000);
 assert.equal(sales.revenueYTDSource, 'transactions');
-assert.equal(sales.totalRevenue, 500000, 'existing Property-based totalRevenue must remain untouched');
-console.log('✅ Scenario 2 (Revenue YTD sourced from completed Transactions, old fields untouched) passed');
+assert.equal(sales.totalRevenue, 500000, 'totalRevenue must be derived from completed Transactions');
+assert.equal(sales.isApproximate, false, 'isApproximate must be false when completion dates are recorded');
+console.log('✅ Scenario 2 (Revenue sourced from completed Transactions) passed');
 
-// ---- Scenario 3: getSalesPerformance still returns revenueYTD even with zero Sold properties ----
-Property.find = () => mockQuery([]);
+// ---- Scenario 3: getSalesPerformance still returns revenueYTD even with zero Completed transactions ----
+Transaction.find = () => mockQuery([]);
 Transaction.aggregate = async () => [{ _id: null, total: 300000 }];
 const salesEmpty = await analyticsService.getSalesPerformance();
 assert.equal(salesEmpty.totalRevenue, 0);
-assert.equal(salesEmpty.revenueYTD, 300000, 'YTD must still be reported even when no properties are Sold yet');
-console.log('✅ Scenario 3 (Revenue YTD present even on the zero-Sold-properties early return) passed');
+assert.equal(salesEmpty.revenueYTD, 300000, 'YTD must still be reported even when no transactions are completed yet');
+console.log('✅ Scenario 3 (Revenue YTD present even on the zero-Completed-transactions early return) passed');
 
 // ---- Scenario 4: a completed transaction from a previous year is excluded ----
 Property.find = () => mockQuery([{ price: 100, updatedAt: now }]);

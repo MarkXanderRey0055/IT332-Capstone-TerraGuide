@@ -64,7 +64,13 @@ const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
   }
 
   if (currentView === 'browse') {
-    return <BuyerPortal onGoToLogin={onGoToLogin} onSignOut={onSignOut} />;
+    return (
+      <BuyerPortal
+        onGoToLogin={onGoToLogin}
+        onGoToAdminLogin={() => setCurrentView('admin')}
+        onSignOut={onSignOut}
+      />
+    );
   }
 
   if (currentView === 'admin') {

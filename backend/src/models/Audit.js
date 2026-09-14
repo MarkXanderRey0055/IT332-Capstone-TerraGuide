@@ -12,7 +12,7 @@ const auditSchema = new mongoose.Schema({
   },
   model: {
     type: String,
-    default: 'meta/llama-3.1-8b-instruct',
+    default: 'meta/llama-3.2-11b-vision-instruct',
   },
   complianceScore: {
     type: Number,

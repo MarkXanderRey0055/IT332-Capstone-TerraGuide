@@ -23,7 +23,6 @@ import {
   DollarSign,
   Target,
   Download,
-  Calendar,
   ChevronDown,
   ChevronUp,
   Info,
@@ -34,7 +33,6 @@ import {
 import {
   getDashboardSummary,
   getChartData,
-  getTopProperties,
   getAttentionProperties,
   getPropertyRankings,
   getBuyerIntelligence,
@@ -42,7 +40,6 @@ import {
   generatePortfolioInsights,
   type DashboardSummary,
   type ChartData as AnalyticsChartData,
-  type TopProperty,
   type AttentionProperty,
   type PropertyRankingsResult,
   type BuyerIntelligence,
@@ -126,12 +123,6 @@ const doughnutOptions = {
   },
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  Available: '#34d399',
-  Reserved: '#fbbf24',
-  Sold: '#9ca3af',
-};
-
 const TYPE_COLORS = ['#34d399', '#60a5fa', '#fbbf24', '#f472b6', '#a78bfa'];
 
 const RISK_STYLES: Record<RiskLevel, string> = {
@@ -146,9 +137,6 @@ const formatCurrency = (amount: number | null | undefined) => {
     maximumFractionDigits: 0,
   })}`;
 };
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 
 const formatMonth = (yyyyMm: string) => {
   const [year, month] = yyyyMm.split('-');
@@ -182,9 +170,9 @@ const SectionHeader: React.FC<{
   </div>
 );
 
-const EmptyState: React.FC<{ message: string; icon?: React.ElementType }> = ({ 
-  message, 
-  icon: Icon 
+const EmptyState: React.FC<{ message: string; icon?: React.ElementType }> = ({
+  message,
+  icon: Icon,
 }) => (
   <div className="h-full flex flex-col items-center justify-center py-10">
     {Icon && <Icon className="w-10 h-10 text-[#9d8c76] mb-3 opacity-30" strokeWidth={1.5} />}
@@ -205,7 +193,6 @@ const MetricTooltip: React.FC<{ tooltip: string }> = ({ tooltip }) => (
 export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [charts, setCharts] = useState<AnalyticsChartData | null>(null);
-  const [topProperties, setTopProperties] = useState<TopProperty[]>([]);
   const [attentionProperties, setAttentionProperties] = useState<AttentionProperty[]>([]);
   const [rankingsResult, setRankingsResult] = useState<PropertyRankingsResult | null>(null);
   const [buyerIntel, setBuyerIntel] = useState<BuyerIntelligence | null>(null);
@@ -222,9 +209,8 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
 
   // Collapsible sections
   const [expandedSections, setExpandedSections] = useState({
-    rankings: true,
-    compliance: true,
     performance: true,
+    rankings: true,
     buyers: true,
     insights: true,
   });
@@ -246,7 +232,6 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
         const [
           summaryData,
           chartData,
-          topData,
           attentionData,
           rankingsData,
           buyerData,
@@ -254,7 +239,6 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
         ] = await Promise.all([
           getDashboardSummary(),
           getChartData(),
-          getTopProperties(5),
           getAttentionProperties(),
           getPropertyRankings(),
           getBuyerIntelligence(),
@@ -264,7 +248,6 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
         if (isCancelled) return;
         setSummary(summaryData);
         setCharts(chartData);
-        setTopProperties(topData);
         setAttentionProperties(attentionData);
         setRankingsResult(rankingsData);
         setBuyerIntel(buyerData);
@@ -322,8 +305,8 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
     return (
       <div className="space-y-8">
         {/* Skeleton KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
             <div key={i} className="admin-panel rounded-2xl p-5 animate-pulse">
               <div className="flex items-center justify-between">
                 <div className="h-3 w-24 bg-[#d6c7b2] rounded" />
@@ -375,18 +358,6 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
       icon: Wallet,
       tooltip: 'Total estimated value of all properties in the portfolio',
     },
-    { 
-      label: 'Total Properties', 
-      value: summary.totalProperties.toLocaleString(), 
-      icon: Home,
-      tooltip: 'Total number of properties in the portfolio',
-    },
-    { 
-      label: 'Total Buyers', 
-      value: summary.totalBuyers.toLocaleString(), 
-      icon: Users,
-      tooltip: 'Total number of registered buyers',
-    },
     {
       label: 'Avg. Compliance Score',
       value: `${summary.averageComplianceScore}%`,
@@ -394,10 +365,10 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
       tooltip: 'Average compliance score across all audited properties',
     },
     {
-      label: 'Avg. Success Rate',
+      label: 'Compliance Pass Rate',
       value: `${summary.averageSuccessRate}%`,
       icon: TrendingUp,
-      tooltip: 'Average success rate compared to portfolio average',
+      tooltip: 'Percentage of audited properties that have reached the compliance readiness threshold (≥70%)',
     },
     {
       label: 'High-Risk Listings',
@@ -406,32 +377,6 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
       tooltip: 'Properties flagged with high risk that need immediate attention',
     },
   ];
-
-  const statusChartData = {
-    labels: charts.propertyStatusDistribution.map((p) => p.label),
-    datasets: [
-      {
-        data: charts.propertyStatusDistribution.map((p) => p.count),
-        backgroundColor: charts.propertyStatusDistribution.map(
-          (p) => STATUS_COLORS[p.label] ?? '#6b7280'
-        ),
-        borderWidth: 0,
-      },
-    ],
-  };
-
-  const typeChartData = {
-    labels: charts.propertyTypeDistribution.map((p) => p.label),
-    datasets: [
-      {
-        data: charts.propertyTypeDistribution.map((p) => p.count),
-        backgroundColor: charts.propertyTypeDistribution.map(
-          (_, i) => TYPE_COLORS[i % TYPE_COLORS.length]
-        ),
-        borderWidth: 0,
-      },
-    ],
-  };
 
   const complianceDistData = {
     labels: charts.complianceScoreDistribution.map((p) => p.label),
@@ -542,13 +487,6 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
             <Download className="w-3 h-3" />
             {isExportingReport ? 'Preparing Report...' : 'Export Report'}
           </button>
-          <button className="text-xs px-3 py-1.5 rounded-lg bg-white/70 hover:bg-white transition-all shadow-sm flex items-center gap-1.5">
-            <Calendar className="w-3 h-3" />
-            This Month
-          </button>
-          <button className="text-xs px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-sm">
-            Schedule Audit
-          </button>
         </div>
       </div>
 
@@ -559,7 +497,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
           title="Executive Summary"
           subtitle="How is the business performing?"
         />
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {kpiCards.map((card) => {
             const Icon = card.icon;
             return (
@@ -585,19 +523,85 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
           <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50/50 border border-amber-200/30">
             <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
             <p className="text-xs text-[#7c6a57]">
-              Compliance, success-rate, and risk figures will populate once properties have been
+              Compliance, pass-rate, and risk figures will populate once properties have been
               audited via the AI Compliance Center below.
             </p>
           </div>
         )}
       </section>
 
-      {/* 2 + 6. Market Intelligence / Property Performance Rankings */}
+      {/* 2. Business Performance */}
+      <section className="space-y-4">
+        <SectionHeader
+          icon={DollarSign}
+          title="Business Performance"
+          subtitle="How are sales and revenue trending?"
+          action={
+            <button
+              onClick={() => toggleSection('performance')}
+              className="text-[#7c6a57] hover:text-[#2f2417] transition-colors p-1"
+            >
+              {expandedSections.performance ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          }
+        />
+
+        {expandedSections.performance && (
+          <>
+            {salesPerf.isApproximate && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50/50 border border-amber-200/30">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                <p className="text-[11px] text-amber-700">{salesPerf.note}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="admin-panel rounded-2xl p-5 hover:shadow-lg transition-all duration-200">
+                <p className="text-[#7c6a57] text-xs uppercase tracking-wider">Total Revenue</p>
+                <p className="text-[#2f2417] text-2xl font-bold mt-2">
+                  {formatCurrency(salesPerf.totalRevenue)}
+                </p>
+              </div>
+              <div className="admin-panel rounded-2xl p-5 hover:shadow-lg transition-all duration-200">
+                <p className="text-[#7c6a57] text-xs uppercase tracking-wider">Monthly Average</p>
+                <p className="text-[#2f2417] text-2xl font-bold mt-2">
+                  {formatCurrency(salesPerf.monthlyAverage)}
+                </p>
+              </div>
+              <div className="admin-panel rounded-2xl p-5 hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-emerald-50/30 to-transparent">
+                <p className="text-[#7c6a57] text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  Projected Next Month
+                  <TrendingUp className="w-3 h-3 text-emerald-500" />
+                </p>
+                <p className="text-[#2f2417] text-2xl font-bold mt-2">
+                  {formatCurrency(salesPerf.forecastNextMonth)}
+                </p>
+              </div>
+            </div>
+
+            <div className="admin-panel rounded-2xl p-6">
+              <h4 className="text-[#2f2417] font-semibold text-xs mb-4 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-1 h-4 bg-emerald-500 rounded-full" />
+                Sales Trend
+              </h4>
+              <div className="h-[240px]">
+                {salesPerf.monthlyTrend.length === 0 ? (
+                  <EmptyState message="No sold properties yet — sales trend will appear here once listings are marked Sold." icon={DollarSign} />
+                ) : (
+                  <Line data={salesTrendChartData} options={lineOptions} />
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* 3. Property Performance */}
       <section className="space-y-4">
         <SectionHeader
           icon={Trophy}
-          title="Property Performance Rankings"
-          subtitle="Which listings are attracting buyers?"
+          title="Property Performance"
+          subtitle="Compliance health and listing rankings"
           action={
             <button
               onClick={() => toggleSection('rankings')}
@@ -610,35 +614,22 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
 
         {expandedSections.rankings && (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="admin-panel rounded-2xl p-6">
-                <h4 className="text-[#2f2417] font-semibold text-xs mb-4 uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-1 h-4 bg-emerald-500 rounded-full" />
-                  Property Status Distribution
-                </h4>
-                <div className="h-[220px]">
-                  {charts.propertyStatusDistribution.length === 0 ? (
-                    <EmptyState message="No properties yet." icon={Home} />
-                  ) : (
-                    <Doughnut data={statusChartData} options={doughnutOptions} />
-                  )}
-                </div>
-              </div>
-              <div className="admin-panel rounded-2xl p-6">
-                <h4 className="text-[#2f2417] font-semibold text-xs mb-4 uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-1 h-4 bg-emerald-500 rounded-full" />
-                  Property Type Distribution
-                </h4>
-                <div className="h-[220px]">
-                  {charts.propertyTypeDistribution.length === 0 ? (
-                    <EmptyState message="No properties yet." icon={Home} />
-                  ) : (
-                    <Doughnut data={typeChartData} options={doughnutOptions} />
-                  )}
-                </div>
+            {/* Compliance Score Distribution */}
+            <div className="admin-panel rounded-2xl p-6">
+              <h4 className="text-[#2f2417] font-semibold text-xs mb-4 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-1 h-4 bg-emerald-500 rounded-full" />
+                Compliance Score Distribution
+              </h4>
+              <div className="h-[200px]">
+                {summary.auditedPropertiesCount === 0 ? (
+                  <EmptyState message="Not enough data yet." icon={ShieldCheck} />
+                ) : (
+                  <Bar data={complianceDistData} options={barOptions} />
+                )}
               </div>
             </div>
 
+            {/* Performance Rankings */}
             <div className="admin-panel rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-[#2f2417] font-semibold text-sm flex items-center gap-2">
@@ -710,7 +701,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
                             <div className="flex items-center gap-2">
                               <span className="text-[#5d503f] text-sm font-medium">{entry.complianceScore}%</span>
                               <div className="w-16 h-1.5 bg-[#e0d5c3] rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   className="h-full bg-emerald-500 rounded-full transition-all duration-500"
                                   style={{ width: `${entry.complianceScore}%` }}
                                 />
@@ -730,7 +721,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
                             <div className="flex items-center gap-2">
                               <span className="text-[#5d503f] text-sm">{entry.marketReadinessScore}%</span>
                               <div className="w-16 h-1.5 bg-[#e0d5c3] rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   className="h-full bg-blue-400 rounded-full transition-all duration-500"
                                   style={{ width: `${entry.marketReadinessScore}%` }}
                                 />
@@ -753,179 +744,45 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
                 competitiveness against similar listings.
               </p>
             </div>
-          </>
-        )}
-      </section>
 
-      {/* 3. AI Compliance Center */}
-      <section className="space-y-4">
-        <SectionHeader
-          icon={ShieldCheck}
-          title="AI Compliance Center"
-          subtitle="Which listings need compliance improvements?"
-          action={
-            <button
-              onClick={() => toggleSection('compliance')}
-              className="text-[#7c6a57] hover:text-[#2f2417] transition-colors p-1"
-            >
-              {expandedSections.compliance ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
-          }
-        />
-
-        {expandedSections.compliance && (
-          <>
+            {/* Properties Requiring Attention */}
             <div className="admin-panel rounded-2xl p-6">
-              <h4 className="text-[#2f2417] font-semibold text-xs mb-4 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-1 h-4 bg-emerald-500 rounded-full" />
-                Compliance Score Distribution
-              </h4>
-              <div className="h-[200px]">
-                {summary.auditedPropertiesCount === 0 ? (
-                  <EmptyState message="Not enough data yet." icon={ShieldCheck} />
-                ) : (
-                  <Bar data={complianceDistData} options={barOptions} />
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="admin-panel rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 rounded-lg bg-amber-50">
-                    <Trophy className="w-4 h-4 text-amber-500" />
-                  </div>
-                  <h4 className="text-[#2f2417] font-semibold text-sm">Top Performing Properties</h4>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-1.5 rounded-lg bg-rose-50">
+                  <AlertTriangle className="w-4 h-4 text-rose-500" />
                 </div>
-                {topProperties.length === 0 ? (
-                  <div className="text-center py-6">
-                    <Trophy className="w-8 h-8 text-[#d6c7b2] mx-auto mb-2" strokeWidth={1.5} />
-                    <p className="text-[#7c6a57] text-sm">No audited properties yet.</p>
-                  </div>
-                ) : (
-                  <ul className="space-y-2">
-                    {topProperties.map((p) => (
-                      <li
-                        key={p.propertyId}
-                        className="flex items-center justify-between p-3 rounded-xl bg-white/40 hover:bg-white/60 transition-colors"
-                      >
-                        <div>
-                          <p className="text-[#2f2417] text-sm font-medium">{p.name}</p>
-                          <p className="text-[#7c6a57] text-xs">{formatDate(p.auditedAt)}</p>
-                        </div>
-                        <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/15 text-emerald-600">
-                          {p.complianceScore}%
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <h4 className="text-[#2f2417] font-semibold text-sm">Properties Requiring Attention</h4>
               </div>
-
-              <div className="admin-panel rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 rounded-lg bg-rose-50">
-                    <AlertTriangle className="w-4 h-4 text-rose-500" />
-                  </div>
-                  <h4 className="text-[#2f2417] font-semibold text-sm">Properties Requiring Attention</h4>
+              {attentionProperties.length === 0 ? (
+                <div className="text-center py-6">
+                  <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto mb-2" strokeWidth={1.5} />
+                  <p className="text-[#7c6a57] text-sm">Nothing needs attention right now.</p>
                 </div>
-                {attentionProperties.length === 0 ? (
-                  <div className="text-center py-6">
-                    <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto mb-2" strokeWidth={1.5} />
-                    <p className="text-[#7c6a57] text-sm">Nothing needs attention right now.</p>
-                  </div>
-                ) : (
-                  <ul className="space-y-2 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-[#d6c7b2] scrollbar-track-transparent">
-                    {attentionProperties.map((p) => (
-                      <li key={p.propertyId} className="p-3 rounded-xl bg-white/40 hover:bg-white/60 transition-colors">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-[#2f2417] text-sm font-medium truncate">{p.name}</p>
-                          <RiskBadge level={p.riskLevel} />
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {p.reasons.map((reason) => (
-                            <span key={reason} className="text-[10px] text-[#7c6a57] bg-white/30 px-2 py-0.5 rounded-full">
-                              {reason}
-                            </span>
-                          ))}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              ) : (
+                <ul className="space-y-2 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-[#d6c7b2] scrollbar-track-transparent">
+                  {attentionProperties.map((p) => (
+                    <li key={p.propertyId} className="p-3 rounded-xl bg-white/40 hover:bg-white/60 transition-colors">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[#2f2417] text-sm font-medium truncate">{p.name}</p>
+                        <RiskBadge level={p.riskLevel} />
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {p.reasons.map((reason) => (
+                          <span key={reason} className="text-[10px] text-[#7c6a57] bg-white/30 px-2 py-0.5 rounded-full">
+                            {reason}
+                          </span>
+                        ))}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </>
         )}
       </section>
 
-      {/* 4. Business Performance */}
-      <section className="space-y-4">
-        <SectionHeader
-          icon={DollarSign}
-          title="Business Performance"
-          subtitle="How are sales and revenue trending?"
-          action={
-            <button
-              onClick={() => toggleSection('performance')}
-              className="text-[#7c6a57] hover:text-[#2f2417] transition-colors p-1"
-            >
-              {expandedSections.performance ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
-          }
-        />
-
-        {expandedSections.performance && (
-          <>
-            {salesPerf.isApproximate && (
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50/50 border border-amber-200/30">
-                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                <p className="text-[11px] text-amber-700">{salesPerf.note}</p>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="admin-panel rounded-2xl p-5 hover:shadow-lg transition-all duration-200">
-                <p className="text-[#7c6a57] text-xs uppercase tracking-wider">Total Revenue</p>
-                <p className="text-[#2f2417] text-2xl font-bold mt-2">
-                  {formatCurrency(salesPerf.totalRevenue)}
-                </p>
-              </div>
-              <div className="admin-panel rounded-2xl p-5 hover:shadow-lg transition-all duration-200">
-                <p className="text-[#7c6a57] text-xs uppercase tracking-wider">Monthly Average</p>
-                <p className="text-[#2f2417] text-2xl font-bold mt-2">
-                  {formatCurrency(salesPerf.monthlyAverage)}
-                </p>
-              </div>
-              <div className="admin-panel rounded-2xl p-5 hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-emerald-50/30 to-transparent">
-                <p className="text-[#7c6a57] text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  Projected Next Month
-                  <TrendingUp className="w-3 h-3 text-emerald-500" />
-                </p>
-                <p className="text-[#2f2417] text-2xl font-bold mt-2">
-                  {formatCurrency(salesPerf.forecastNextMonth)}
-                </p>
-              </div>
-            </div>
-
-            <div className="admin-panel rounded-2xl p-6">
-              <h4 className="text-[#2f2417] font-semibold text-xs mb-4 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-1 h-4 bg-emerald-500 rounded-full" />
-                Sales Trend
-              </h4>
-              <div className="h-[240px]">
-                {salesPerf.monthlyTrend.length === 0 ? (
-                  <EmptyState message="No sold properties yet — sales trend will appear here once listings are marked Sold." icon={DollarSign} />
-                ) : (
-                  <Line data={salesTrendChartData} options={lineOptions} />
-                )}
-              </div>
-            </div>
-          </>
-        )}
-      </section>
-
-      {/* 5. Buyer Intelligence */}
+      {/* 4. Buyer Intelligence */}
       <section className="space-y-4">
         <SectionHeader
           icon={Users}
@@ -1014,7 +871,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
         )}
       </section>
 
-      {/* 7. AI Portfolio Insights */}
+      {/* 5. AI Portfolio Insights */}
       <section className="space-y-4">
         <SectionHeader
           icon={Sparkles}
