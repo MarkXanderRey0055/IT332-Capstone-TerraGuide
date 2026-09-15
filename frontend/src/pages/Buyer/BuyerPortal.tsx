@@ -416,6 +416,8 @@ const SiteVisitModal: React.FC<{
 }) => {
   if (!isOpen) return null;
 
+  const todayDateString = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+
   return (
     <div className="fixed inset-0 bg-[#091413]/90 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
       <div className="w-full max-w-md bg-[#0D1F1A] rounded-2xl p-6 relative border border-[rgba(40,90,72,0.2)] shadow-2xl">
@@ -445,9 +447,12 @@ const SiteVisitModal: React.FC<{
               type="date"
               value={preferredDate}
               onChange={(e) => onPreferredDateChange(e.target.value)}
-              min={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]}
-              className="w-full bg-[#091413] text-[#E8F5EF] border border-[rgba(40,90,72,0.3)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#285A48] focus:shadow-[0_0_0_3px_rgba(40,90,72,0.2)] transition-all"
+              min={todayDateString}
+              className={`w-full bg-[#091413] text-[#E8F5EF] border ${preferredDate && preferredDate < todayDateString ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.2)]' : 'border-[rgba(40,90,72,0.3)] focus:border-[#285A48] focus:shadow-[0_0_0_3px_rgba(40,90,72,0.2)]'} rounded-lg px-3 py-2.5 text-sm focus:outline-none transition-all`}
             />
+            {preferredDate && preferredDate < todayDateString && (
+              <p className="text-red-400 text-xs mt-1.5 font-medium">Please select a future date.</p>
+            )}
           </div>
           <div>
             <label className="block text-[10px] uppercase tracking-wider font-medium text-[#6A9F8A] mb-1.5">
@@ -474,7 +479,7 @@ const SiteVisitModal: React.FC<{
           <button
             type="button"
             onClick={onSubmit}
-            disabled={!preferredDate}
+            disabled={!preferredDate || preferredDate < todayDateString}
             className="flex-1 px-4 py-2.5 rounded-lg text-xs font-semibold text-[#FFFFFF] bg-[#285A48] hover:bg-[#408A71] transition-colors shadow-md hover:shadow-lg border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Submit Request
