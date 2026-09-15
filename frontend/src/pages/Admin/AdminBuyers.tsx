@@ -105,9 +105,9 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast, onDataChanged
     if (!query) return buyers;
     return buyers.filter(
       (b) =>
-        b.fullName.toLowerCase().includes(query) ||
-        b.username.toLowerCase().includes(query) ||
-        b.email.toLowerCase().includes(query)
+        (b.fullName || '').toLowerCase().includes(query) ||
+        (b.username || '').toLowerCase().includes(query) ||
+        (b.email || '').toLowerCase().includes(query)
     );
   }, [buyers, searchQuery]);
 
