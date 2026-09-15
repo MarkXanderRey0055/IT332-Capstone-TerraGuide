@@ -17,6 +17,15 @@ const siteVisitSchema = new mongoose.Schema(
     preferredDate: {
       type: Date,
       required: [true, 'A preferred date is required'],
+      validate: {
+        validator: function(value) {
+          const today = new Date();
+          // Reset time to start of day for comparison
+          today.setUTCHours(0, 0, 0, 0);
+          return value >= today;
+        },
+        message: 'Preferred date cannot be in the past',
+      },
     },
     notes: {
       type: String,
