@@ -487,7 +487,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
                           <button
                             type="button"
                             onClick={() => handleEditPropertyClick(p)}
-                            className="admin-button-secondary p-1.5 text-[#5d503f] rounded-lg hover:text-[#2f2417] transition-colors cursor-pointer"
+                            className="admin-button-secondary p-1.5 text-forest-700 rounded-lg hover:text-forest-900 hover:bg-forest-50 transition-colors cursor-pointer"
                             title="Edit Listing"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
