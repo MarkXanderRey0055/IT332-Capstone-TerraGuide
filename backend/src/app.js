@@ -43,8 +43,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Render (and most PaaS hosts) ping GET / to verify the service is alive.
-// Without this, the catch-all throws a 404 on every health probe.
+//health probe something
 app.get('/', (_req, res) => {
   res.status(200).json({ success: true, message: 'TerraGuide API is running.' });
 });
