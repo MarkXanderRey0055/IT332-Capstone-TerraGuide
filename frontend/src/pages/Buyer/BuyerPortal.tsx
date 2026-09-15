@@ -445,7 +445,7 @@ const SiteVisitModal: React.FC<{
               type="date"
               value={preferredDate}
               onChange={(e) => onPreferredDateChange(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
+              min={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]}
               className="w-full bg-[#091413] text-[#E8F5EF] border border-[rgba(40,90,72,0.3)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#285A48] focus:shadow-[0_0_0_3px_rgba(40,90,72,0.2)] transition-all"
             />
           </div>
