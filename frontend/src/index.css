@@ -85,8 +85,58 @@
   background: linear-gradient(180deg, rgba(247, 244, 237, 0.98), rgba(219, 228, 214, 0.98));
 }
 
+.admin-table tbody td {
+  vertical-align: middle;
+}
+
 .admin-table tbody tr:hover {
   background: rgba(199, 211, 192, 0.36);
+}
+
+.admin-properties-table {
+  min-width: 72rem;
+}
+
+.admin-properties-table tbody td {
+  padding-top: 1.15rem;
+  padding-bottom: 1.15rem;
+  vertical-align: middle;
+}
+
+.admin-properties-table .admin-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: #223127;
+  border: 1px solid rgba(78, 96, 73, 0.42);
+  background: linear-gradient(180deg, #f7f4ed 0%, #d8e1d2 100%);
+  box-shadow: var(--admin-shadow-soft);
+}
+
+.admin-properties-table .admin-icon-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #eef3ea 0%, #c7d3c0 100%);
+  border-color: rgba(56, 107, 79, 0.6);
+}
+
+.admin-properties-table .admin-icon-btn:focus-visible {
+  outline: 2px solid #386b4f;
+  outline-offset: 2px;
+}
+
+.admin-properties-table .admin-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.admin-properties-table .admin-icon-btn--warn {
+  color: #78350f;
+}
+
+.admin-properties-table .admin-icon-btn--danger {
+  color: #9f1239;
 }
 
 .admin-scroll-cue {

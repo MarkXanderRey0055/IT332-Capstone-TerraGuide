@@ -45,52 +45,88 @@ interface AdminPropertiesProps {
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
 
-const getDocIcon = (status: 'pending' | 'verified' | 'missing') => {
+type DocStatus = 'pending' | 'verified' | 'missing';
+type DocKind = 'deed' | 'tax' | 'survey';
+
+const DOC_LABELS: Record<DocKind, string> = {
+  deed: 'Title Deed',
+  tax: 'Tax Declaration',
+  survey: 'Survey Plan',
+};
+
+const DOC_SHORT: Record<DocKind, string> = {
+  deed: 'Deed',
+  tax: 'Tax',
+  survey: 'Survey',
+};
+
+const DOC_STATUS_LABELS: Record<DocStatus, string> = {
+  verified: 'Verified',
+  pending: 'Pending review',
+  missing: 'Missing',
+};
+
+const getDocIcon = (status: DocStatus) => {
   switch (status) {
     case 'verified':
-      return (
-        <span title="Verified" className="inline-flex">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-        </span>
-      );
+      return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-800 shrink-0" aria-hidden="true" />;
     case 'pending':
-      return (
-        <span title="Pending Review" className="inline-flex">
-          <Clock className="w-3.5 h-3.5 text-amber-400" />
-        </span>
-      );
+      return <Clock className="w-3.5 h-3.5 text-amber-800 shrink-0" aria-hidden="true" />;
     case 'missing':
-      return (
-        <span title="Missing Document" className="inline-flex">
-          <XCircle className="w-3.5 h-3.5 text-rose-400" />
-        </span>
-      );
+      return <XCircle className="w-3.5 h-3.5 text-rose-800 shrink-0" aria-hidden="true" />;
   }
 };
 
+const getDocChipClass = (status: DocStatus) => {
+  switch (status) {
+    case 'verified':
+      return 'border-emerald-700/35 bg-emerald-100 text-emerald-950';
+    case 'pending':
+      return 'border-amber-700/35 bg-amber-100 text-amber-950';
+    case 'missing':
+      return 'border-rose-700/35 bg-rose-100 text-rose-950';
+  }
+};
+
+const ComplianceIndicator = ({ kind, status }: { kind: DocKind; status: DocStatus }) => {
+  const description = `${DOC_LABELS[kind]}: ${DOC_STATUS_LABELS[status]}`;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-1 ${getDocChipClass(status)}`}
+      title={description}
+      aria-label={description}
+    >
+      {getDocIcon(status)}
+      <span className="text-[10px] font-bold leading-none">{DOC_SHORT[kind]}</span>
+    </span>
+  );
+};
+
 const getStatusBadge = (status: Property['status']) => {
+  const badgeClass =
+    'inline-flex items-center px-2.5 py-1 text-[10px] font-bold rounded-md border';
   switch (status) {
     case 'Available':
       return (
-        <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/15 text-emerald-400">
+        <span className={`${badgeClass} bg-emerald-100 text-emerald-950 border-emerald-700/35`}>
           Available
         </span>
       );
     case 'Reserved':
       return (
-        <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-500/15 text-amber-400">
+        <span className={`${badgeClass} bg-amber-100 text-amber-950 border-amber-700/35`}>
           Reserved
         </span>
       );
     case 'Sold':
       return (
-        <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-neutral-500/15 text-neutral-400">
+        <span className={`${badgeClass} bg-stone-200 text-stone-900 border-stone-500/40`}>
           Sold
         </span>
       );
     default:
       return (
-        <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/15 text-emerald-400">
+        <span className={`${badgeClass} bg-emerald-100 text-emerald-950 border-emerald-700/35`}>
           Available
         </span>
       );
@@ -101,13 +137,15 @@ const getTypeBadgeClass = (type: Property['type']) => {
   switch (type) {
     case 'Residential':
     case 'House & Lot':
-      return 'bg-sage-500/10 text-sage-300';
+      return 'bg-emerald-100 text-emerald-950 border-emerald-700/30';
     case 'Agricultural':
-      return 'bg-amber-500/10 text-amber-300';
+      return 'bg-amber-100 text-amber-950 border-amber-700/30';
     case 'Commercial':
-      return 'bg-teal-500/10 text-teal-300';
+      return 'bg-teal-100 text-teal-950 border-teal-700/30';
+    case 'Condominium':
+      return 'bg-sky-100 text-sky-950 border-sky-700/30';
     default:
-      return 'bg-white/10 text-gray-300';
+      return 'bg-stone-200 text-stone-900 border-stone-500/35';
   }
 };
 
@@ -412,18 +450,18 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="admin-table w-full text-left border-collapse text-xs">
+            <table className="admin-table admin-properties-table w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-[#d6c7b2] text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">
-                  <th className="p-4">Property</th>
-                  <th className="p-4">Owner</th>
-                  <th className="p-4">Location</th>
-                  <th className="p-4">Type</th>
-                  <th className="p-4">Deed / Tax / Survey</th>
-                  {selectedFilter === 'all' && <th className="p-4">Filing Cabinet</th>}
-                  <th className="p-4 text-right">Price</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Actions</th>
+                <tr className="border-b border-[#d6c7b2] text-[10px] font-bold uppercase tracking-wider text-[#4d5e4d]">
+                  <th className="p-4 min-w-[16rem]">Property</th>
+                  <th className="p-4 min-w-[9rem]">Owner</th>
+                  <th className="p-4 min-w-[11rem]">Location</th>
+                  <th className="p-4 min-w-[8rem]">Type</th>
+                  <th className="p-4 min-w-[12rem]">Deed / Tax / Survey</th>
+                  {selectedFilter === 'all' && <th className="p-4 min-w-[9rem]">Filing Cabinet</th>}
+                  <th className="p-4 min-w-[8rem] text-right">Price</th>
+                  <th className="p-4 min-w-[6.5rem]">Status</th>
+                  <th className="p-4 min-w-[10rem] text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#ded2c0]">
@@ -431,39 +469,42 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
                   const propCabinet = p.cabinetId ? cabinets.find((c) => c.id === p.cabinetId) : null;
                   return (
                     <tr key={p.id} className="transition-colors">
-                      <td className="p-4">
-                        <div className="font-bold text-[#2f2417] text-sm">{p.name}</div>
-                        <div className="text-[10px] text-[#7c6a57] font-mono mt-0.5">
-                          Size: {getLotSize(p).toLocaleString()} sqm · GPS: {p.lat.toFixed(5)}, {p.lng.toFixed(5)}
+                      <td className="px-4">
+                        <div className="font-bold text-[#223127] text-sm leading-snug whitespace-normal break-words">
+                          {p.name}
+                        </div>
+                        <div className="text-[11px] text-[#4d5e4d] mt-1 leading-snug">
+                          Size: {getLotSize(p).toLocaleString()} sqm
+                        </div>
+                        <div className="text-[11px] text-[#4d5e4d] font-mono leading-snug whitespace-normal break-all">
+                          GPS: {p.lat.toFixed(5)}, {p.lng.toFixed(5)}
                         </div>
                       </td>
-                      <td className="p-4 text-[#5d503f] font-medium">{p.owner || '—'}</td>
-                      <td className="p-4 text-[#6f604d] font-semibold">{p.location}</td>
-                      <td className="p-4">
+                      <td className="px-4 text-[#3d4a3d] font-medium whitespace-normal break-words leading-snug">
+                        {p.owner || '—'}
+                      </td>
+                      <td className="px-4 text-[#3d4a3d] font-semibold whitespace-normal break-words leading-snug">
+                        {p.location}
+                      </td>
+                      <td className="px-4">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getTypeBadgeClass(p.type)}`}
+                          className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${getTypeBadgeClass(p.type)}`}
                         >
                           {p.type}
                         </span>
                       </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <span className="flex items-center gap-0.5 text-[10px] font-semibold text-gray-400" title="Title Deed">
-                            {getDocIcon(p.documents?.deed || 'pending')}
-                          </span>
-                          <span className="flex items-center gap-0.5 text-[10px] font-semibold text-gray-400" title="Tax Declaration">
-                            {getDocIcon(p.documents?.tax || 'pending')}
-                          </span>
-                          <span className="flex items-center gap-0.5 text-[10px] font-semibold text-gray-400" title="Survey Plan">
-                            {getDocIcon(p.documents?.survey || 'pending')}
-                          </span>
+                      <td className="px-4">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <ComplianceIndicator kind="deed" status={p.documents?.deed || 'pending'} />
+                          <ComplianceIndicator kind="tax" status={p.documents?.tax || 'pending'} />
+                          <ComplianceIndicator kind="survey" status={p.documents?.survey || 'pending'} />
                         </div>
                       </td>
                       {selectedFilter === 'all' && (
-                        <td className="p-4">
+                        <td className="px-4">
                           {propCabinet ? (
                             <span
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold border border-black/10"
                               style={{
                                 background: CABINET_COLOR_STYLES[propCabinet.color].badgeBg,
                                 color: CABINET_COLOR_STYLES[propCabinet.color].badgeText,
@@ -472,52 +513,56 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
                               <Archive className="w-3 h-3" /> {propCabinet.name}
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-500/15 text-amber-700">
+                            <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-bold rounded-md bg-amber-100 text-amber-950 border border-amber-700/35">
                               Unassigned
                             </span>
                           )}
                         </td>
                       )}
-                      <td className="p-4 text-right font-bold text-emerald-400 font-mono text-sm">
+                      <td className="px-4 text-right font-bold text-emerald-900 font-mono text-sm whitespace-nowrap">
                         {formatPrice(p.price)}
                       </td>
-                      <td className="p-4">{getStatusBadge(p.status)}</td>
-                      <td className="p-4">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-4">{getStatusBadge(p.status)}</td>
+                      <td className="px-4">
+                        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => handleEditPropertyClick(p)}
-                            className="admin-button-secondary p-1.5 text-forest-700 rounded-lg hover:text-forest-900 hover:bg-forest-50 transition-colors cursor-pointer"
+                            className="admin-icon-btn rounded-lg cursor-pointer"
                             title="Edit Listing"
+                            aria-label="Edit Listing"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
+                            <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleAuditPropertyClick(p)}
-                            className="admin-button-secondary p-1.5 text-[#5d503f] rounded-lg hover:text-emerald-700 transition-colors cursor-pointer"
+                            className="admin-icon-btn rounded-lg cursor-pointer"
                             title="AI Compliance Audit"
+                            aria-label="AI Compliance Audit"
                           >
-                            <Sparkles className="w-3.5 h-3.5" />
+                            <Sparkles className="w-4 h-4" />
                           </button>
                           {p.cabinetId && (
                             <button
                               type="button"
                               onClick={() => handleRemoveFromCabinet(p)}
-                              className="admin-button-secondary p-1.5 text-amber-700 rounded-lg hover:text-amber-900 transition-colors cursor-pointer"
+                              className="admin-icon-btn admin-icon-btn--warn rounded-lg cursor-pointer"
                               title="Remove from Filing Cabinet (does not delete the property)"
+                              aria-label="Remove from Filing Cabinet"
                             >
-                              <FolderMinus className="w-3.5 h-3.5" />
+                              <FolderMinus className="w-4 h-4" />
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => handleDeleteProperty(p.id, p.name)}
                             disabled={deletingId === p.id}
-                            className="admin-button-secondary p-1.5 text-[#7c6a57] rounded-lg hover:text-red-700 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="admin-icon-btn admin-icon-btn--danger rounded-lg cursor-pointer"
                             title="Delete Listing"
+                            aria-label="Delete Listing"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
