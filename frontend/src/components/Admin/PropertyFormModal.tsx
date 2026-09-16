@@ -497,7 +497,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="px-4 py-2 text-xs font-bold text-neutral-500 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm cursor-pointer"
+            className="px-4 py-2 text-xs font-bold text-forest-900 bg-[#edf3ee] border border-[#bfd0bb] rounded-xl hover:bg-[#e3ecdf] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm cursor-pointer"
           >
             Cancel
           </button>
@@ -505,7 +505,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-sage-500 to-forest-800 rounded-xl hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer border-none"
+            className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-[#5d7d5f] via-[#43664b] to-[#1d372a] rounded-xl hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer border-none"
           >
             {isSaving ? 'Saving...' : 'Save Listing'}
           </button>
