@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Image as ImageIcon, Compass, MapPin } from 'lucide-react';
+import { X, Image as ImageIcon, Compass, MapPin, Home } from 'lucide-react';
 import type { Property } from '../../types/types';
 import { getLotSize } from '../../services/buyerPrefs';
 
@@ -187,119 +187,145 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     }
   };
 
+  // Shared label style — matches CabinetFormModal / TransactionFormModal
+  const labelCls = 'text-[10px] uppercase tracking-wider font-bold text-[#7c6a57] block mb-1';
+  // Sub-label for grouped fields (GPS sub-fields, document selects)
+  const subLabelCls = 'text-[10px] uppercase tracking-wider font-bold text-[#9d8c76] block mb-1';
+
   return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-forest-950/40 backdrop-blur-md">
-      <div className="w-full max-w-xl bg-white/90 backdrop-blur-lg border border-white/90 rounded-3xl shadow-lg flex flex-col overflow-hidden max-h-[90vh]">
-        <div className="flex items-center justify-between p-6 pb-2">
-          <h3 className="font-serif text-xl font-bold text-forest-900">
+    <div className="fixed inset-0 z-[500] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div
+        className="admin-panel w-full max-w-xl rounded-2xl flex flex-col overflow-hidden max-h-[90vh]"
+        style={{ boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.45)' }}
+      >
+
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#d6c7b2]">
+          <h3 className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
+            <Home className="w-4 h-4 text-emerald-700" />
             {property ? 'Edit Property Listing' : 'Add Property Listing'}
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800 transition-colors border-none cursor-pointer bg-transparent"
+            aria-label="Close"
+            className="text-[#8f7d69] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-6 pt-2 overflow-y-auto space-y-4">
+        {/* ── Scrollable body ── */}
+        <div className="px-6 py-5 overflow-y-auto space-y-5">
+
+          {/* Error banner */}
           {errorMsg && (
-            <div className="p-3 text-xs font-semibold text-red-700 bg-red-100 border border-red-200 rounded-lg">
+            <div className="px-3 py-2.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg">
               {errorMsg}
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                Property Name
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Riverside Villa"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full p-2.5 bg-white/70 border border-neutral-200 rounded-lg text-sm text-neutral-800 focus:outline-none focus:border-sage-400 focus:bg-white"
-              />
+          {/* ── Section: Basic Info ── */}
+          <div className="space-y-4">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
+              <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
+              Basic Information
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>
+                  Property Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Riverside Villa"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
+                />
+              </div>
+              <div>
+                <label className={labelCls}>
+                  Owner Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Juan dela Cruz"
+                  value={owner}
+                  onChange={(e) => setOwner(e.target.value)}
+                  className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                Owner Name
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Juan dela Cruz"
-                value={owner}
-                onChange={(e) => setOwner(e.target.value)}
-                className="w-full p-2.5 bg-white/70 border border-neutral-200 rounded-lg text-sm text-neutral-800 focus:outline-none focus:border-sage-400 focus:bg-white"
-              />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>
+                  Price (₱) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 450,000"
+                  value={price}
+                  onChange={handlePriceChange}
+                  className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
+                />
+              </div>
+              <div>
+                <label className={labelCls}>
+                  Lot Size (sqm) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 1200"
+                  value={lotSize || ''}
+                  onChange={(e) => setLotSize(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                  className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>
+                  Location <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Balayan, Batangas"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
+                />
+              </div>
+              <div>
+                <label className={labelCls}>
+                  Property Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value as Property['type'])}
+                  className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
+                >
+                  <option value="">Select Type</option>
+                  {PROPERTY_TYPES.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                Price (₱)
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. 450,000"
-                value={price}
-                onChange={handlePriceChange}
-                className="w-full p-2.5 bg-white/70 border border-neutral-200 rounded-lg text-sm text-neutral-800 focus:outline-none focus:border-sage-400 focus:bg-white"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                Lot Size (sqm)
-              </label>
-              <input
-                type="number"
-                placeholder="e.g. 1200"
-                value={lotSize || ''}
-                onChange={(e) => setLotSize(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                className="w-full p-2.5 bg-white/70 border border-neutral-200 rounded-lg text-sm text-neutral-800 focus:outline-none focus:border-sage-400 focus:bg-white"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                Location
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Balayan, Batangas"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full p-2.5 bg-white/70 border border-neutral-200 rounded-lg text-sm text-neutral-800 focus:outline-none focus:border-sage-400 focus:bg-white"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                Property Type
-              </label>
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value as Property['type'])}
-                className="w-full p-2.5 bg-white/70 border border-neutral-200 rounded-lg text-sm text-neutral-800 focus:outline-none focus:border-sage-400 focus:bg-white"
-              >
-                <option value="">Select Type</option>
-                {PROPERTY_TYPES.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-              Suitable For <span className="normal-case font-medium text-neutral-400">(optional)</span>
-            </label>
+          {/* ── Section: Suitable For ── */}
+          <div className="border-t border-[#d6c7b2] pt-4 space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
+              <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
+              Suitable For
+              <span className="normal-case font-normal text-[#9d8c76] ml-1">(optional)</span>
+            </p>
             <div className="flex flex-wrap gap-2">
               {SUITABLE_FOR_OPTIONS.map((option) => {
                 const checked = suitableFor.includes(option);
@@ -308,15 +334,15 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                     key={option}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer transition-colors ${
                       checked
-                        ? 'bg-sage-100 border-sage-300 text-forest-900'
-                        : 'bg-white/70 border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                        ? 'admin-button text-white border-transparent'
+                        : 'admin-panel-muted text-[#5d503f] border-[#d6c7b2] hover:border-[#b8a990]'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleSuitableFor(option)}
-                      className="cursor-pointer"
+                      className="cursor-pointer accent-emerald-700"
                     />
                     {option}
                   </label>
@@ -325,72 +351,67 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             </div>
           </div>
 
-          <div className="space-y-2 border-t border-forest-900/10 pt-3">
+          {/* ── Section: GPS Coordinates ── */}
+          <div className="border-t border-[#d6c7b2] pt-4 space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-neutral-400" />
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
+                <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
+                <MapPin className="w-3.5 h-3.5 text-emerald-700" />
                 GPS Coordinates
-              </label>
-              <span className="text-[10px] text-neutral-400 font-mono">WGS-84 Format</span>
+              </p>
+              <span className="text-[10px] text-[#9d8c76] font-mono">WGS-84</span>
             </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Latitude</span>
+              <div>
+                <label className={subLabelCls}>Latitude</label>
                 <input
                   type="number"
                   step="any"
                   placeholder="e.g. 13.948324"
                   value={lat}
                   onChange={(e) => setLat(e.target.value)}
-                  className="w-full p-2.5 bg-white/70 border border-neutral-200 rounded-lg text-sm text-neutral-800 focus:outline-none focus:border-sage-400 focus:bg-white"
+                  className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
                 />
               </div>
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Longitude</span>
+              <div>
+                <label className={subLabelCls}>Longitude</label>
                 <input
                   type="number"
                   step="any"
                   placeholder="e.g. 120.722989"
                   value={lng}
                   onChange={(e) => setLng(e.target.value)}
-                  className="w-full p-2.5 bg-white/70 border border-neutral-200 rounded-lg text-sm text-neutral-800 focus:outline-none focus:border-sage-400 focus:bg-white"
+                  className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
                 />
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 bg-neutral-50 p-2.5 rounded-xl border border-neutral-200/60 text-xs mt-1">
-              <span className="text-neutral-500 font-semibold flex items-center gap-1 text-[11px]">
-                <Compass className="w-3.5 h-3.5 text-sage-500" />
+            {/* Batangas preset quick-fills */}
+            <div className="admin-panel-muted flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-[#d6c7b2] text-xs">
+              <span className="text-[#7c6a57] font-semibold flex items-center gap-1 text-[11px]">
+                <Compass className="w-3.5 h-3.5 text-emerald-700" />
                 Batangas Presets:
               </span>
               <div className="flex gap-1.5 flex-wrap">
                 <button
                   type="button"
-                  onClick={() => {
-                    setLat('13.948324');
-                    setLng('120.722989');
-                  }}
-                  className="px-2 py-1 bg-white hover:bg-neutral-50 text-neutral-700 border border-neutral-200 rounded-lg cursor-pointer transition-all font-semibold text-[10px]"
+                  onClick={() => { setLat('13.948324'); setLng('120.722989'); }}
+                  className="admin-button-secondary px-2 py-1 rounded-lg cursor-pointer transition-all text-[#5d503f] font-semibold text-[10px]"
                 >
                   Balayan Capstone
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setLat('13.943187');
-                    setLng('120.720345');
-                  }}
-                  className="px-2 py-1 bg-white hover:bg-neutral-50 text-neutral-700 border border-neutral-200 rounded-lg cursor-pointer transition-all font-semibold text-[10px]"
+                  onClick={() => { setLat('13.943187'); setLng('120.720345'); }}
+                  className="admin-button-secondary px-2 py-1 rounded-lg cursor-pointer transition-all text-[#5d503f] font-semibold text-[10px]"
                 >
                   WalterMart
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setLat('13.931890');
-                    setLng('120.718300');
-                  }}
-                  className="px-2 py-1 bg-white hover:bg-neutral-50 text-neutral-700 border border-neutral-200 rounded-lg cursor-pointer transition-all font-semibold text-[10px]"
+                  onClick={() => { setLat('13.931890'); setLng('120.718300'); }}
+                  className="admin-button-secondary px-2 py-1 rounded-lg cursor-pointer transition-all text-[#5d503f] font-semibold text-[10px]"
                 >
                   Balayan East Central
                 </button>
@@ -398,11 +419,14 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1">
-              <ImageIcon className="w-3.5 h-3.5 text-neutral-400" />
-              Image URL <span className="text-neutral-400 font-normal lowercase">(optional)</span>
-            </label>
+          {/* ── Section: Image URL ── */}
+          <div className="border-t border-[#d6c7b2] pt-4 space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
+              <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
+              <ImageIcon className="w-3.5 h-3.5 text-emerald-700" />
+              Image URL
+              <span className="normal-case font-normal text-[#9d8c76] ml-1">(optional)</span>
+            </p>
             <input
               type="text"
               placeholder="https://example.com/image.jpg"
@@ -411,10 +435,10 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                 setImage(e.target.value);
                 setImgPreviewFailed(false);
               }}
-              className="w-full p-2.5 bg-white/70 border border-neutral-200 rounded-lg text-sm text-neutral-800 focus:outline-none focus:border-sage-400 focus:bg-white"
+              className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
             />
             {image.trim() && (
-              <div className="mt-2 h-36 w-full rounded-xl overflow-hidden border border-neutral-200 bg-neutral-50 flex items-center justify-center">
+              <div className="mt-2 h-36 w-full rounded-xl overflow-hidden border border-[#d6c7b2] bg-[#f0ece4] flex items-center justify-center">
                 {!imgPreviewFailed ? (
                   <img
                     src={image}
@@ -423,50 +447,52 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                     onError={() => setImgPreviewFailed(true)}
                   />
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-neutral-400 gap-1 p-3 text-center">
-                    <ImageIcon className="w-6 h-6 text-neutral-300" />
-                    <span className="text-xs">Unable to load image from URL</span>
+                  <div className="flex flex-col items-center justify-center text-[#9d8c76] gap-1.5 p-3 text-center">
+                    <ImageIcon className="w-6 h-6 text-[#c4b49e]" />
+                    <span className="text-xs text-[#7c6a57]">Unable to load image from URL</span>
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          <div className="space-y-2 border-t border-forest-900/10 pt-3">
-            <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500">
+          {/* ── Section: Document Status ── */}
+          <div className="border-t border-[#d6c7b2] pt-4 space-y-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
+              <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
               Document Status
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-neutral-50 p-3 rounded-xl border border-neutral-200/60">
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Tax Declaration</span>
+            </p>
+            <div className="admin-panel-muted grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl border border-[#d6c7b2]">
+              <div>
+                <label className={subLabelCls}>Tax Declaration</label>
                 <select
                   value={docTax}
                   onChange={(e) => setDocTax(e.target.value as typeof docTax)}
-                  className="w-full p-1.5 bg-white border border-neutral-200 rounded text-xs text-neutral-800 focus:outline-none"
+                  className="admin-input w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
                 >
                   <option value="pending">Pending</option>
                   <option value="verified">Verified</option>
                   <option value="missing">Missing</option>
                 </select>
               </div>
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Title Deed</span>
+              <div>
+                <label className={subLabelCls}>Title Deed</label>
                 <select
                   value={docDeed}
                   onChange={(e) => setDocDeed(e.target.value as typeof docDeed)}
-                  className="w-full p-1.5 bg-white border border-neutral-200 rounded text-xs text-neutral-800 focus:outline-none"
+                  className="admin-input w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
                 >
                   <option value="pending">Pending</option>
                   <option value="verified">Verified</option>
                   <option value="missing">Missing</option>
                 </select>
               </div>
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Survey Plan</span>
+              <div>
+                <label className={subLabelCls}>Survey Plan</label>
                 <select
                   value={docSurvey}
                   onChange={(e) => setDocSurvey(e.target.value as typeof docSurvey)}
-                  className="w-full p-1.5 bg-white border border-neutral-200 rounded text-xs text-neutral-800 focus:outline-none"
+                  className="admin-input w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
                 >
                   <option value="pending">Pending</option>
                   <option value="verified">Verified</option>
@@ -476,28 +502,32 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+          {/* ── Section: Listing Status ── */}
+          <div className="border-t border-[#d6c7b2] pt-4 space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
+              <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
               Listing Status
-            </label>
+            </p>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as typeof status)}
-              className="w-full p-2.5 bg-white/70 border border-neutral-200 rounded-lg text-sm text-neutral-800 focus:outline-none focus:border-sage-400 focus:bg-white"
+              className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
             >
               <option value="Available">Available</option>
               <option value="Reserved">Reserved</option>
               <option value="Sold">Sold</option>
             </select>
           </div>
-        </div>
 
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-white/60 bg-white/30">
+        </div>{/* end scrollable body */}
+
+        {/* ── Footer ── */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#d6c7b2]">
           <button
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="px-4 py-2 text-xs font-bold text-forest-900 bg-[#edf3ee] border border-[#bfd0bb] rounded-xl hover:bg-[#e3ecdf] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm cursor-pointer"
+            className="admin-button-secondary px-4 py-2 rounded-xl text-xs font-bold text-[#5d503f] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
@@ -505,11 +535,12 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-[#5d7d5f] via-[#43664b] to-[#1d372a] rounded-xl hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer border-none"
+            className="admin-button px-4 py-2 rounded-xl text-xs font-bold text-white transition-all cursor-pointer border-none hover:brightness-105 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSaving ? 'Saving...' : 'Save Listing'}
           </button>
         </div>
+
       </div>
     </div>
   );
