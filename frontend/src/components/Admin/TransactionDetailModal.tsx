@@ -100,7 +100,10 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-[500] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div className="admin-panel w-full max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto">
+        <div
+          className="admin-panel w-full max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto"
+          style={{ boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.45)' }}
+        >
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#d6c7b2]">
             <div>
               <h3 className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
