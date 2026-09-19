@@ -20,15 +20,17 @@ const formatDate = (iso: string) =>
 const STATUS_FILTERS: Array<'All' | TransactionStatus> = ['All', 'Reserved', 'Processing', 'Completed', 'Cancelled'];
 
 const getStatusBadge = (status: TransactionStatus) => {
+  const badgeClass =
+    'inline-flex items-center px-2.5 py-1 text-[10px] font-bold rounded-md border';
   switch (status) {
     case 'Reserved':
-      return <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-500/15 text-amber-400">Reserved</span>;
+      return <span className={`${badgeClass} bg-amber-100 text-amber-950 border-amber-700/35`}>Reserved</span>;
     case 'Processing':
-      return <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-teal-500/15 text-teal-400">Processing</span>;
+      return <span className={`${badgeClass} bg-teal-100 text-teal-950 border-teal-700/35`}>Processing</span>;
     case 'Completed':
-      return <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/15 text-emerald-400">Completed</span>;
+      return <span className={`${badgeClass} bg-emerald-100 text-emerald-950 border-emerald-700/35`}>Completed</span>;
     case 'Cancelled':
-      return <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-neutral-500/15 text-neutral-400">Cancelled</span>;
+      return <span className={`${badgeClass} bg-stone-200 text-stone-900 border-stone-500/40`}>Cancelled</span>;
   }
 };
 
@@ -265,4 +267,4 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
   );
 };
 
-export default AdminTransactions;
+export default AdminTransactions; 

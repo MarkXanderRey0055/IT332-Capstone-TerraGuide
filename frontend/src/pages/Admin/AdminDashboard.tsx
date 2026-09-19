@@ -408,7 +408,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     ? 'Portfolio performance, compliance trends, and properties that need attention.'
                     : activeNav === 'transactions'
                       ? 'Track deals from reservation through to a completed sale.'
-                      : 'Manage listings, buyers, and transactions from one place.'}
+                      : activeNav === 'activities'
+                        ? 'Inquiries and site-visit requests from buyers.'
+                        : activeNav === 'settings'
+                          ? 'Export and back up your property, buyer, and transaction records.'
+                          : 'Manage listings, buyers, and transactions from one place.'}
             </p>
           </div>
           <button

@@ -149,7 +149,7 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                     </td>
                     <td className="px-4 py-3 text-[#7c6a57] whitespace-nowrap">{formatDate(inq.createdAt)}</td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1.5">
+                      <div className="flex flex-col items-start gap-1.5">
                         {statusBadge(inq.status)}
                         <select
                           value={inq.status}
@@ -204,7 +204,7 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                     </td>
                     <td className="px-4 py-3 text-[#7c6a57] whitespace-nowrap">{formatDate(v.createdAt)}</td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1.5">
+                      <div className="flex flex-col items-start gap-1.5">
                         {statusBadge(v.status)}
                         <select
                           value={v.status}
