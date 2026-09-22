@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Search, FolderPlus } from 'lucide-react';
 import type { Property } from '../../types/types';
 import type { Cabinet } from '../../services/CabinetService';
+import { filterAndSortProperties, getPropertyFilterOptions } from '../../utils/propertyFilters';
 
 interface AddPropertiesToCabinetModalProps {
   isOpen: boolean;
@@ -23,6 +24,9 @@ export const AddPropertiesToCabinetModal: React.FC<AddPropertiesToCabinetModalPr
   onSave,
 }) => {
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<Property['status'] | ''>('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -32,13 +36,11 @@ export const AddPropertiesToCabinetModal: React.FC<AddPropertiesToCabinetModalPr
   // Properties already in this exact cabinet are hidden — nothing to
   // "add" there. Properties filed elsewhere are shown but flagged, since
   // selecting them here is how a move to this cabinet happens.
-  const candidateProperties = properties
-    .filter((p) => p.cabinetId !== cabinet.id)
-    .filter((p) => {
-      const q = search.trim().toLowerCase();
-      if (!q) return true;
-      return p.name.toLowerCase().includes(q) || p.location.toLowerCase().includes(q);
-    });
+  const filterOptions = getPropertyFilterOptions(properties);
+  const candidateProperties = filterAndSortProperties(
+    properties.filter((p) => p.cabinetId !== cabinet.id),
+    { search, type: typeFilter, location: locationFilter, status: statusFilter },
+  );
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -48,6 +50,9 @@ export const AddPropertiesToCabinetModal: React.FC<AddPropertiesToCabinetModalPr
 
   const handleClose = () => {
     setSearch('');
+    setTypeFilter('');
+    setLocationFilter('');
+    setStatusFilter('');
     setSelectedIds([]);
     setErrorMsg('');
     onClose();
@@ -93,16 +98,34 @@ export const AddPropertiesToCabinetModal: React.FC<AddPropertiesToCabinetModalPr
           </button>
         </div>
 
-        <div className="px-6 py-3 border-b border-[#d6c7b2]">
+        <div className="px-6 py-3 border-b border-[#d6c7b2] space-y-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
             <input
               type="text"
+              aria-label="Search properties by name or location"
               placeholder="Search properties by name or location..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="admin-input w-full pl-9 pr-3 py-2 rounded-lg text-xs"
             />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <label className="text-[9px] font-bold text-[#7c6a57]">Property Type
+              <select aria-label="Filter cabinet properties by type" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="admin-input block w-full mt-1 px-2 py-1.5 rounded-lg text-[10px]">
+                <option value="">All types</option>{filterOptions.types.map((type) => <option key={type} value={type}>{type}</option>)}
+              </select>
+            </label>
+            <label className="text-[9px] font-bold text-[#7c6a57]">Location
+              <select aria-label="Filter cabinet properties by location" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="admin-input block w-full mt-1 px-2 py-1.5 rounded-lg text-[10px]">
+                <option value="">All locations</option>{filterOptions.locations.map((location) => <option key={location} value={location}>{location}</option>)}
+              </select>
+            </label>
+            <label className="text-[9px] font-bold text-[#7c6a57]">Listing Status
+              <select aria-label="Filter cabinet properties by listing status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as Property['status'] | '')} className="admin-input block w-full mt-1 px-2 py-1.5 rounded-lg text-[10px]">
+                <option value="">All statuses</option><option>Available</option><option>Reserved</option><option>Sold</option>
+              </select>
+            </label>
           </div>
         </div>
 
