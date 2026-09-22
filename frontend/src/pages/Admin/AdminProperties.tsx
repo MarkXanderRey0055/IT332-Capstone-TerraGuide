@@ -19,6 +19,7 @@ import { AddPropertiesToCabinetModal } from '../../components/Admin/AddPropertie
 import { FilingCabinetPanel } from '../../components/Admin/FilingCabinetPanel';
 import { CABINET_COLOR_STYLES } from '../../components/Admin/cabinetColors';
 import { getLotSize } from '../../services/buyerPrefs';
+import { filterAndSortProperties, getPropertyFilterOptions } from '../../utils/propertyFilters';
 import {
   createProperty,
   updateProperty,
@@ -157,6 +158,11 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
   onDataChanged,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [documentStatusFilter, setDocumentStatusFilter] = useState('');
+  const [listingStatusFilter, setListingStatusFilter] = useState<Property['status'] | ''>('');
+  const [propertySort, setPropertySort] = useState<'latest' | 'priceAsc' | 'priceDesc'>('latest');
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -352,12 +358,23 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     return properties.filter((p) => p.cabinetId === selectedFilter);
   }, [properties, selectedFilter]);
 
-  const filteredProperties = cabinetFilteredProperties.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.owner ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.location.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filterOptions = getPropertyFilterOptions(properties);
+  const filteredProperties = filterAndSortProperties(cabinetFilteredProperties, {
+    search: searchQuery,
+    type: typeFilter,
+    location: locationFilter,
+    documentStatus: documentStatusFilter as 'Verified' | 'Pending' | 'Missing' | '',
+    status: listingStatusFilter,
+    sort: propertySort,
+  });
+  const clearPropertyFilters = () => {
+    setSearchQuery('');
+    setTypeFilter('');
+    setLocationFilter('');
+    setDocumentStatusFilter('');
+    setListingStatusFilter('');
+    setPropertySort('latest');
+  };
 
   const selectedCabinetName =
     selectedFilter !== 'all' && selectedFilter !== 'unassigned'
@@ -375,16 +392,6 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search listings..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="admin-input pl-10 pr-4 py-2 rounded-xl text-xs focus:outline-none focus:border-emerald-700/50 w-48 sm:w-64 transition-all"
-            />
-          </div>
           <button
             type="button"
             onClick={handleAddPropertyClick}
@@ -421,6 +428,52 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
             onAddProperties={handleOpenAddProperties}
           />
         )}
+      </div>
+
+      <div className="admin-panel rounded-2xl p-4">
+        <h3 className="text-[#2f2417] font-serif text-lg font-bold mb-3">Filter &amp; Sort Listings</h3>
+        <div className="relative mb-3">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" aria-hidden="true" />
+          <input
+            type="text"
+            aria-label="Search listings"
+            placeholder="Search listings..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="admin-input block w-full min-w-0 pl-10 pr-4 py-2 rounded-xl text-xs focus:outline-none focus:border-emerald-700/50 transition-all"
+          />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+          <label className="text-[10px] font-bold text-[#7c6a57]">Property Type
+            <select aria-label="Filter by property type" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="admin-input block w-full mt-1 px-3 py-2 rounded-lg text-xs">
+              <option value="">All types</option>{filterOptions.types.map((type) => <option key={type} value={type}>{type}</option>)}
+            </select>
+          </label>
+          <label className="text-[10px] font-bold text-[#7c6a57]">Location
+            <select aria-label="Filter by location" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="admin-input block w-full mt-1 px-3 py-2 rounded-lg text-xs">
+              <option value="">All locations</option>{filterOptions.locations.map((location) => <option key={location} value={location}>{location}</option>)}
+            </select>
+          </label>
+          <label className="text-[10px] font-bold text-[#7c6a57]">Document Status
+            <select aria-label="Filter by document status" value={documentStatusFilter} onChange={(e) => setDocumentStatusFilter(e.target.value)} className="admin-input block w-full mt-1 px-3 py-2 rounded-lg text-xs">
+              <option value="">All document statuses</option><option>Verified</option><option>Pending</option><option>Missing</option>
+            </select>
+          </label>
+          <label className="text-[10px] font-bold text-[#7c6a57]">Listing Status
+            <select aria-label="Filter by listing status" value={listingStatusFilter} onChange={(e) => setListingStatusFilter(e.target.value as Property['status'] | '')} className="admin-input block w-full mt-1 px-3 py-2 rounded-lg text-xs">
+              <option value="">All listing statuses</option><option>Available</option><option>Reserved</option><option>Sold</option>
+            </select>
+          </label>
+          <label className="text-[10px] font-bold text-[#7c6a57]">Sort By
+            <select aria-label="Sort properties" value={propertySort} onChange={(e) => setPropertySort(e.target.value as 'latest' | 'priceAsc' | 'priceDesc')} className="admin-input block w-full mt-1 px-3 py-2 rounded-lg text-xs">
+              <option value="latest">Latest</option><option value="priceAsc">Price: Low to High</option><option value="priceDesc">Price: High to Low</option>
+            </select>
+          </label>
+        </div>
+        <div className="flex items-center justify-between gap-3 mt-3">
+          <span className="text-[10px] text-[#7c6a57]">Showing {filteredProperties.length} of {cabinetFilteredProperties.length} listings</span>
+          <button type="button" onClick={clearPropertyFilters} className="text-xs font-bold text-emerald-800 underline underline-offset-2">Clear filters</button>
+        </div>
       </div>
 
       <div className="admin-panel rounded-2xl overflow-hidden">
