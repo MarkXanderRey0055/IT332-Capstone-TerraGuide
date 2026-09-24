@@ -35,12 +35,15 @@ export const getAllInquiries = asyncHandler(async (req, res) => {
 
 // Admin: update inquiry status
 export const updateInquiryStatus = asyncHandler(async (req, res) => {
-  const { status } = req.body;
+  const { status, adminResponse } = req.body;
 
-  if (!status) {
-    throw new AppError('status is required.', 400);
+  if (status === undefined && adminResponse === undefined) {
+    throw new AppError('status or adminResponse is required.', 400);
   }
 
-  const inquiry = await inquiryService.updateInquiryStatus(req.params.id, status);
+  const inquiry = await inquiryService.updateInquiryStatus(req.params.id, {
+    status,
+    adminResponse,
+  });
   return sendSuccess(res, 200, 'Inquiry status updated successfully.', inquiry);
 });

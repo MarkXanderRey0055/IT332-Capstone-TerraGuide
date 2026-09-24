@@ -20,6 +20,12 @@ const inquirySchema = new mongoose.Schema(
       trim: true,
       maxlength: [1000, 'Message cannot exceed 1000 characters'],
     },
+    adminResponse: {
+      type: String,
+      trim: true,
+      maxlength: [2000, 'Admin response cannot exceed 2000 characters'],
+      default: '',
+    },
     status: {
       type: String,
       enum: INQUIRY_STATUSES,
@@ -33,6 +39,12 @@ inquirySchema.virtual('id').get(function () {
   return this._id.toHexString();
 });
 
-inquirySchema.set('toJSON', { virtuals: true });
+inquirySchema.set('toJSON', {
+  virtuals: true,
+  transform: (_doc, ret) => {
+    ret.adminResponse = ret.adminResponse ?? '';
+    return ret;
+  },
+});
 
 export default mongoose.model('Inquiry', inquirySchema);

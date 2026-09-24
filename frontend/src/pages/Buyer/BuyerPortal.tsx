@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Home,
   Search,
@@ -11,6 +11,7 @@ import {
   Lock,
   X,
   Menu,
+  RefreshCw,
   Trees,
   Building2,
   Landmark,
@@ -616,6 +617,8 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [inquiryMessage, setInquiryMessage] = useState('');
   const [buyerInquiries, setBuyerInquiries] = useState<Inquiry[]>([]);
   const [buyerSiteVisits, setBuyerSiteVisits] = useState<SiteVisit[]>([]);
+  const [isActivityLoading, setIsActivityLoading] = useState(false);
+  const [activityErrors, setActivityErrors] = useState({ inquiries: '', siteVisits: '' });
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -667,6 +670,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
       );
       const updated = await getMySiteVisits();
       setBuyerSiteVisits(updated);
+      setActivityErrors((prev) => ({ ...prev, siteVisits: '' }));
       setIsVisitModalOpen(false);
       setActionFeedback('Site visit request submitted. An admin will contact you soon.');
     } catch (err) {
@@ -681,6 +685,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
       await submitInquiry(selectedProperty.id, inquiryMessage.trim());
       const updated = await getMyInquiries();
       setBuyerInquiries(updated);
+      setActivityErrors((prev) => ({ ...prev, inquiries: '' }));
       setIsInquiryModalOpen(false);
       setActionFeedback('Inquiry sent successfully. Check My Inquiries for updates.');
     } catch (err) {
@@ -797,24 +802,47 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     return () => window.clearTimeout(timer);
   }, [actionFeedback]);
 
-  useEffect(() => {
-    const syncBuyerActivity = async () => {
-      if (!isAuthenticated) {
-        setBuyerInquiries([]);
-        setBuyerSiteVisits([]);
-        return;
-      }
-      try {
-        const [inquiries, visits] = await Promise.all([getMyInquiries(), getMySiteVisits()]);
-        setBuyerInquiries(inquiries);
-        setBuyerSiteVisits(visits);
-      } catch {
-        // Non-critical — leave existing state intact
-      }
-    };
+  const syncBuyerActivity = useCallback(async () => {
+    if (!isAuthenticated) {
+      setBuyerInquiries([]);
+      setBuyerSiteVisits([]);
+      setActivityErrors({ inquiries: '', siteVisits: '' });
+      setIsActivityLoading(false);
+      return;
+    }
 
-    syncBuyerActivity();
+    setIsActivityLoading(true);
+    const [inquiriesResult, siteVisitsResult] = await Promise.allSettled([
+      getMyInquiries(),
+      getMySiteVisits(),
+    ]);
+
+    if (inquiriesResult.status === 'fulfilled') {
+      setBuyerInquiries(inquiriesResult.value);
+      setActivityErrors((prev) => ({ ...prev, inquiries: '' }));
+    } else {
+      setActivityErrors((prev) => ({
+        ...prev,
+        inquiries: 'Could not load inquiries right now.',
+      }));
+    }
+
+    if (siteVisitsResult.status === 'fulfilled') {
+      setBuyerSiteVisits(siteVisitsResult.value);
+      setActivityErrors((prev) => ({ ...prev, siteVisits: '' }));
+    } else {
+      setActivityErrors((prev) => ({
+        ...prev,
+        siteVisits: 'Could not load site visits right now.',
+      }));
+    }
+
+    setIsActivityLoading(false);
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    syncBuyerActivity();
+  }, [syncBuyerActivity]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -940,6 +968,18 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     );
   }
 
+  const activityRefreshButton = (
+    <button
+      type="button"
+      onClick={syncBuyerActivity}
+      disabled={isActivityLoading}
+      className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[rgba(40,90,72,0.2)] px-3 py-1.5 text-xs font-semibold text-[#285A48] hover:bg-[#E8F5EF] disabled:opacity-60"
+    >
+      <RefreshCw className={`h-3.5 w-3.5 ${isActivityLoading ? 'animate-spin' : ''}`} />
+      {isActivityLoading ? 'Refreshing…' : 'Refresh Activities'}
+    </button>
+  );
+
   const renderTabContent = () => {
     const effectiveTab = isTabLocked(activeTab) ? 'Home' : activeTab;
 
@@ -987,8 +1027,24 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                 <Mail className="w-8 h-8 text-[#6A9F8A]" />
               </div>
               <h2 className="font-serif text-2xl text-[#1A2D24]">My Inquiries</h2>
+              {activityRefreshButton}
             </div>
-            {buyerInquiries.length === 0 ? (
+            {activityErrors.inquiries && (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-800">
+                <p>{activityErrors.inquiries}</p>
+                <button
+                  type="button"
+                  onClick={syncBuyerActivity}
+                  disabled={isActivityLoading}
+                  className="mt-2 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold hover:bg-red-100 disabled:opacity-60"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+            {isActivityLoading && buyerInquiries.length === 0 ? (
+              <div className="rounded-xl bg-[#0D1F1A] p-8 text-center text-sm text-[#B0E4CC]">Loading inquiries…</div>
+            ) : activityErrors.inquiries && buyerInquiries.length === 0 ? null : buyerInquiries.length === 0 ? (
               <EmptyState variant="inquiries" />
             ) : (
               <div className="space-y-3">
@@ -1015,6 +1071,12 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                       </span>
                     </div>
                     <p className="text-sm text-[#E8F5EF] mt-3">{inquiry.message}</p>
+                    {inquiry.adminResponse && (
+                      <div className="mt-3 rounded-lg border border-[rgba(176,228,204,0.2)] bg-[rgba(40,90,72,0.35)] p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[#B0E4CC]">Admin Response</p>
+                        <p className="text-sm text-[#E8F5EF] mt-1">{inquiry.adminResponse}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1029,8 +1091,24 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                 <Calendar className="w-8 h-8 text-[#6A9F8A]" />
               </div>
               <h2 className="font-serif text-2xl text-[#1A2D24]">My Site Visits</h2>
+              {activityRefreshButton}
             </div>
-            {buyerSiteVisits.length === 0 ? (
+            {activityErrors.siteVisits && (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-800">
+                <p>{activityErrors.siteVisits}</p>
+                <button
+                  type="button"
+                  onClick={syncBuyerActivity}
+                  disabled={isActivityLoading}
+                  className="mt-2 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold hover:bg-red-100 disabled:opacity-60"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+            {isActivityLoading && buyerSiteVisits.length === 0 ? (
+              <div className="rounded-xl bg-[#0D1F1A] p-8 text-center text-sm text-[#B0E4CC]">Loading site visits…</div>
+            ) : activityErrors.siteVisits && buyerSiteVisits.length === 0 ? null : buyerSiteVisits.length === 0 ? (
               <EmptyState variant="sitevisits" />
             ) : (
               <div className="space-y-3">
@@ -1068,6 +1146,12 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                         <p>
                           <span className="font-semibold text-[#FFFFFF]">Notes:</span> {visit.notes}
                         </p>
+                      )}
+                      {visit.adminResponse && (
+                        <div className="rounded-lg border border-[rgba(176,228,204,0.2)] bg-[rgba(40,90,72,0.35)] p-3 mt-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#B0E4CC]">Admin Response</p>
+                          <p className="text-sm text-[#E8F5EF] mt-1">{visit.adminResponse}</p>
+                        </div>
                       )}
                     </div>
                   </div>

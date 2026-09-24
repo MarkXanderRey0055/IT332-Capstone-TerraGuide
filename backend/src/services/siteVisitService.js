@@ -34,13 +34,19 @@ export const getAllSiteVisits = async () => {
   return populateSiteVisit(SiteVisit.find()).sort({ createdAt: -1 });
 };
 
-export const updateSiteVisitStatus = async (visitId, status) => {
+export const updateSiteVisitStatus = async (visitId, { status, adminResponse } = {}) => {
   if (!mongoose.Types.ObjectId.isValid(visitId)) {
     throw new AppError('Invalid site visit ID.', 400);
   }
 
+  const updates = {};
+  if (status !== undefined) updates.status = status;
+  if (adminResponse !== undefined) {
+    updates.adminResponse = typeof adminResponse === 'string' ? adminResponse.trim() : adminResponse;
+  }
+
   const visit = await populateSiteVisit(
-    SiteVisit.findByIdAndUpdate(visitId, { status }, { new: true, runValidators: true })
+    SiteVisit.findByIdAndUpdate(visitId, updates, { new: true, runValidators: true })
   );
 
   if (!visit) {

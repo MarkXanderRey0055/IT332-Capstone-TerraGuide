@@ -31,6 +31,8 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [siteVisits, setSiteVisits] = useState<SiteVisit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [responseDrafts, setResponseDrafts] = useState<Record<string, string>>({});
+  const [savingActivityId, setSavingActivityId] = useState<string | null>(null);
 
   const load = async () => {
     setIsLoading(true);
@@ -38,6 +40,12 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
       const [inq, vis] = await Promise.all([getAllInquiries(), getAllSiteVisits()]);
       setInquiries(inq);
       setSiteVisits(vis);
+      setResponseDrafts(
+        Object.fromEntries([
+          ...inq.map((item) => [item.id, item.adminResponse ?? '']),
+          ...vis.map((item) => [item.id, item.adminResponse ?? '']),
+        ])
+      );
     } catch {
       onToast?.('Failed to load activities.');
     } finally {
@@ -47,23 +55,39 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
 
   useEffect(() => { load(); }, []);
 
-  const handleInquiryStatus = async (id: string, status: 'Pending' | 'Responded') => {
+  const handleInquirySave = async (inquiry: Inquiry) => {
+    setSavingActivityId(inquiry.id);
     try {
-      const updated = await updateInquiryStatus(id, status);
-      setInquiries((prev) => prev.map((i) => i.id === id ? updated : i));
-      onToast?.('Inquiry status updated.');
+      const updated = await updateInquiryStatus(
+        inquiry.id,
+        inquiry.status,
+        responseDrafts[inquiry.id] ?? inquiry.adminResponse ?? ''
+      );
+      setInquiries((prev) => prev.map((item) => item.id === inquiry.id ? updated : item));
+      setResponseDrafts((prev) => ({ ...prev, [inquiry.id]: updated.adminResponse ?? '' }));
+      onToast?.('Inquiry updated.');
     } catch {
-      onToast?.('Failed to update inquiry status.');
+      onToast?.('Failed to update inquiry.');
+    } finally {
+      setSavingActivityId(null);
     }
   };
 
-  const handleVisitStatus = async (id: string, status: 'Pending' | 'Scheduled' | 'Completed') => {
+  const handleVisitSave = async (visit: SiteVisit) => {
+    setSavingActivityId(visit.id);
     try {
-      const updated = await updateSiteVisitStatus(id, status);
-      setSiteVisits((prev) => prev.map((v) => v.id === id ? updated : v));
-      onToast?.('Site visit status updated.');
+      const updated = await updateSiteVisitStatus(
+        visit.id,
+        visit.status,
+        responseDrafts[visit.id] ?? visit.adminResponse ?? ''
+      );
+      setSiteVisits((prev) => prev.map((item) => item.id === visit.id ? updated : item));
+      setResponseDrafts((prev) => ({ ...prev, [visit.id]: updated.adminResponse ?? '' }));
+      onToast?.('Site visit updated.');
     } catch {
-      onToast?.('Failed to update site visit status.');
+      onToast?.('Failed to update site visit.');
+    } finally {
+      setSavingActivityId(null);
     }
   };
 
@@ -129,6 +153,7 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Buyer</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Property</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Message</th>
+                  <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Admin Response</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Date</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Status</th>
                 </tr>
@@ -147,17 +172,39 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                     <td className="px-4 py-3 max-w-xs">
                       <p className="text-[#4d5e4d] leading-relaxed line-clamp-3">{inq.message}</p>
                     </td>
+                    <td className="px-4 py-3 min-w-64">
+                      <label htmlFor={`inquiry-response-${inq.id}`} className="sr-only">Admin Response</label>
+                      <textarea
+                        id={`inquiry-response-${inq.id}`}
+                        value={responseDrafts[inq.id] ?? ''}
+                        onChange={(e) => setResponseDrafts((prev) => ({ ...prev, [inq.id]: e.target.value }))}
+                        maxLength={2000}
+                        rows={3}
+                        placeholder="Enter a response for the buyer..."
+                        className="admin-input text-[10px] py-1.5 px-2 rounded-lg w-full resize-y"
+                      />
+                    </td>
                     <td className="px-4 py-3 text-[#7c6a57] whitespace-nowrap">{formatDate(inq.createdAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col items-start gap-1.5">
                         {statusBadge(inq.status)}
                         <select
                           value={inq.status}
-                          onChange={(e) => handleInquiryStatus(inq.id, e.target.value as 'Pending' | 'Responded')}
+                          onChange={(e) => setInquiries((prev) => prev.map((item) => item.id === inq.id
+                            ? { ...item, status: e.target.value as 'Pending' | 'Responded' }
+                            : item))}
                           className="admin-input text-[10px] py-1 px-2 rounded-lg cursor-pointer w-fit"
                         >
                           {INQUIRY_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
+                        <button
+                          type="button"
+                          onClick={() => handleInquirySave(inq)}
+                          disabled={savingActivityId === inq.id}
+                          className="admin-button text-white text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer disabled:opacity-60"
+                        >
+                          {savingActivityId === inq.id ? 'Saving…' : 'Save'}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -183,6 +230,7 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Property</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Preferred Date</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Notes</th>
+                  <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Admin Response</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Submitted</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Status</th>
                 </tr>
@@ -202,17 +250,39 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                     <td className="px-4 py-3 max-w-xs">
                       <p className="text-[#4d5e4d] leading-relaxed line-clamp-3">{v.notes || '—'}</p>
                     </td>
+                    <td className="px-4 py-3 min-w-64">
+                      <label htmlFor={`visit-response-${v.id}`} className="sr-only">Admin Response</label>
+                      <textarea
+                        id={`visit-response-${v.id}`}
+                        value={responseDrafts[v.id] ?? ''}
+                        onChange={(e) => setResponseDrafts((prev) => ({ ...prev, [v.id]: e.target.value }))}
+                        maxLength={2000}
+                        rows={3}
+                        placeholder="Enter scheduling details or a response..."
+                        className="admin-input text-[10px] py-1.5 px-2 rounded-lg w-full resize-y"
+                      />
+                    </td>
                     <td className="px-4 py-3 text-[#7c6a57] whitespace-nowrap">{formatDate(v.createdAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col items-start gap-1.5">
                         {statusBadge(v.status)}
                         <select
                           value={v.status}
-                          onChange={(e) => handleVisitStatus(v.id, e.target.value as 'Pending' | 'Scheduled' | 'Completed')}
+                          onChange={(e) => setSiteVisits((prev) => prev.map((item) => item.id === v.id
+                            ? { ...item, status: e.target.value as 'Pending' | 'Scheduled' | 'Completed' }
+                            : item))}
                           className="admin-input text-[10px] py-1 px-2 rounded-lg cursor-pointer w-fit"
                         >
                           {VISIT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
+                        <button
+                          type="button"
+                          onClick={() => handleVisitSave(v)}
+                          disabled={savingActivityId === v.id}
+                          className="admin-button text-white text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer disabled:opacity-60"
+                        >
+                          {savingActivityId === v.id ? 'Saving…' : 'Save'}
+                        </button>
                       </div>
                     </td>
                   </tr>
