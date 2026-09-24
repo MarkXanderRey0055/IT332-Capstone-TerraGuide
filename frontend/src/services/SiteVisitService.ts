@@ -21,6 +21,7 @@ export interface SiteVisit {
   propertyId: SiteVisitProperty;
   preferredDate: string;
   notes: string;
+  adminResponse: string;
   status: 'Pending' | 'Scheduled' | 'Completed';
   createdAt: string;
   updatedAt: string;
@@ -40,21 +41,28 @@ export async function submitSiteVisit(
 
 export async function getMySiteVisits(): Promise<SiteVisit[]> {
   const res = await apiRequest('/site-visits');
-  return (res.data ?? []) as SiteVisit[];
+  return (res.data ?? []).map((visit: SiteVisit) => ({
+    ...visit,
+    adminResponse: visit.adminResponse ?? '',
+  }));
 }
 
 export async function getAllSiteVisits(): Promise<SiteVisit[]> {
   const res = await apiRequest('/site-visits/admin/all');
-  return (res.data ?? []) as SiteVisit[];
+  return (res.data ?? []).map((visit: SiteVisit) => ({
+    ...visit,
+    adminResponse: visit.adminResponse ?? '',
+  }));
 }
 
 export async function updateSiteVisitStatus(
   id: string,
-  status: 'Pending' | 'Scheduled' | 'Completed'
+  status: 'Pending' | 'Scheduled' | 'Completed',
+  adminResponse: string
 ): Promise<SiteVisit> {
   const res = await apiRequest(`/site-visits/admin/${id}`, {
     method: 'PUT',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, adminResponse }),
   });
-  return res.data as SiteVisit;
+  return { ...(res.data as SiteVisit), adminResponse: res.data.adminResponse ?? '' };
 }

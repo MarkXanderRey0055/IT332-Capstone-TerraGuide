@@ -34,13 +34,19 @@ export const getAllInquiries = async () => {
   return populateInquiry(Inquiry.find()).sort({ createdAt: -1 });
 };
 
-export const updateInquiryStatus = async (inquiryId, status) => {
+export const updateInquiryStatus = async (inquiryId, { status, adminResponse } = {}) => {
   if (!mongoose.Types.ObjectId.isValid(inquiryId)) {
     throw new AppError('Invalid inquiry ID.', 400);
   }
 
+  const updates = {};
+  if (status !== undefined) updates.status = status;
+  if (adminResponse !== undefined) {
+    updates.adminResponse = typeof adminResponse === 'string' ? adminResponse.trim() : adminResponse;
+  }
+
   const inquiry = await populateInquiry(
-    Inquiry.findByIdAndUpdate(inquiryId, { status }, { new: true, runValidators: true })
+    Inquiry.findByIdAndUpdate(inquiryId, updates, { new: true, runValidators: true })
   );
 
   if (!inquiry) {

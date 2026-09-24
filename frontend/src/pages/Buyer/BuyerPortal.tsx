@@ -1015,6 +1015,12 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                       </span>
                     </div>
                     <p className="text-sm text-[#E8F5EF] mt-3">{inquiry.message}</p>
+                    {inquiry.adminResponse && (
+                      <div className="mt-3 rounded-lg border border-[rgba(176,228,204,0.2)] bg-[rgba(40,90,72,0.35)] p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[#B0E4CC]">Admin Response</p>
+                        <p className="text-sm text-[#E8F5EF] mt-1">{inquiry.adminResponse}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1068,6 +1074,12 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                         <p>
                           <span className="font-semibold text-[#FFFFFF]">Notes:</span> {visit.notes}
                         </p>
+                      )}
+                      {visit.adminResponse && (
+                        <div className="rounded-lg border border-[rgba(176,228,204,0.2)] bg-[rgba(40,90,72,0.35)] p-3 mt-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#B0E4CC]">Admin Response</p>
+                          <p className="text-sm text-[#E8F5EF] mt-1">{visit.adminResponse}</p>
+                        </div>
                       )}
                     </div>
                   </div>

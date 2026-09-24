@@ -20,6 +20,7 @@ export interface Inquiry {
   buyerId: InquiryBuyer;
   propertyId: InquiryProperty;
   message: string;
+  adminResponse: string;
   status: 'Pending' | 'Responded';
   createdAt: string;
   updatedAt: string;
@@ -35,18 +36,28 @@ export async function submitInquiry(propertyId: string, message: string): Promis
 
 export async function getMyInquiries(): Promise<Inquiry[]> {
   const res = await apiRequest('/inquiries');
-  return (res.data ?? []) as Inquiry[];
+  return (res.data ?? []).map((inquiry: Inquiry) => ({
+    ...inquiry,
+    adminResponse: inquiry.adminResponse ?? '',
+  }));
 }
 
 export async function getAllInquiries(): Promise<Inquiry[]> {
   const res = await apiRequest('/inquiries/admin/all');
-  return (res.data ?? []) as Inquiry[];
+  return (res.data ?? []).map((inquiry: Inquiry) => ({
+    ...inquiry,
+    adminResponse: inquiry.adminResponse ?? '',
+  }));
 }
 
-export async function updateInquiryStatus(id: string, status: 'Pending' | 'Responded'): Promise<Inquiry> {
+export async function updateInquiryStatus(
+  id: string,
+  status: 'Pending' | 'Responded',
+  adminResponse: string
+): Promise<Inquiry> {
   const res = await apiRequest(`/inquiries/admin/${id}`, {
     method: 'PUT',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, adminResponse }),
   });
-  return res.data as Inquiry;
+  return { ...(res.data as Inquiry), adminResponse: res.data.adminResponse ?? '' };
 }

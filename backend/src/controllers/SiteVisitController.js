@@ -36,12 +36,15 @@ export const getAllSiteVisits = asyncHandler(async (req, res) => {
 
 // Admin: update site visit status
 export const updateSiteVisitStatus = asyncHandler(async (req, res) => {
-  const { status } = req.body;
+  const { status, adminResponse } = req.body;
 
-  if (!status) {
-    throw new AppError('status is required.', 400);
+  if (status === undefined && adminResponse === undefined) {
+    throw new AppError('status or adminResponse is required.', 400);
   }
 
-  const visit = await siteVisitService.updateSiteVisitStatus(req.params.id, status);
+  const visit = await siteVisitService.updateSiteVisitStatus(req.params.id, {
+    status,
+    adminResponse,
+  });
   return sendSuccess(res, 200, 'Site visit status updated successfully.', visit);
 });
