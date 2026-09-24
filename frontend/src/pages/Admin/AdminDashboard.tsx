@@ -403,7 +403,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               {activeNav === 'properties'
                 ? 'Create, modify, and audit real estate listings.'
                 : activeNav === 'buyers'
-                  ? 'View and manage buyer accounts registered through the portal.'
+                  ? 'Review buyer accounts and preferences submitted through the portal.'
                   : activeNav === 'analytics'
                     ? 'Portfolio performance, compliance trends, and properties that need attention.'
                     : activeNav === 'transactions'
@@ -652,7 +652,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               />
             )}
 
-            {activeNav === 'buyers' && <AdminBuyers onToast={setToast} onDataChanged={refreshDashboardCards} />}
+            {activeNav === 'buyers' && <AdminBuyers onToast={setToast} />}
 
             {activeNav === 'analytics' && <AdminAnalytics onToast={setToast} />}
 
