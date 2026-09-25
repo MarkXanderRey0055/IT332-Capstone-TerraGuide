@@ -391,16 +391,6 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleAddPropertyClick}
-            className="admin-button flex items-center gap-1.5 px-4 py-2 text-white font-bold text-xs rounded-xl transition-all cursor-pointer border-none hover:brightness-105"
-          >
-            <Plus className="w-4 h-4" />
-            Add Listing
-          </button>
-        </div>
       </div>
 
       {/* Digital Filing Cabinet */}
@@ -476,6 +466,17 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
         </div>
       </div>
 
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleAddPropertyClick}
+          className="admin-button flex items-center gap-1.5 px-4 py-2 text-white font-bold text-xs rounded-xl transition-all cursor-pointer border-none hover:brightness-105"
+        >
+          <Plus className="w-4 h-4" />
+          Add Listing
+        </button>
+      </div>
+
       <div className="admin-panel rounded-2xl overflow-hidden">
         <div className="px-5 py-3 border-b border-[#d6c7b2] bg-[#faf6ef]/50">
           <p className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">
@@ -503,18 +504,21 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
+            <p className="px-5 py-2 border-b border-[#d6c7b2] text-[10px] text-[#7c6a57]">
+              Scroll horizontally to view all columns and actions.
+            </p>
             <table className="admin-table admin-properties-table w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-[#d6c7b2] text-[10px] font-bold uppercase tracking-wider text-[#4d5e4d]">
-                  <th className="p-4 min-w-[16rem]">Property</th>
-                  <th className="p-4 min-w-[9rem]">Owner</th>
-                  <th className="p-4 min-w-[11rem]">Location</th>
-                  <th className="p-4 min-w-[8rem]">Type</th>
-                  <th className="p-4 min-w-[12rem]">Deed / Tax / Survey</th>
-                  {selectedFilter === 'all' && <th className="p-4 min-w-[9rem]">Filing Cabinet</th>}
-                  <th className="p-4 min-w-[8rem] text-right">Price</th>
-                  <th className="p-4 min-w-[6.5rem]">Status</th>
-                  <th className="p-4 min-w-[10rem] text-right">Actions</th>
+                  <th className="p-4 min-w-[13rem]">Property</th>
+                  <th className="p-4 min-w-[7rem]">Owner</th>
+                  <th className="p-4 min-w-[8rem]">Location</th>
+                  <th className="p-4 min-w-[6.5rem]">Type</th>
+                  <th className="p-4 min-w-[9.5rem]">Deed / Tax / Survey</th>
+                  {selectedFilter === 'all' && <th className="p-4 min-w-[7rem]">Filing Cabinet</th>}
+                  <th className="p-4 min-w-[7rem] text-right">Price</th>
+                  <th className="p-4 min-w-[5.5rem]">Status</th>
+                  <th className="p-4 min-w-[10.5rem] text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#ded2c0]">

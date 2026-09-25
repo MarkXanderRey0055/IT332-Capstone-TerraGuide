@@ -93,10 +93,6 @@
   background: rgba(199, 211, 192, 0.36);
 }
 
-.admin-properties-table {
-  min-width: 72rem;
-}
-
 .admin-properties-table tbody td {
   padding-top: 1.15rem;
   padding-bottom: 1.15rem;

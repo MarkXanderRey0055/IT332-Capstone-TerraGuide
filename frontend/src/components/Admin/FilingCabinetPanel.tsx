@@ -106,7 +106,18 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
             <div
               key={cabinet.id}
               onClick={() => onFilterChange(cabinet.id)}
-              className="relative rounded-2xl border overflow-hidden cursor-pointer transition-all group"
+              onKeyDown={(event) => {
+                if (event.target !== event.currentTarget) return;
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onFilterChange(cabinet.id);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-pressed={isSelected}
+              aria-label={`Select cabinet ${cabinet.name}`}
+              className="relative rounded-2xl border overflow-hidden cursor-pointer transition-all group focus-visible:outline-2 focus-visible:outline-emerald-700 focus-visible:outline-offset-2"
               style={{
                 borderColor: isSelected ? style.border : 'rgba(0,0,0,0.08)',
                 boxShadow: isSelected ? `0 0 0 2px ${style.badgeBg}` : 'none',
@@ -133,7 +144,7 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity shrink-0">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -142,6 +153,7 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
                       }}
                       className="p-1 rounded hover:bg-black/5 cursor-pointer"
                       title="Edit Cabinet"
+                      aria-label="Edit cabinet"
                     >
                       <Edit2 className="w-3 h-3" style={{ color: style.text }} />
                     </button>
@@ -153,6 +165,7 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
                       }}
                       className="p-1 rounded hover:bg-black/5 cursor-pointer"
                       title="Delete Cabinet"
+                      aria-label="Delete cabinet"
                     >
                       <Trash2 className="w-3 h-3 text-red-600" />
                     </button>
