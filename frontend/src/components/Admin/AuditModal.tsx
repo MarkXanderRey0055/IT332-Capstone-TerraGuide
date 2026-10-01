@@ -21,6 +21,7 @@ import {
   getAuditHistory,
   type Audit,
 } from '../../services/AuditService';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 
 interface AuditModalProps {
   isOpen: boolean;
@@ -98,6 +99,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
   property,
   onClose,
 }) => {
+  const modalRef = useModalAccessibility({ isOpen, onClose });
   const [history, setHistory] = useState<Audit[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -181,7 +183,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-2xl bg-[#f7f4ed] border border-[#d6c7b2] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="audit-modal-title" tabIndex={-1} className="w-full max-w-2xl bg-[#f7f4ed] border border-[#d6c7b2] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-[#d6c7b2] bg-white/40">
           <div className="flex items-center gap-3">
@@ -189,7 +191,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
               <Sparkles className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#2f2417] flex items-center gap-2">
+              <h3 id="audit-modal-title" className="text-base font-bold text-[#2f2417] flex items-center gap-2">
                 AI Compliance Auditor
                 <span className="px-2 py-0.5 rounded-full text-[10px] uppercase font-extrabold bg-indigo-100 text-indigo-700 border border-indigo-200 tracking-wider">
                   BI Engine

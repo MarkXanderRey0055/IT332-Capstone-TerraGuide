@@ -5,6 +5,7 @@ import type { Transaction, TransactionStatus } from '../../services/TransactionS
 import { updateTransaction } from '../../services/TransactionService';
 import { AuditModal } from './AuditModal';
 import { CurrencyInput } from './CurrencyInput';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 
 interface TransactionDetailModalProps {
   isOpen: boolean;
@@ -42,6 +43,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   onClose,
   onUpdated,
 }) => {
+  const modalRef = useModalAccessibility({ isOpen, onClose });
   const [amount, setAmount] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<TransactionStatus>('Reserved');
@@ -101,12 +103,17 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
     <>
       <div className="fixed inset-0 z-[500] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
         <div
+          ref={modalRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="transaction-detail-modal-title"
+          tabIndex={-1}
           className="admin-panel w-full max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto"
           style={{ boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.45)' }}
         >
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#d6c7b2]">
             <div>
-              <h3 className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
+              <h3 id="transaction-detail-modal-title" className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
                 <Handshake className="w-4 h-4 text-emerald-700" />
                 {transaction.reference}
               </h3>

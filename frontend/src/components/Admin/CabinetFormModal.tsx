@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Archive } from 'lucide-react';
 import type { Cabinet, CabinetColor, CabinetPayload } from '../../services/CabinetService';
 import { CABINET_COLORS } from '../../services/CabinetService';
 import { CABINET_COLOR_STYLES } from './cabinetColors';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 
 interface CabinetFormModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export const CabinetFormModal: React.FC<CabinetFormModalProps> = ({
   onClose,
   onSave,
 }) => {
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useModalAccessibility({ isOpen, onClose, initialFocusRef: nameInputRef });
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [capacity, setCapacity] = useState('');
@@ -68,11 +71,16 @@ export const CabinetFormModal: React.FC<CabinetFormModalProps> = ({
   return (
     <div className="fixed inset-0 z-[500] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cabinet-form-modal-title"
+        tabIndex={-1}
         className="admin-panel w-full max-w-md rounded-2xl"
         style={{ boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.45)' }}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#d6c7b2]">
-          <h3 className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
+          <h3 id="cabinet-form-modal-title" className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
             <Archive className="w-4 h-4 text-emerald-700" />
             {cabinet ? 'Edit Filing Cabinet' : 'Create Filing Cabinet'}
           </h3>
@@ -98,6 +106,7 @@ export const CabinetFormModal: React.FC<CabinetFormModalProps> = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="admin-input w-full px-3 py-2 rounded-lg text-xs"
+              ref={nameInputRef}
               autoFocus
             />
           </div>

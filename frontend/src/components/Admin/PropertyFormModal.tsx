@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Image as ImageIcon, Compass, MapPin, Home } from 'lucide-react';
 import type { Property } from '../../types/types';
 import { getLotSize } from '../../services/buyerPrefs';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 
 interface PropertyFormModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   onClose,
   onSave,
 }) => {
+  const modalRef = useModalAccessibility({ isOpen, onClose });
   const [name, setName] = useState('');
   const [owner, setOwner] = useState('');
   const [price, setPrice] = useState('');
@@ -195,13 +197,18 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   return (
     <div className="fixed inset-0 z-[500] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="property-form-modal-title"
+        tabIndex={-1}
         className="admin-panel w-full max-w-xl rounded-2xl flex flex-col overflow-hidden max-h-[90vh]"
         style={{ boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.45)' }}
       >
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#d6c7b2]">
-          <h3 className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
+          <h3 id="property-form-modal-title" className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
             <Home className="w-4 h-4 text-emerald-700" />
             {property ? 'Edit Property Listing' : 'Add Property Listing'}
           </h3>
