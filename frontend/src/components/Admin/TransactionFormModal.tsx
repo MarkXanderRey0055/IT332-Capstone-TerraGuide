@@ -5,6 +5,7 @@ import type { AdminBuyerProfile } from '../../services/AdminBuyerService';
 import { getBuyers } from '../../services/AdminBuyerService';
 import { createTransaction } from '../../services/TransactionService';
 import { CurrencyInput } from './CurrencyInput';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 
 interface TransactionFormModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   onClose,
   onCreated,
 }) => {
+  const modalRef = useModalAccessibility({ isOpen, onClose });
   const [buyers, setBuyers] = useState<AdminBuyerProfile[]>([]);
   const [isLoadingBuyers, setIsLoadingBuyers] = useState(false);
 
@@ -109,11 +111,16 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   return (
     <div className="fixed inset-0 z-[500] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="transaction-form-modal-title"
+        tabIndex={-1}
         className="admin-panel w-full max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto"
         style={{ boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.45)' }}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#d6c7b2]">
-          <h3 className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
+          <h3 id="transaction-form-modal-title" className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
             <Handshake className="w-4 h-4 text-emerald-700" />
             New Transaction
           </h3>

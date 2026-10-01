@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent } from 'react';
 import type { BuyerPreferences, Property } from '../../types/types';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 
 export interface WelcomeModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export function WelcomeModal({
   buyerName = 'Valued Buyer',
   onSavePreferences,
 }: WelcomeModalProps) {
+  const modalRef = useModalAccessibility({ isOpen, onClose });
   const [minBudget, setMinBudget] = useState(100000);
   const [maxBudget, setMaxBudget] = useState(4000000);
   const [error, setError] = useState('');
@@ -80,8 +82,8 @@ export function WelcomeModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4 py-8">
-      <div className="w-full max-w-[560px] max-h-[calc(100vh-4rem)] overflow-y-auto rounded-2xl bg-gradient-to-br from-[#d9ece6] to-[#76a995] shadow-2xl p-5">
-        <h2 className="text-2xl sm:text-3xl font-bold text-[#53463d] mb-1.5">Welcome to TerraGuide!</h2>
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="welcome-modal-title" tabIndex={-1} className="w-full max-w-[560px] max-h-[calc(100vh-4rem)] overflow-y-auto rounded-2xl bg-gradient-to-br from-[#d9ece6] to-[#76a995] shadow-2xl p-5">
+        <h2 id="welcome-modal-title" className="text-2xl sm:text-3xl font-bold text-[#53463d] mb-1.5">Welcome to TerraGuide!</h2>
 
         <p className="text-sm text-gray-700 mb-1.5">
           Hello, {buyerName}! Before you explore, help us find the best properties for you.

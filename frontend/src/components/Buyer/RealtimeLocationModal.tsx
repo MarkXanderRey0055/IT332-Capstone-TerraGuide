@@ -1,6 +1,7 @@
 import { X, MapPin } from 'lucide-react';
 import { PropertyMap } from './PropertyMap';
 import type { Property } from '../../types/types';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 
 interface PropertyLocationModalProps {
   isOpen: boolean;
@@ -15,16 +16,17 @@ export const PropertyLocationModal: React.FC<PropertyLocationModalProps> = ({
   properties,
   onClose,
 }) => {
+  const modalRef = useModalAccessibility({ isOpen, onClose });
   if (!isOpen || !property) {
     return null;
   }
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-      <div className="bg-white rounded-2xl w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col shadow-2xl relative border border-neutral-100">
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="property-location-modal-title" tabIndex={-1} className="bg-white rounded-2xl w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col shadow-2xl relative border border-neutral-100">
         <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-neutral-200 bg-white">
           <div className="flex-1">
-            <h2 className="text-lg font-bold text-[#1C3A27] flex items-center gap-2">
+            <h2 id="property-location-modal-title" className="text-lg font-bold text-[#1C3A27] flex items-center gap-2">
               <MapPin className="w-5 h-5 text-emerald-600" />
               Property Location Map
             </h2>

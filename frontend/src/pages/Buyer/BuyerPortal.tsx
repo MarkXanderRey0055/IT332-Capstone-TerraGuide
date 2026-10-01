@@ -34,6 +34,7 @@ import type { Inquiry } from '../../services/InquiryService';
 import { submitSiteVisit, getMySiteVisits } from '../../services/SiteVisitService';
 import type { SiteVisit } from '../../services/SiteVisitService';
 import { COLORS } from '../../styles/buyerTheme';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 
 export { COLORS };
 
@@ -309,11 +310,12 @@ const LoginRequiredModal: React.FC<{
   onClose: () => void;
   onLogin: () => void;
 }> = ({ isOpen, featureName, onClose, onLogin }) => {
+  const modalRef = useModalAccessibility({ isOpen, onClose });
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-[#091413]/90 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
-      <div className="w-full max-w-md bg-[#0D1F1A] rounded-2xl p-6 relative border border-[rgba(40,90,72,0.2)] shadow-2xl">
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="login-required-modal-title" tabIndex={-1} className="w-full max-w-md bg-[#0D1F1A] rounded-2xl p-6 relative border border-[rgba(40,90,72,0.2)] shadow-2xl">
         <button
           type="button"
           onClick={onClose}
@@ -326,7 +328,7 @@ const LoginRequiredModal: React.FC<{
         <div className="w-14 h-14 bg-[#122A20] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[rgba(40,90,72,0.15)]">
           <Lock className="w-6 h-6 text-[#B0E4CC]" />
         </div>
-        <h2 className="font-serif text-xl text-[#FFFFFF] text-center">Sign In Required</h2>
+        <h2 id="login-required-modal-title" className="font-serif text-xl text-[#FFFFFF] text-center">Sign In Required</h2>
         <p className="text-sm text-[#6A9F8A] mt-2 text-center leading-relaxed">
           You need to log in or create an account to access {featureName.toLowerCase()}.
         </p>
@@ -356,11 +358,12 @@ const LogoutConfirmModal: React.FC<{
   onClose: () => void;
   onConfirm: () => void;
 }> = ({ isOpen, onClose, onConfirm }) => {
+  const modalRef = useModalAccessibility({ isOpen, onClose });
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-[#091413]/90 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
-      <div className="w-full max-w-md bg-[#0D1F1A] rounded-2xl p-6 relative border border-[rgba(40,90,72,0.2)] shadow-2xl">
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="logout-confirm-modal-title" tabIndex={-1} className="w-full max-w-md bg-[#0D1F1A] rounded-2xl p-6 relative border border-[rgba(40,90,72,0.2)] shadow-2xl">
         <button
           type="button"
           onClick={onClose}
@@ -373,7 +376,7 @@ const LogoutConfirmModal: React.FC<{
         <div className="w-14 h-14 bg-[#122A20] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[rgba(40,90,72,0.15)]">
           <LogOut className="w-6 h-6 text-[#B0E4CC]" />
         </div>
-        <h2 className="font-serif text-xl text-[#FFFFFF] text-center">Log Out?</h2>
+        <h2 id="logout-confirm-modal-title" className="font-serif text-xl text-[#FFFFFF] text-center">Log Out?</h2>
         <p className="text-sm text-[#6A9F8A] mt-2 text-center leading-relaxed">
           Are you sure you want to log out of your TerraGuide account?
         </p>
@@ -417,13 +420,14 @@ const SiteVisitModal: React.FC<{
   onClose,
   onSubmit,
 }) => {
+  const modalRef = useModalAccessibility({ isOpen, onClose });
   if (!isOpen) return null;
 
   const todayDateString = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
   return (
     <div className="fixed inset-0 bg-[#091413]/90 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
-      <div className="w-full max-w-md bg-[#0D1F1A] rounded-2xl p-6 relative border border-[rgba(40,90,72,0.2)] shadow-2xl">
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="site-visit-modal-title" tabIndex={-1} className="w-full max-w-md bg-[#0D1F1A] rounded-2xl p-6 relative border border-[rgba(40,90,72,0.2)] shadow-2xl">
         <button
           type="button"
           onClick={onClose}
@@ -436,7 +440,7 @@ const SiteVisitModal: React.FC<{
         <div className="w-14 h-14 bg-[#122A20] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[rgba(40,90,72,0.15)]">
           <Calendar className="w-6 h-6 text-[#B0E4CC]" />
         </div>
-        <h2 className="font-serif text-xl text-[#FFFFFF] text-center">Request Site Visit</h2>
+        <h2 id="site-visit-modal-title" className="font-serif text-xl text-[#FFFFFF] text-center">Request Site Visit</h2>
         <p className="text-sm text-[#6A9F8A] mt-2 text-center leading-relaxed">
           Schedule a visit for <span className="font-semibold text-[#E8F5EF]">{propertyName}</span>.
         </p>
@@ -501,11 +505,12 @@ const InquiryModal: React.FC<{
   onClose: () => void;
   onSubmit: () => void;
 }> = ({ isOpen, propertyName, message, onMessageChange, onClose, onSubmit }) => {
+  const modalRef = useModalAccessibility({ isOpen, onClose });
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-[#091413]/90 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
-      <div className="w-full max-w-md bg-[#0D1F1A] rounded-2xl p-6 relative border border-[rgba(40,90,72,0.2)] shadow-2xl">
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="inquiry-modal-title" tabIndex={-1} className="w-full max-w-md bg-[#0D1F1A] rounded-2xl p-6 relative border border-[rgba(40,90,72,0.2)] shadow-2xl">
         <button
           type="button"
           onClick={onClose}
@@ -518,7 +523,7 @@ const InquiryModal: React.FC<{
         <div className="w-14 h-14 bg-[#122A20] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[rgba(40,90,72,0.15)]">
           <Mail className="w-6 h-6 text-[#B0E4CC]" />
         </div>
-        <h2 className="font-serif text-xl text-[#FFFFFF] text-center">Send Inquiry</h2>
+        <h2 id="inquiry-modal-title" className="font-serif text-xl text-[#FFFFFF] text-center">Send Inquiry</h2>
         <p className="text-sm text-[#6A9F8A] mt-2 text-center leading-relaxed">
           Ask about <span className="font-semibold text-[#E8F5EF]">{propertyName}</span>.
         </p>
