@@ -107,9 +107,10 @@ const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
         </div>
 
         <div className="space-y-4">
-          <div
+          <button
+            type="button"
             onClick={() => setCurrentView('buyer')}
-            className="flex items-center justify-between p-5 rounded-2xl bg-white/[0.04] border border-white/[0.05] cursor-pointer hover:bg-white/[0.08] transition duration-200"
+            className="w-full flex items-center justify-between p-5 rounded-2xl bg-white/[0.04] border border-white/[0.05] cursor-pointer hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-emerald-400 focus-visible:outline-offset-2 transition duration-200 text-left"
           >
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 rounded-xl bg-emerald-950/50 text-emerald-400 border border-emerald-500/10 flex items-center justify-center">
@@ -130,11 +131,12 @@ const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
             <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
-          </div>
+          </button>
 
-          <div
+          <button
+            type="button"
             onClick={() => setCurrentView('admin')}
-            className="flex items-center justify-between p-5 rounded-2xl bg-white/[0.04] border border-white/[0.05] cursor-pointer hover:bg-white/[0.08] transition duration-200"
+            className="w-full flex items-center justify-between p-5 rounded-2xl bg-white/[0.04] border border-white/[0.05] cursor-pointer hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-yellow-400 focus-visible:outline-offset-2 transition duration-200 text-left"
           >
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 rounded-xl bg-yellow-950/30 text-yellow-600 border border-yellow-500/10 flex items-center justify-center">
@@ -150,7 +152,7 @@ const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
             <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
-          </div>
+          </button>
  
         </div>
 
