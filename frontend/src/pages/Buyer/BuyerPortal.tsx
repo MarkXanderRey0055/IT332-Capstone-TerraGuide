@@ -110,8 +110,10 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   const style = variants[variant] || variants.grid;
 
   return (
-    <div 
-      className={`${style.containerClass} ${className}`} 
+    <button
+      type="button"
+      aria-label={`View ${propertyLabel} property details`}
+      className={`${style.containerClass} w-full p-0 text-left focus-visible:outline-2 focus-visible:outline-emerald-700 focus-visible:outline-offset-2 ${className}`}
       onClick={() => onClick?.(property)}
     >
       {variant === 'featured' && (
@@ -166,7 +168,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           </span>
         </div>
       </div>
-    </div>
+    </button>
   );
 };
 

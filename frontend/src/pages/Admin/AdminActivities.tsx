@@ -30,30 +30,55 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
   const [activeTab, setActiveTab] = useState<'inquiries' | 'sitevisits'>('inquiries');
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [siteVisits, setSiteVisits] = useState<SiteVisit[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isInquiryLoading, setIsInquiryLoading] = useState(true);
+  const [isSiteVisitLoading, setIsSiteVisitLoading] = useState(true);
+  const [inquiryError, setInquiryError] = useState('');
+  const [siteVisitError, setSiteVisitError] = useState('');
   const [responseDrafts, setResponseDrafts] = useState<Record<string, string>>({});
   const [savingActivityId, setSavingActivityId] = useState<string | null>(null);
 
-  const load = async () => {
-    setIsLoading(true);
+  const loadInquiries = async () => {
+    setIsInquiryLoading(true);
+    setInquiryError('');
     try {
-      const [inq, vis] = await Promise.all([getAllInquiries(), getAllSiteVisits()]);
+      const inq = await getAllInquiries();
       setInquiries(inq);
-      setSiteVisits(vis);
-      setResponseDrafts(
-        Object.fromEntries([
-          ...inq.map((item) => [item.id, item.adminResponse ?? '']),
-          ...vis.map((item) => [item.id, item.adminResponse ?? '']),
-        ])
-      );
+      setResponseDrafts((prev) => ({
+        ...prev,
+        ...Object.fromEntries(inq.map((item) => [item.id, item.adminResponse ?? ''])),
+      }));
     } catch {
-      onToast?.('Failed to load activities.');
+      setInquiryError('Could not load inquiries. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsInquiryLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
+  const loadSiteVisits = async () => {
+    setIsSiteVisitLoading(true);
+    setSiteVisitError('');
+    try {
+      const vis = await getAllSiteVisits();
+      setSiteVisits(vis);
+      setResponseDrafts((prev) => ({
+        ...prev,
+        ...Object.fromEntries(vis.map((item) => [item.id, item.adminResponse ?? ''])),
+      }));
+    } catch {
+      setSiteVisitError('Could not load site visits. Please try again.');
+    } finally {
+      setIsSiteVisitLoading(false);
+    }
+  };
+
+  const load = async () => {
+    if (isInquiryLoading || isSiteVisitLoading) return;
+    await Promise.all([loadInquiries(), loadSiteVisits()]);
+  };
+
+  useEffect(() => {
+    void Promise.all([loadInquiries(), loadSiteVisits()]);
+  }, []);
 
   const handleInquirySave = async (inquiry: Inquiry) => {
     setSavingActivityId(inquiry.id);
@@ -107,11 +132,11 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
         </div>
         <button
           onClick={load}
-          disabled={isLoading}
+          disabled={isInquiryLoading || isSiteVisitLoading}
           className="admin-button-secondary flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl cursor-pointer disabled:opacity-60"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
+          <RefreshCw className={`w-3.5 h-3.5 ${isInquiryLoading || isSiteVisitLoading ? 'animate-spin' : ''}`} />
+          {isInquiryLoading || isSiteVisitLoading ? 'Refreshing…' : 'Refresh'}
         </button>
       </div>
 
@@ -142,12 +167,34 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
       {/* Inquiries table */}
       {activeTab === 'inquiries' && (
         <div className="admin-panel rounded-2xl overflow-hidden">
-          {isLoading ? (
+          {isInquiryLoading && inquiries.length === 0 ? (
             <div className="p-10 text-center text-xs text-[#7c6a57]">Loading inquiries…</div>
+          ) : inquiryError && inquiries.length === 0 ? (
+            <div className="p-10 text-center text-xs text-red-700">
+              <p>{inquiryError}</p>
+              <button
+                type="button"
+                onClick={() => void loadInquiries()}
+                disabled={isInquiryLoading}
+                className="admin-button-secondary mt-3 px-3 py-1.5 rounded-lg font-bold cursor-pointer disabled:opacity-60"
+              >
+                Retry
+              </button>
+            </div>
           ) : inquiries.length === 0 ? (
             <div className="p-10 text-center text-xs text-[#7c6a57]">No inquiries yet.</div>
           ) : (
-            <table className="w-full text-xs">
+            <>
+              {isInquiryLoading && <div className="px-4 py-2 text-xs text-[#7c6a57]">Refreshing inquiries…</div>}
+              {inquiryError && (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">
+                  <span>{inquiryError} Existing inquiries are still shown.</span>
+                  <button type="button" onClick={() => void loadInquiries()} disabled={isInquiryLoading} className="font-bold underline disabled:opacity-60">Retry</button>
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <p className="px-4 py-2 text-[10px] font-semibold text-[#7c6a57]">Scroll horizontally to view all columns and actions.</p>
+                <table className="w-full min-w-[72rem] text-xs">
               <thead>
                 <tr className="border-b border-[rgba(78,96,73,0.12)] bg-[rgba(199,211,192,0.18)]">
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Buyer</th>
@@ -210,7 +257,9 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                   </tr>
                 ))}
               </tbody>
-            </table>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
@@ -218,12 +267,34 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
       {/* Site Visits table */}
       {activeTab === 'sitevisits' && (
         <div className="admin-panel rounded-2xl overflow-hidden">
-          {isLoading ? (
+          {isSiteVisitLoading && siteVisits.length === 0 ? (
             <div className="p-10 text-center text-xs text-[#7c6a57]">Loading site visits…</div>
+          ) : siteVisitError && siteVisits.length === 0 ? (
+            <div className="p-10 text-center text-xs text-red-700">
+              <p>{siteVisitError}</p>
+              <button
+                type="button"
+                onClick={() => void loadSiteVisits()}
+                disabled={isSiteVisitLoading}
+                className="admin-button-secondary mt-3 px-3 py-1.5 rounded-lg font-bold cursor-pointer disabled:opacity-60"
+              >
+                Retry
+              </button>
+            </div>
           ) : siteVisits.length === 0 ? (
             <div className="p-10 text-center text-xs text-[#7c6a57]">No site visit requests yet.</div>
           ) : (
-            <table className="w-full text-xs">
+            <>
+              {isSiteVisitLoading && <div className="px-4 py-2 text-xs text-[#7c6a57]">Refreshing site visits…</div>}
+              {siteVisitError && (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">
+                  <span>{siteVisitError} Existing site visits are still shown.</span>
+                  <button type="button" onClick={() => void loadSiteVisits()} disabled={isSiteVisitLoading} className="font-bold underline disabled:opacity-60">Retry</button>
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <p className="px-4 py-2 text-[10px] font-semibold text-[#7c6a57]">Scroll horizontally to view all columns and actions.</p>
+                <table className="w-full min-w-[80rem] text-xs">
               <thead>
                 <tr className="border-b border-[rgba(78,96,73,0.12)] bg-[rgba(199,211,192,0.18)]">
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Buyer</th>
@@ -288,7 +359,9 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                   </tr>
                 ))}
               </tbody>
-            </table>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}

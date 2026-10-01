@@ -35,9 +35,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const TypeIcon = getTypeIcon(property.type);
 
   return (
-    <div
+    <button
+      type="button"
       onClick={() => onClick(property)}
-      className="relative flex flex-col overflow-hidden cursor-pointer rounded-2xl border border-neutral-200/50 bg-white shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md group"
+      aria-label={`View ${getLabel(property)} property details`}
+      className="relative flex flex-col w-full p-0 text-left overflow-hidden cursor-pointer rounded-2xl border border-neutral-200/50 bg-white shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md focus-visible:outline-2 focus-visible:outline-emerald-700 focus-visible:outline-offset-2 group"
     >
       <div className="relative h-48 w-full overflow-hidden shrink-0 bg-neutral-100">
         {imageUrl && !imgFailed ? (
@@ -92,7 +94,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </span>
         </div>
       </div>
-    </div>
+    </button>
   );
 };
 
