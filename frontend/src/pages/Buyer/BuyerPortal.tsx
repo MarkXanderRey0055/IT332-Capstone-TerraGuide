@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Home,
   Search,
@@ -616,6 +616,8 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [buyerPrefs, setBuyerPrefs] = useState<BuyerPreferences | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
+  const [propertyLoadError, setPropertyLoadError] = useState('');
+  const propertyRequestInFlightRef = useRef(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
@@ -851,33 +853,32 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     syncBuyerActivity();
   }, [syncBuyerActivity]);
 
-  useEffect(() => {
-    let isCancelled = false;
+  const loadProperties = useCallback(async () => {
+    if (propertyRequestInFlightRef.current) return;
 
-    const fetchProperties = async () => {
-      setIsLoadingProperties(true);
-      try {
-        const fetched = await getProperties();
-        if (isCancelled) return;
-        setProperties(fetched);
-      } catch (error) {
-        if (isCancelled) return;
-        setActionFeedback(
-          error instanceof Error
-            ? error.message
-            : 'Could not load property listings. Please try again.'
-        );
-      } finally {
-        if (!isCancelled) setIsLoadingProperties(false);
-      }
-    };
+    propertyRequestInFlightRef.current = true;
+    setIsLoadingProperties(true);
+    setPropertyLoadError('');
 
-    fetchProperties();
-
-    return () => {
-      isCancelled = true;
-    };
+    try {
+      const fetched = await getProperties();
+      setProperties(fetched);
+      setPropertyLoadError('');
+    } catch (error) {
+      setPropertyLoadError(
+        error instanceof Error
+          ? error.message
+          : 'Could not load property listings. Please try again.'
+      );
+    } finally {
+      propertyRequestInFlightRef.current = false;
+      setIsLoadingProperties(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadProperties();
+  }, [loadProperties]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -1485,8 +1486,38 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
           <div className="px-6 py-16 text-center text-sm text-[#5C7A6E]">
             Loading property listings...
           </div>
+        ) : propertyLoadError && properties.length === 0 ? (
+          <div className="px-6 py-16 text-center">
+            <div className="max-w-md mx-auto rounded-xl border border-red-200 bg-red-50 px-6 py-8">
+              <p className="text-sm font-semibold text-red-800">Couldn&apos;t load property listings</p>
+              <p className="mt-2 text-xs text-red-700">{propertyLoadError}</p>
+              <button
+                type="button"
+                onClick={loadProperties}
+                disabled={isLoadingProperties}
+                className="mt-4 rounded-lg border border-red-300 px-4 py-2 text-xs font-semibold text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoadingProperties ? 'Retrying...' : 'Retry'}
+              </button>
+            </div>
+          </div>
         ) : (
-          renderTabContent()
+          <>
+            {propertyLoadError && properties.length > 0 && (
+              <div className="mx-6 mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-800">
+                <p>{propertyLoadError}</p>
+                <button
+                  type="button"
+                  onClick={loadProperties}
+                  disabled={isLoadingProperties}
+                  className="mt-2 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isLoadingProperties ? 'Retrying...' : 'Retry'}
+                </button>
+              </div>
+            )}
+            {renderTabContent()}
+          </>
         )}
       </div>
     </>

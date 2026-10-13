@@ -61,6 +61,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [retryToken, setRetryToken] = useState(0);
 
   // Location/Type dropdown options still come from the full in-memory list —
   // that's just populating a filter dropdown, not the actual search itself.
@@ -127,7 +128,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
       window.clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyword, location, type, minPrice, maxPrice, minLotSize, page]);
+  }, [keyword, location, type, minPrice, maxPrice, minLotSize, page, retryToken]);
 
   const hasActiveFilters = keyword || location || type || minPrice || maxPrice || minLotSize;
 
@@ -295,6 +296,13 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
               <HelpCircle className="w-10 h-10 text-[#a89884] mx-auto mb-3" />
               <strong className="text-sm font-serif text-[#1C3A27]">Couldn't load listings</strong>
               <p className="text-xs text-[#7c6a57] mt-1">{loadError}</p>
+              <button
+                type="button"
+                onClick={() => setRetryToken((current) => current + 1)}
+                className="mt-4 px-5 py-2.5 text-xs font-bold text-white bg-[#1C3A27] rounded-xl shadow-sm hover:bg-[#254F35] transition-colors border-none cursor-pointer"
+              >
+                Retry
+              </button>
             </div>
           ) : results.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center bg-white border border-[#d6c7b2] rounded-2xl shadow-sm">
