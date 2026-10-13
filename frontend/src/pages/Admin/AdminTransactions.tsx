@@ -176,11 +176,11 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
       </div>
 
       <div className="admin-panel rounded-2xl overflow-hidden">
-        {isLoading ? (
+        {isLoading && transactions.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-[#7c6a57] text-sm">Loading transactions...</p>
           </div>
-        ) : error ? (
+        ) : error && transactions.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-red-500 text-sm mb-3">{error}</p>
             <button
@@ -194,16 +194,33 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
               Try Again
             </button>
           </div>
-        ) : filteredTransactions.length === 0 ? (
-          <div className="p-12 text-center">
-            <Handshake className="w-10 h-10 text-[#9d8c76] mx-auto mb-3" />
-            <p className="text-[#7c6a57] text-sm">
-              {searchQuery || statusFilter !== 'All'
-                ? 'No transactions match your filters.'
-                : 'No transactions yet. Create one to get started.'}
-            </p>
-          </div>
         ) : (
+          <>
+            {error && (
+              <div className="border-b border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-800">
+                <p className="text-red-500 text-sm mb-2">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLoading(true);
+                    loadAll().finally(() => setIsLoading(false));
+                  }}
+                  className="admin-button-secondary px-4 py-2 rounded-xl text-xs font-bold text-[#5d503f] transition-colors cursor-pointer"
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+            {filteredTransactions.length === 0 ? (
+              <div className="p-12 text-center">
+                <Handshake className="w-10 h-10 text-[#9d8c76] mx-auto mb-3" />
+                <p className="text-[#7c6a57] text-sm">
+                  {searchQuery || statusFilter !== 'All'
+                    ? 'No transactions match your filters.'
+                    : 'No transactions yet. Create one to get started.'}
+                </p>
+              </div>
+            ) : (
           <div className="overflow-x-auto">
             <table className="admin-table w-full text-left border-collapse text-xs">
               <thead>
@@ -246,6 +263,8 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
               </tbody>
             </table>
           </div>
+            )}
+          </>
         )}
       </div>
 
@@ -267,4 +286,4 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
   );
 };
 
-export default AdminTransactions; 
+export default AdminTransactions;
