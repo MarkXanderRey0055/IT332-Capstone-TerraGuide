@@ -493,7 +493,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           AI Usage Today
                         </p>
                         <p className="text-[#2f2417] text-2xl font-bold">
-                          {aiUsage.daily.used} <span className="text-sm font-semibold text-[#9d8c76]">/ {aiUsage.daily.limit}</span>
+                          {aiUsage.daily.used} <span className="text-sm font-semibold text-[#5d503f]">/ {aiUsage.daily.limit}</span>
                         </p>
                         <div className="w-full h-2 rounded-full overflow-hidden mt-2 bg-black/10">
                           <div
@@ -504,7 +504,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         <p className="text-[10px] text-[#7c6a57] mt-1.5">
                           {aiUsage.daily.remaining} request{aiUsage.daily.remaining === 1 ? '' : 's'} remaining
                         </p>
-                        <p className="text-[10px] text-[#9d8c76] mt-0.5">{formatResetTime(aiUsage.resetAt)}</p>
+                        <p className="text-[10px] text-[#5d503f] mt-0.5">{formatResetTime(aiUsage.resetAt)}</p>
                         {getDailyUsageState(aiUsage.daily.percentage).label && (
                           <p className={`text-[10px] font-semibold mt-1.5 ${getDailyUsageState(aiUsage.daily.percentage).textColor}`}>
                             {getDailyUsageState(aiUsage.daily.percentage).label}
@@ -518,7 +518,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           <Gauge className="w-3 h-3" /> AI Request Rate
                         </p>
                         <p className="text-[#2f2417] text-2xl font-bold">
-                          {aiUsage.rpm.current} <span className="text-sm font-semibold text-[#9d8c76]">/ {aiUsage.rpm.limit} RPM</span>
+                          {aiUsage.rpm.current} <span className="text-sm font-semibold text-[#5d503f]">/ {aiUsage.rpm.limit} RPM</span>
                         </p>
                         <div className="flex items-center gap-1.5 mt-2.5">
                           <span className={`w-2 h-2 rounded-full ${getRpmState(aiUsage.rpm.current, aiUsage.rpm.limit).dot}`} />
@@ -526,7 +526,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             {getRpmState(aiUsage.rpm.current, aiUsage.rpm.limit).label}
                           </span>
                         </div>
-                        <p className="text-[10px] text-[#9d8c76] mt-1.5">
+                        <p className="text-[10px] text-[#5d503f] mt-1.5">
                           Short-term request rate — separate from the daily quota.
                         </p>
                         {getRpmState(aiUsage.rpm.current, aiUsage.rpm.limit).message && (

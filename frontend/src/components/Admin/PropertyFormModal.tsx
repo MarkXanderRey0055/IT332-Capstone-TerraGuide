@@ -189,10 +189,9 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     }
   };
 
-  // Shared label style — matches CabinetFormModal / TransactionFormModal
-  const labelCls = 'text-[10px] uppercase tracking-wider font-bold text-[#7c6a57] block mb-1';
+  const labelCls = 'text-xs font-semibold text-[#5d503f] block mb-1.5';
   // Sub-label for grouped fields (GPS sub-fields, document selects)
-  const subLabelCls = 'text-[10px] uppercase tracking-wider font-bold text-[#9d8c76] block mb-1';
+  const subLabelCls = 'text-[10px] uppercase tracking-wider font-bold text-[#5d503f] block mb-1';
 
   return (
     <div className="fixed inset-0 z-[500] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
@@ -202,28 +201,31 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
         aria-modal="true"
         aria-labelledby="property-form-modal-title"
         tabIndex={-1}
-        className="admin-panel w-full max-w-xl rounded-2xl flex flex-col overflow-hidden max-h-[90vh]"
+        className="w-full max-w-2xl rounded-2xl border border-[#d6c7b2] bg-[#f7f4ed] flex flex-col overflow-hidden max-h-[90vh]"
         style={{ boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.45)' }}
       >
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#d6c7b2]">
+        <div className="shrink-0 flex items-start justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[#d6c7b2] bg-[#fcfaf5]">
+          <div>
           <h3 id="property-form-modal-title" className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
             <Home className="w-4 h-4 text-emerald-700" />
             {property ? 'Edit Property Listing' : 'Add Property Listing'}
           </h3>
+          <p className="text-xs text-[#5d503f] mt-1">Fields marked * are required. Review all sections before saving.</p>
+          </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-[#8f7d69] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1"
+            className="shrink-0 text-[#5d503f] hover:text-[#2f2417] hover:bg-[#e7eee3] rounded-lg focus-visible:outline-2 focus-visible:outline-emerald-800 focus-visible:outline-offset-2 transition-colors bg-transparent border-none cursor-pointer p-1"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* ── Scrollable body ── */}
-        <div className="px-6 py-5 overflow-y-auto space-y-5">
+        <div className="min-h-0 flex-1 px-4 sm:px-6 py-4 overflow-y-auto space-y-5">
 
           {/* Error banner */}
           {errorMsg && (
@@ -232,20 +234,21 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             </div>
           )}
 
-          {/* ── Section: Basic Info ── */}
+          <section aria-labelledby="property-essentials-title" className="space-y-4">
+            <div>
+              <h4 id="property-essentials-title" className="text-sm font-bold text-[#223127] flex items-center gap-2"><Home aria-hidden="true" className="w-4 h-4 text-emerald-800" />Essentials</h4>
+              <p className="text-xs text-[#5d503f] mt-1">Identify the property, its value, and suitable uses.</p>
+            </div>
           <div className="space-y-4">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
-              <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
-              Basic Information
-            </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>
+                <label htmlFor="property-name" className={labelCls}>
                   Property Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
+                  id="property-name"
                   placeholder="e.g. Riverside Villa"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -253,11 +256,12 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                 />
               </div>
               <div>
-                <label className={labelCls}>
+                <label htmlFor="property-owner" className={labelCls}>
                   Owner Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
+                  id="property-owner"
                   placeholder="e.g. Juan dela Cruz"
                   value={owner}
                   onChange={(e) => setOwner(e.target.value)}
@@ -268,11 +272,12 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>
+                <label htmlFor="property-price" className={labelCls}>
                   Price (₱) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
+                  id="property-price"
                   placeholder="e.g. 450,000"
                   value={price}
                   onChange={handlePriceChange}
@@ -280,11 +285,12 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                 />
               </div>
               <div>
-                <label className={labelCls}>
+                <label htmlFor="property-size" className={labelCls}>
                   Lot Size (sqm) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
+                  id="property-size"
                   placeholder="e.g. 1200"
                   value={lotSize || ''}
                   onChange={(e) => setLotSize(e.target.value === '' ? '' : parseFloat(e.target.value))}
@@ -295,22 +301,11 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>
-                  Location <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Balayan, Batangas"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
-                />
-              </div>
-              <div>
-                <label className={labelCls}>
+                <label htmlFor="property-type" className={labelCls}>
                   Property Type <span className="text-red-500">*</span>
                 </label>
                 <select
+                  id="property-type"
                   value={type}
                   onChange={(e) => setType(e.target.value as Property['type'])}
                   className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
@@ -327,11 +322,11 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
           </div>
 
           {/* ── Section: Suitable For ── */}
-          <div className="border-t border-[#d6c7b2] pt-4 space-y-2">
+          <div className="space-y-2">
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
               <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
               Suitable For
-              <span className="normal-case font-normal text-[#9d8c76] ml-1">(optional)</span>
+              <span className="normal-case font-normal text-[#5d503f] ml-1">(optional)</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {SUITABLE_FOR_OPTIONS.map((option) => {
@@ -357,36 +352,48 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               })}
             </div>
           </div>
+          </section>
 
           {/* ── Section: GPS Coordinates ── */}
-          <div className="border-t border-[#d6c7b2] pt-4 space-y-3">
+          <section aria-labelledby="property-location-title" className="border-t border-[#d6c7b2] pt-4 space-y-4">
+            <div>
+              <h4 id="property-location-title" className="text-sm font-bold text-[#223127] flex items-center gap-2"><MapPin aria-hidden="true" className="w-4 h-4 text-emerald-800" />Location &amp; photos</h4>
+              <p className="text-xs text-[#5d503f] mt-1">Set the location and coordinates, then add an optional image URL.</p>
+            </div>
+            <div>
+              <label htmlFor="property-location" className={labelCls}>Location <span className="text-red-500">*</span></label>
+              <input id="property-location" type="text" placeholder="e.g. Balayan, Batangas" value={location} onChange={(e) => setLocation(e.target.value)} className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30" />
+            </div>
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
                 <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
                 <MapPin className="w-3.5 h-3.5 text-emerald-700" />
                 GPS Coordinates
               </p>
-              <span className="text-[10px] text-[#9d8c76] font-mono">WGS-84</span>
+              <span className="text-[10px] text-[#5d503f] font-mono">WGS-84</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={subLabelCls}>Latitude</label>
+                <label htmlFor="property-latitude" className={subLabelCls}>Latitude <span className="normal-case font-normal">(optional)</span></label>
                 <input
                   type="number"
                   step="any"
                   placeholder="e.g. 13.948324"
+                  id="property-latitude"
                   value={lat}
                   onChange={(e) => setLat(e.target.value)}
                   className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
                 />
               </div>
               <div>
-                <label className={subLabelCls}>Longitude</label>
+                <label htmlFor="property-longitude" className={subLabelCls}>Longitude <span className="normal-case font-normal">(optional)</span></label>
                 <input
                   type="number"
                   step="any"
                   placeholder="e.g. 120.722989"
+                  id="property-longitude"
                   value={lng}
                   onChange={(e) => setLng(e.target.value)}
                   className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
@@ -395,8 +402,8 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             </div>
 
             {/* Batangas preset quick-fills */}
-            <div className="admin-panel-muted flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-[#d6c7b2] text-xs">
-              <span className="text-[#7c6a57] font-semibold flex items-center gap-1 text-[11px]">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-[#d6c7b2] bg-[#eef3ea] text-xs">
+              <span className="text-[#5d503f] font-semibold flex items-center gap-1 text-[11px]">
                 <Compass className="w-3.5 h-3.5 text-emerald-700" />
                 Batangas Presets:
               </span>
@@ -427,14 +434,15 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
           </div>
 
           {/* ── Section: Image URL ── */}
-          <div className="border-t border-[#d6c7b2] pt-4 space-y-2">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
+          <div className="space-y-2">
+            <label htmlFor="property-image" className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
               <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
               <ImageIcon className="w-3.5 h-3.5 text-emerald-700" />
               Image URL
-              <span className="normal-case font-normal text-[#9d8c76] ml-1">(optional)</span>
-            </p>
+              <span className="normal-case font-normal text-[#5d503f] ml-1">(optional)</span>
+            </label>
             <input
+              id="property-image"
               type="text"
               placeholder="https://example.com/image.jpg"
               value={image}
@@ -454,7 +462,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                     onError={() => setImgPreviewFailed(true)}
                   />
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-[#9d8c76] gap-1.5 p-3 text-center">
+                  <div className="flex flex-col items-center justify-center text-[#5d503f] gap-1.5 p-3 text-center">
                     <ImageIcon className="w-6 h-6 text-[#c4b49e]" />
                     <span className="text-xs text-[#7c6a57]">Unable to load image from URL</span>
                   </div>
@@ -462,17 +470,20 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               </div>
             )}
           </div>
+          </section>
 
           {/* ── Section: Document Status ── */}
-          <div className="border-t border-[#d6c7b2] pt-4 space-y-3">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
-              <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
-              Document Status
-            </p>
-            <div className="admin-panel-muted grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl border border-[#d6c7b2]">
+          <section aria-labelledby="property-documents-title" className="border-t border-[#d6c7b2] pt-4 space-y-4">
+            <div>
+              <h4 id="property-documents-title" className="text-sm font-bold text-[#223127]">Documents &amp; listing status</h4>
+              <p className="text-xs text-[#5d503f] mt-1">Record each document's current status and the listing's availability.</p>
+            </div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl border border-[#d6c7b2] bg-[#eef3ea]">
               <div>
-                <label className={subLabelCls}>Tax Declaration</label>
+                <label htmlFor="property-tax" className={subLabelCls}>Tax Declaration</label>
                 <select
+                  id="property-tax"
                   value={docTax}
                   onChange={(e) => setDocTax(e.target.value as typeof docTax)}
                   className="admin-input w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
@@ -483,8 +494,9 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                 </select>
               </div>
               <div>
-                <label className={subLabelCls}>Title Deed</label>
+                <label htmlFor="property-deed" className={subLabelCls}>Title Deed</label>
                 <select
+                  id="property-deed"
                   value={docDeed}
                   onChange={(e) => setDocDeed(e.target.value as typeof docDeed)}
                   className="admin-input w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
@@ -495,8 +507,9 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                 </select>
               </div>
               <div>
-                <label className={subLabelCls}>Survey Plan</label>
+                <label htmlFor="property-survey" className={subLabelCls}>Survey Plan</label>
                 <select
+                  id="property-survey"
                   value={docSurvey}
                   onChange={(e) => setDocSurvey(e.target.value as typeof docSurvey)}
                   className="admin-input w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
@@ -506,16 +519,14 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                   <option value="missing">Missing</option>
                 </select>
               </div>
-            </div>
-          </div>
-
-          {/* ── Section: Listing Status ── */}
-          <div className="border-t border-[#d6c7b2] pt-4 space-y-2">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
+          {/* Listing status shares the two-column document grid. */}
+          <div className="space-y-2">
+            <label htmlFor="property-status" className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
               <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
               Listing Status
-            </p>
+            </label>
             <select
+              id="property-status"
               value={status}
               onChange={(e) => setStatus(e.target.value as typeof status)}
               className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
@@ -525,11 +536,14 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               <option value="Sold">Sold</option>
             </select>
           </div>
+            </div>
+          </div>
+          </section>
 
         </div>{/* end scrollable body */}
 
         {/* ── Footer ── */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#d6c7b2]">
+        <div className="shrink-0 flex flex-wrap items-center justify-end gap-3 px-4 sm:px-6 py-3 border-t border-[#d6c7b2] bg-[#fcfaf5]">
           <button
             type="button"
             onClick={onClose}

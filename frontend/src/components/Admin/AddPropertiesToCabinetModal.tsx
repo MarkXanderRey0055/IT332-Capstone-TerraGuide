@@ -99,7 +99,7 @@ export const AddPropertiesToCabinetModal: React.FC<AddPropertiesToCabinetModalPr
             type="button"
             onClick={handleClose}
             aria-label="Close"
-            className="text-[#8f7d69] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1"
+            className="text-[#5d503f] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1"
           >
             <X className="w-4 h-4" />
           </button>

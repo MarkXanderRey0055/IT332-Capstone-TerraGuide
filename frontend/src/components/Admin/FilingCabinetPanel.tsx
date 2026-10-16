@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Folder, FolderOpen, AlertCircle, Home, Edit2, Trash2, FolderPlus, Archive } from 'lucide-react';
+import { Folder, FolderOpen, AlertCircle, Home, Edit2, Trash2, FolderPlus, Archive } from 'lucide-react';
 import type { Cabinet } from '../../services/CabinetService';
 import { CABINET_COLOR_STYLES } from './cabinetColors';
 
@@ -9,7 +9,6 @@ interface FilingCabinetPanelProps {
   totalCount: number;
   selectedFilter: string; // 'all' | 'unassigned' | cabinetId
   onFilterChange: (filter: string) => void;
-  onCreateCabinet: () => void;
   onEditCabinet: (cabinet: Cabinet) => void;
   onDeleteCabinet: (cabinet: Cabinet) => void;
   onAddProperties: (cabinet: Cabinet) => void;
@@ -45,7 +44,6 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
   totalCount,
   selectedFilter,
   onFilterChange,
-  onCreateCabinet,
   onEditCabinet,
   onDeleteCabinet,
   onAddProperties,
@@ -56,42 +54,42 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
       : null;
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {/* All Listings */}
         <button
           type="button"
           onClick={() => onFilterChange('all')}
-          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+          className={`min-h-[9rem] p-3.5 rounded-xl border text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-emerald-700 focus-visible:outline-offset-2 flex flex-col ${
             selectedFilter === 'all'
               ? 'admin-panel border-emerald-700/50 ring-2 ring-emerald-700/20'
               : 'admin-panel-muted border-transparent hover:border-[#d6c7b2]'
           }`}
         >
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">All Listings</span>
             <Home className="w-4 h-4 text-emerald-700/70" />
           </div>
           <div className="text-2xl font-bold text-[#2f2417]">{totalCount}</div>
-          <div className="text-[10px] text-[#9d8c76] mt-1">Every registered property record</div>
+          <div className="text-[10px] text-[#5d503f] mt-1">Every registered property record</div>
         </button>
 
         {/* Unassigned */}
         <button
           type="button"
           onClick={() => onFilterChange('unassigned')}
-          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+          className={`min-h-[9rem] p-3.5 rounded-xl border text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-amber-700 focus-visible:outline-offset-2 flex flex-col ${
             selectedFilter === 'unassigned'
               ? 'admin-panel border-amber-600/50 ring-2 ring-amber-600/20'
               : 'admin-panel-muted border-transparent hover:border-[#d6c7b2]'
           }`}
         >
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Unassigned</span>
             <AlertCircle className="w-4 h-4 text-amber-600" />
           </div>
           <div className="text-2xl font-bold text-[#2f2417]">{unassignedCount}</div>
-          <div className="text-[10px] text-[#9d8c76] mt-1">
+          <div className="text-[10px] text-[#5d503f] mt-1">
             Propert{unassignedCount === 1 ? 'y needs' : 'ies need'} filing
           </div>
         </button>
@@ -117,17 +115,17 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
               tabIndex={0}
               aria-pressed={isSelected}
               aria-label={`Select cabinet ${cabinet.name}`}
-              className="relative rounded-2xl border overflow-hidden cursor-pointer transition-all group focus-visible:outline-2 focus-visible:outline-emerald-700 focus-visible:outline-offset-2"
+              className="relative min-h-[9rem] rounded-xl border overflow-hidden cursor-pointer transition-all group focus-visible:outline-2 focus-visible:outline-emerald-700 focus-visible:outline-offset-2 admin-panel-muted"
               style={{
                 borderColor: isSelected ? style.border : 'rgba(0,0,0,0.08)',
                 boxShadow: isSelected ? `0 0 0 2px ${style.badgeBg}` : 'none',
-                background: '#fffdfa',
+                background: isSelected ? style.header : undefined,
               }}
             >
               {/* "Drawer handle" accent bar */}
               <div className="h-1.5 w-full" style={{ background: style.handle }} />
 
-              <div className="p-4" style={{ background: isSelected ? style.header : 'transparent' }}>
+              <div className="p-3.5">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-1.5 min-w-0">
                     {isSelected ? (
@@ -144,14 +142,14 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         onEditCabinet(cabinet);
                       }}
-                      className="p-1 rounded hover:bg-black/5 cursor-pointer"
+                      className="p-1 rounded hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-emerald-700 cursor-pointer"
                       title="Edit Cabinet"
                       aria-label="Edit cabinet"
                     >
@@ -163,7 +161,7 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
                         e.stopPropagation();
                         onDeleteCabinet(cabinet);
                       }}
-                      className="p-1 rounded hover:bg-black/5 cursor-pointer"
+                      className="p-1 rounded hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-red-600 cursor-pointer"
                       title="Delete Cabinet"
                       aria-label="Delete cabinet"
                     >
@@ -173,7 +171,7 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
                 </div>
 
                 {cabinet.description && (
-                  <p className="text-[10px] text-[#9d8c76] mb-2 line-clamp-1" title={cabinet.description}>
+                  <p className="text-[10px] text-[#5d503f] mb-2 line-clamp-1" title={cabinet.description}>
                     {cabinet.description}
                   </p>
                 )}
@@ -181,7 +179,7 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
                 <FolderRow count={cabinet.filedCount} color={style.text} />
 
                 <div className="text-lg font-bold text-[#2f2417] mt-2">
-                  {cabinet.filedCount} <span className="text-xs font-semibold text-[#9d8c76]">/ {cabinet.capacity} folders</span>
+                  {cabinet.filedCount} <span className="text-xs font-semibold text-[#5d503f]">/ {cabinet.capacity} folders</span>
                 </div>
 
                 <div className="w-full h-1.5 rounded-full overflow-hidden mt-2" style={{ background: 'rgba(0,0,0,0.08)' }}>
@@ -201,21 +199,11 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
           );
         })}
 
-        {/* + Create Cabinet */}
-        <button
-          type="button"
-          onClick={onCreateCabinet}
-          className="p-4 rounded-2xl border border-dashed border-[#d6c7b2] hover:border-emerald-700/50 bg-transparent hover:bg-[#faf6ef] text-left transition-all flex flex-col items-center justify-center py-8 cursor-pointer"
-        >
-          <Plus className="w-5 h-5 text-[#9d8c76] mb-2" />
-          <span className="text-xs font-bold text-[#7c6a57]">Create Cabinet</span>
-          <span className="text-[9px] text-[#9d8c76] mt-1 text-center">Add a new filing cabinet</span>
-        </button>
       </div>
 
       {/* Selected cabinet action banner */}
       {selectedCabinet && (
-        <div className="admin-panel rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="admin-panel rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
               <Archive className="w-4 h-4" style={{ color: CABINET_COLOR_STYLES[selectedCabinet.color].text }} />

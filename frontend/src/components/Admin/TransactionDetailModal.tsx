@@ -117,13 +117,13 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                 <Handshake className="w-4 h-4 text-emerald-700" />
                 {transaction.reference}
               </h3>
-              <p className="text-[10px] text-[#9d8c76] mt-0.5">Created {formatDate(transaction.createdAt)}</p>
+              <p className="text-[10px] text-[#5d503f] mt-0.5">Created {formatDate(transaction.createdAt)}</p>
             </div>
             <button
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="text-[#8f7d69] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1"
+              className="text-[#5d503f] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1"
             >
               <X className="w-4 h-4" />
             </button>
@@ -133,12 +133,12 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             {/* Buyer & property summary — read-only, these are existing records */}
             <div className="grid grid-cols-2 gap-3">
               <div className="admin-panel-muted rounded-lg p-3">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-[#9d8c76] mb-1">Buyer</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-[#5d503f] mb-1">Buyer</p>
                 <p className="text-xs font-bold text-[#2f2417] truncate">{transaction.buyerId?.fullName ?? 'Unknown buyer'}</p>
                 <p className="text-[10px] text-[#7c6a57] truncate">{transaction.buyerId?.email ?? ''}</p>
               </div>
               <div className="admin-panel-muted rounded-lg p-3">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-[#9d8c76] mb-1">Property</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-[#5d503f] mb-1">Property</p>
                 <p className="text-xs font-bold text-[#2f2417] truncate">{transaction.propertyId?.name ?? 'Unknown property'}</p>
                 <p className="text-[10px] text-[#7c6a57] truncate">{transaction.propertyId?.location ?? ''}</p>
               </div>
@@ -148,7 +148,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             {fullProperty?.documents && (
               <div className="admin-panel-muted rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-[#9d8c76] flex items-center gap-1">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-[#5d503f] flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3" /> Compliance Snapshot
                   </p>
                   <button

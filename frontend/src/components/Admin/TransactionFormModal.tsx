@@ -128,7 +128,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-[#8f7d69] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1"
+            className="text-[#5d503f] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1"
           >
             <X className="w-4 h-4" />
           </button>
@@ -152,9 +152,9 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
             </div>
             <div className="max-h-32 overflow-y-auto space-y-1 admin-panel-muted rounded-lg p-1.5">
               {isLoadingBuyers ? (
-                <p className="text-[10px] text-[#9d8c76] p-2">Loading buyers...</p>
+                <p className="text-[10px] text-[#5d503f] p-2">Loading buyers...</p>
               ) : filteredBuyers.length === 0 ? (
-                <p className="text-[10px] text-[#9d8c76] p-2">No registered buyers match your search.</p>
+                <p className="text-[10px] text-[#5d503f] p-2">No registered buyers match your search.</p>
               ) : (
                 filteredBuyers.map((b) => (
                   <label
@@ -171,7 +171,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
                       className="accent-emerald-600 cursor-pointer"
                     />
                     <span className="font-bold text-[#2f2417]">{b.fullName}</span>
-                    <span className="text-[#9d8c76]">{b.email}</span>
+                    <span className="text-[#5d503f]">{b.email}</span>
                   </label>
                 ))
               )}
@@ -195,7 +195,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
             </div>
             <div className="max-h-36 overflow-y-auto space-y-1 admin-panel-muted rounded-lg p-1.5">
               {filteredProperties.length === 0 ? (
-                <p className="text-[10px] text-[#9d8c76] p-2">No available properties match your search.</p>
+                <p className="text-[10px] text-[#5d503f] p-2">No available properties match your search.</p>
               ) : (
                 filteredProperties.map((p) => (
                   <label
@@ -213,7 +213,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
                         className="accent-emerald-600 cursor-pointer shrink-0"
                       />
                       <span className="font-bold text-[#2f2417] truncate">{p.name}</span>
-                      <span className="text-[#9d8c76] truncate">{p.location}</span>
+                      <span className="text-[#5d503f] truncate">{p.location}</span>
                     </span>
                     <span className="font-mono font-bold text-[#2f2417] shrink-0">{formatPrice(p.price)}</span>
                   </label>
@@ -237,7 +237,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
 
           <div>
             <label className="text-[10px] uppercase tracking-wider font-bold text-[#7c6a57] block mb-1">
-              Notes <span className="text-[#9d8c76] normal-case font-normal">(optional)</span>
+              Notes <span className="text-[#5d503f] normal-case font-normal">(optional)</span>
             </label>
             <textarea
               rows={2}
