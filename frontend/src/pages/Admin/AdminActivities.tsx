@@ -125,11 +125,7 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="admin-panel rounded-2xl p-5 flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-[#2f2417] font-serif text-lg font-bold">Buyer Activities</h2>
-          <p className="text-[#7c6a57] text-xs mt-0.5">Inquiries and site-visit requests from buyers.</p>
-        </div>
+      <div className="flex items-center justify-end gap-4">
         <button
           onClick={load}
           disabled={isInquiryLoading || isSiteVisitLoading}

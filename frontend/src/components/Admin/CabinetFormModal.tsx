@@ -88,7 +88,7 @@ export const CabinetFormModal: React.FC<CabinetFormModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-[#8f7d69] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1"
+            className="text-[#5d503f] hover:text-[#2f2417] transition-colors bg-transparent border-none cursor-pointer p-1"
           >
             <X className="w-4 h-4" />
           </button>
@@ -113,7 +113,7 @@ export const CabinetFormModal: React.FC<CabinetFormModalProps> = ({
 
           <div>
             <label className="text-[10px] uppercase tracking-wider font-bold text-[#7c6a57] block mb-1">
-              Description <span className="text-[#9d8c76] normal-case font-normal">(optional)</span>
+              Description <span className="text-[#5d503f] normal-case font-normal">(optional)</span>
             </label>
             <textarea
               placeholder="e.g. Property listings located in Balayan."
@@ -138,7 +138,7 @@ export const CabinetFormModal: React.FC<CabinetFormModalProps> = ({
               className="admin-input w-full px-3 py-2 rounded-lg text-xs"
             />
             {cabinet && cabinet.filedCount > 0 && (
-              <p className="text-[10px] text-[#9d8c76] mt-1">
+              <p className="text-[10px] text-[#5d503f] mt-1">
                 This cabinet currently holds {cabinet.filedCount} propert{cabinet.filedCount === 1 ? 'y' : 'ies'} —
                 capacity can't be set below that.
               </p>

@@ -99,14 +99,7 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
         })}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-[#2f2417] font-serif text-xl sm:text-2xl font-bold">Registered Buyer Profiles</h2>
-          <p className="text-[#7c6a57] text-xs sm:text-sm mt-1">
-            Read-only buyer accounts and preferences submitted through the Buyer Portal.
-          </p>
-        </div>
-
+      <div className="flex flex-wrap items-center justify-end gap-4">
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -185,7 +178,7 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
                           {buyer.preferences.landType}
                         </span>
                       ) : (
-                        <span className="text-[#9d8c76]">Not provided</span>
+                        <span className="text-[#5d503f]">Not provided</span>
                       )}
                     </td>
                     <td className="p-4 text-[#5d503f]">

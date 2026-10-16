@@ -10,6 +10,7 @@ import {
   Sparkles,
   FolderMinus,
   Archive,
+  X,
 } from 'lucide-react';
 import type { Property } from '../../types/types';
 import { PropertyFormModal } from '../../components/Admin/PropertyFormModal';
@@ -374,6 +375,19 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     setDocumentStatusFilter('');
     setListingStatusFilter('');
     setPropertySort('latest');
+    setSelectedFilter('all');
+  };
+
+  const toggleUnassignedQuickFilter = () => {
+    setSelectedFilter((currentFilter) => currentFilter === 'unassigned' ? 'all' : 'unassigned');
+  };
+
+  const toggleDocumentQuickFilter = () => {
+    setDocumentStatusFilter((currentStatus) => currentStatus === 'Missing' ? '' : 'Missing');
+  };
+
+  const toggleReservedQuickFilter = () => {
+    setListingStatusFilter((currentStatus) => currentStatus === 'Reserved' ? '' : 'Reserved');
   };
 
   const selectedCabinetName =
@@ -383,22 +397,22 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-[#2f2417] font-serif text-xl sm:text-2xl font-bold">Manage Land Listings</h2>
-          <p className="text-[#7c6a57] text-xs sm:text-sm mt-1">
-            Create, modify, and audit real estate listings.
-          </p>
-        </div>
-
-      </div>
-
       {/* Digital Filing Cabinet */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
           <Archive className="w-4 h-4 text-emerald-700" />
           <h3 className="text-[#2f2417] font-serif text-lg font-bold">Filing Cabinet</h3>
-          <span className="text-[10px] text-[#9d8c76]">Organize where each property record is filed</span>
+          <span className="text-[10px] text-[#7c6a57]">Organize where each property record is filed</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleCreateCabinetClick}
+            className="admin-button flex items-center gap-1.5 px-3.5 py-2 text-white font-bold text-xs rounded-xl transition-all cursor-pointer border-none hover:brightness-105 shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Create Cabinet
+          </button>
         </div>
 
         {isLoadingCabinets ? (
@@ -412,7 +426,6 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
             totalCount={properties.length}
             selectedFilter={selectedFilter}
             onFilterChange={setSelectedFilter}
-            onCreateCabinet={handleCreateCabinetClick}
             onEditCabinet={handleEditCabinetClick}
             onDeleteCabinet={handleDeleteCabinet}
             onAddProperties={handleOpenAddProperties}
@@ -420,53 +433,77 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
         )}
       </div>
 
-      <div className="admin-panel rounded-2xl p-4">
-        <h3 className="text-[#2f2417] font-serif text-lg font-bold mb-3">Filter &amp; Sort Listings</h3>
-        <div className="relative mb-3">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" aria-hidden="true" />
-          <input
-            type="text"
-            aria-label="Search listings"
-            placeholder="Search listings..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="admin-input block w-full min-w-0 pl-10 pr-4 py-2 rounded-xl text-xs focus:outline-none focus:border-emerald-700/50 transition-all"
-          />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
-          <label className="text-[10px] font-bold text-[#7c6a57]">Property Type
-            <select aria-label="Filter by property type" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="admin-input block w-full mt-1 px-3 py-2 rounded-lg text-xs">
+      <div className="admin-properties-filter-section">
+        <h3 className="text-[#2f2417] font-serif text-lg font-bold mb-2.5">Filter &amp; Sort Listings</h3>
+        <div className="flex flex-wrap items-end gap-2.5">
+          <div className="relative flex-[2_1_20rem] min-w-[14rem]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" aria-hidden="true" />
+            <input
+              type="text"
+              aria-label="Search listings"
+              placeholder="Search listings..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="admin-input admin-properties-search-input block w-full min-w-0 pl-10 pr-4 py-2.5 rounded-full text-xs focus:outline-none transition-all"
+            />
+          </div>
+          <label className="admin-properties-filter-label flex-[1_1_8rem] min-w-[8rem] text-[10px] font-bold text-[#5d503f]">Property Type
+            <select aria-label="Filter by property type" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="admin-input admin-properties-filter-control block w-full mt-1 px-3 py-2 rounded-full text-xs">
               <option value="">All types</option>{filterOptions.types.map((type) => <option key={type} value={type}>{type}</option>)}
             </select>
           </label>
-          <label className="text-[10px] font-bold text-[#7c6a57]">Location
-            <select aria-label="Filter by location" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="admin-input block w-full mt-1 px-3 py-2 rounded-lg text-xs">
+          <label className="admin-properties-filter-label flex-[1_1_8rem] min-w-[8rem] text-[10px] font-bold text-[#5d503f]">Location
+            <select aria-label="Filter by location" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="admin-input admin-properties-filter-control block w-full mt-1 px-3 py-2 rounded-full text-xs">
               <option value="">All locations</option>{filterOptions.locations.map((location) => <option key={location} value={location}>{location}</option>)}
             </select>
           </label>
-          <label className="text-[10px] font-bold text-[#7c6a57]">Document Status
-            <select aria-label="Filter by document status" value={documentStatusFilter} onChange={(e) => setDocumentStatusFilter(e.target.value)} className="admin-input block w-full mt-1 px-3 py-2 rounded-lg text-xs">
+          <label className="admin-properties-filter-label flex-[1_1_11rem] min-w-[11rem] text-[10px] font-bold text-[#5d503f]">Document Status
+            <select aria-label="Filter by document status" value={documentStatusFilter} onChange={(e) => setDocumentStatusFilter(e.target.value)} className="admin-input admin-properties-filter-control block w-full mt-1 px-3 py-2 rounded-full text-xs">
               <option value="">All document statuses</option><option>Verified</option><option>Pending</option><option>Missing</option>
             </select>
           </label>
-          <label className="text-[10px] font-bold text-[#7c6a57]">Listing Status
-            <select aria-label="Filter by listing status" value={listingStatusFilter} onChange={(e) => setListingStatusFilter(e.target.value as Property['status'] | '')} className="admin-input block w-full mt-1 px-3 py-2 rounded-lg text-xs">
+          <label className="admin-properties-filter-label flex-[1_1_8rem] min-w-[8rem] text-[10px] font-bold text-[#5d503f]">Listing Status
+            <select aria-label="Filter by listing status" value={listingStatusFilter} onChange={(e) => setListingStatusFilter(e.target.value as Property['status'] | '')} className="admin-input admin-properties-filter-control block w-full mt-1 px-3 py-2 rounded-full text-xs">
               <option value="">All listing statuses</option><option>Available</option><option>Reserved</option><option>Sold</option>
             </select>
           </label>
-          <label className="text-[10px] font-bold text-[#7c6a57]">Sort By
-            <select aria-label="Sort properties" value={propertySort} onChange={(e) => setPropertySort(e.target.value as 'latest' | 'priceAsc' | 'priceDesc')} className="admin-input block w-full mt-1 px-3 py-2 rounded-lg text-xs">
+          <label className="admin-properties-filter-label flex-[1_1_8rem] min-w-[8rem] text-[10px] font-bold text-[#5d503f]">Sort By
+            <select aria-label="Sort properties" value={propertySort} onChange={(e) => setPropertySort(e.target.value as 'latest' | 'priceAsc' | 'priceDesc')} className="admin-input admin-properties-filter-control block w-full mt-1 px-3 py-2 rounded-full text-xs">
               <option value="latest">Latest</option><option value="priceAsc">Price: Low to High</option><option value="priceDesc">Price: High to Low</option>
             </select>
           </label>
         </div>
-        <div className="flex items-center justify-between gap-3 mt-3">
+        <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-[#d6c7b2]/70">
+          <span className="admin-properties-quick-label text-[10px] font-bold uppercase tracking-wide text-[#7c6a57]">Quick</span>
+          <button type="button" onClick={toggleUnassignedQuickFilter} aria-pressed={selectedFilter === 'unassigned'} className={`admin-properties-quick-chip ${selectedFilter === 'unassigned' ? 'admin-properties-quick-chip-active' : ''}`}>
+            Unfiled{unassignedCount > 0 && <span className="admin-properties-chip-count">{unassignedCount}</span>}
+          </button>
+          <button type="button" onClick={toggleDocumentQuickFilter} aria-pressed={documentStatusFilter === 'Missing'} className={`admin-properties-quick-chip ${documentStatusFilter === 'Missing' ? 'admin-properties-quick-chip-active' : ''}`}>
+            Missing documents
+          </button>
+          <button type="button" onClick={toggleReservedQuickFilter} aria-pressed={listingStatusFilter === 'Reserved'} className={`admin-properties-quick-chip ${listingStatusFilter === 'Reserved' ? 'admin-properties-quick-chip-active' : ''}`}>
+            Reserved
+          </button>
+        </div>
+        {(searchQuery || typeFilter || locationFilter || documentStatusFilter || listingStatusFilter || propertySort !== 'latest' || selectedFilter !== 'all') && (
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-[#7c6a57]">Active</span>
+            {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="admin-properties-active-chip">Search: {searchQuery}<X aria-hidden="true" /></button>}
+            {typeFilter && <button type="button" onClick={() => setTypeFilter('')} className="admin-properties-active-chip">Type: {typeFilter}<X aria-hidden="true" /></button>}
+            {locationFilter && <button type="button" onClick={() => setLocationFilter('')} className="admin-properties-active-chip">Location: {locationFilter}<X aria-hidden="true" /></button>}
+            {documentStatusFilter && <button type="button" onClick={() => setDocumentStatusFilter('')} className="admin-properties-active-chip">Documents: {documentStatusFilter}<X aria-hidden="true" /></button>}
+            {listingStatusFilter && <button type="button" onClick={() => setListingStatusFilter('')} className="admin-properties-active-chip">Status: {listingStatusFilter}<X aria-hidden="true" /></button>}
+            {propertySort !== 'latest' && <button type="button" onClick={() => setPropertySort('latest')} className="admin-properties-active-chip">Sort: {propertySort === 'priceAsc' ? 'Low to High' : 'High to Low'}<X aria-hidden="true" /></button>}
+            {selectedFilter !== 'all' && <button type="button" onClick={() => setSelectedFilter('all')} className="admin-properties-active-chip">Cabinet: {selectedFilter === 'unassigned' ? 'Unfiled' : selectedCabinetName ?? 'Selected'}<X aria-hidden="true" /></button>}
+          </div>
+        )}
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
           <span className="text-[10px] text-[#7c6a57]">Showing {filteredProperties.length} of {cabinetFilteredProperties.length} listings</span>
-          <button type="button" onClick={clearPropertyFilters} className="text-xs font-bold text-emerald-800 underline underline-offset-2">Clear filters</button>
+          <button type="button" onClick={clearPropertyFilters} className="text-xs font-bold text-emerald-800 underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-emerald-700 focus-visible:outline-offset-2">Clear all</button>
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="admin-properties-listing-action flex justify-end">
         <button
           type="button"
           onClick={handleAddPropertyClick}
@@ -477,7 +514,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
         </button>
       </div>
 
-      <div className="admin-panel rounded-2xl overflow-hidden">
+      <div className="admin-panel admin-properties-listings rounded-2xl overflow-hidden">
         <div className="px-5 py-3 border-b border-[#d6c7b2] bg-[#faf6ef]/50">
           <p className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">
             {selectedFilter === 'all' && 'All registered land listings'}
