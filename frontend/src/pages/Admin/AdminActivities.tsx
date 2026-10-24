@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatActivityTimestamp } from '../../utils/activityTimestamp';
 import { Mail, Calendar, RefreshCw } from 'lucide-react';
 import { getAllInquiries, updateInquiryStatus } from '../../services/InquiryService';
 import type { Inquiry } from '../../services/InquiryService';
@@ -116,9 +117,6 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
     }
   };
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
-
   const formatDay = (d: string) =>
     new Date(d).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -197,7 +195,7 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Property</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Message</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Admin Response</th>
-                  <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Date</th>
+                  <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Submitted</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Status</th>
                 </tr>
               </thead>
@@ -227,7 +225,7 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                         className="admin-input text-[10px] py-1.5 px-2 rounded-lg w-full resize-y"
                       />
                     </td>
-                    <td className="px-4 py-3 text-[#7c6a57] whitespace-nowrap">{formatDate(inq.createdAt)}</td>
+                    <td className="px-4 py-3 text-[#7c6a57] whitespace-nowrap">{formatActivityTimestamp(inq.createdAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col items-start gap-1.5">
                         {statusBadge(inq.status)}
@@ -329,7 +327,7 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                         className="admin-input text-[10px] py-1.5 px-2 rounded-lg w-full resize-y"
                       />
                     </td>
-                    <td className="px-4 py-3 text-[#7c6a57] whitespace-nowrap">{formatDate(v.createdAt)}</td>
+                    <td className="px-4 py-3 text-[#7c6a57] whitespace-nowrap">{formatActivityTimestamp(v.createdAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col items-start gap-1.5">
                         {statusBadge(v.status)}
