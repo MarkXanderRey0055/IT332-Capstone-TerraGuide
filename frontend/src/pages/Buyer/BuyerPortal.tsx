@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { formatActivityTimestamp } from '../../utils/activityTimestamp';
 import {
   Home,
   Search,
@@ -401,11 +402,25 @@ const LogoutConfirmModal: React.FC<{
   );
 };
 
+// Match SiteVisit.preferredDate's existing UTC calendar-day validation.
+const getSiteVisitDateError = (value: string) => {
+  if (!value) return 'Please select a preferred date.';
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+    return 'Please select a valid date.';
+  }
+  return value < new Date().toISOString().slice(0, 10)
+    ? 'Please select today or a later date (UTC).'
+    : '';
+};
+
 const SiteVisitModal: React.FC<{
   isOpen: boolean;
   propertyName: string;
   preferredDate: string;
   notes: string;
+  isSubmitting: boolean;
+  error: string;
   onPreferredDateChange: (value: string) => void;
   onNotesChange: (value: string) => void;
   onClose: () => void;
@@ -415,6 +430,8 @@ const SiteVisitModal: React.FC<{
   propertyName,
   preferredDate,
   notes,
+  isSubmitting,
+  error,
   onPreferredDateChange,
   onNotesChange,
   onClose,
@@ -423,7 +440,8 @@ const SiteVisitModal: React.FC<{
   const modalRef = useModalAccessibility({ isOpen, onClose });
   if (!isOpen) return null;
 
-  const todayDateString = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  const todayDateString = new Date().toISOString().slice(0, 10);
+  const dateError = preferredDate ? getSiteVisitDateError(preferredDate) : '';
 
   return (
     <div className="fixed inset-0 bg-[#091413]/90 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
@@ -452,13 +470,16 @@ const SiteVisitModal: React.FC<{
             </label>
             <input
               type="date"
+              disabled={isSubmitting}
+              aria-invalid={Boolean(dateError)}
+              aria-describedby={dateError ? 'site-visit-date-error' : undefined}
               value={preferredDate}
               onChange={(e) => onPreferredDateChange(e.target.value)}
               min={todayDateString}
               className={`w-full bg-[#091413] text-[#E8F5EF] border ${preferredDate && preferredDate < todayDateString ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.2)]' : 'border-[rgba(40,90,72,0.3)] focus:border-[#285A48] focus:shadow-[0_0_0_3px_rgba(40,90,72,0.2)]'} rounded-lg px-3 py-2.5 text-sm focus:outline-none transition-all`}
             />
-            {preferredDate && preferredDate < todayDateString && (
-              <p className="text-red-400 text-xs mt-1.5 font-medium">Please select a future date.</p>
+            {dateError && (
+              <p id="site-visit-date-error" role="alert" className="text-red-400 text-xs mt-1.5 font-medium">{dateError}</p>
             )}
           </div>
           <div>
@@ -467,6 +488,7 @@ const SiteVisitModal: React.FC<{
             </label>
             <textarea
               value={notes}
+              disabled={isSubmitting}
               onChange={(e) => onNotesChange(e.target.value)}
               rows={3}
               placeholder="Any special requests or questions..."
@@ -475,6 +497,7 @@ const SiteVisitModal: React.FC<{
           </div>
         </div>
 
+        {error && <p role="alert" className="text-red-400 text-xs mt-3">{error}</p>}
         <div className="mt-6 flex flex-col-reverse sm:flex-row gap-3">
           <button
             type="button"
@@ -486,10 +509,10 @@ const SiteVisitModal: React.FC<{
           <button
             type="button"
             onClick={onSubmit}
-            disabled={!preferredDate || preferredDate < todayDateString}
+            disabled={isSubmitting || !preferredDate || Boolean(dateError)}
             className="flex-1 px-4 py-2.5 rounded-lg text-xs font-semibold text-[#FFFFFF] bg-[#285A48] hover:bg-[#408A71] transition-colors shadow-md hover:shadow-lg border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Submit Request
+            {isSubmitting ? 'Submitting...' : 'Submit Request'}
           </button>
         </div>
       </div>
@@ -501,10 +524,12 @@ const InquiryModal: React.FC<{
   isOpen: boolean;
   propertyName: string;
   message: string;
+  isSubmitting: boolean;
+  error: string;
   onMessageChange: (value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
-}> = ({ isOpen, propertyName, message, onMessageChange, onClose, onSubmit }) => {
+}> = ({ isOpen, propertyName, message, isSubmitting, error, onMessageChange, onClose, onSubmit }) => {
   const modalRef = useModalAccessibility({ isOpen, onClose });
   if (!isOpen) return null;
 
@@ -534,6 +559,7 @@ const InquiryModal: React.FC<{
           </label>
           <textarea
             value={message}
+            disabled={isSubmitting}
             onChange={(e) => onMessageChange(e.target.value)}
             rows={4}
             placeholder="I'm interested in this property and would like to know more about..."
@@ -541,6 +567,7 @@ const InquiryModal: React.FC<{
           />
         </div>
 
+        {error && <p role="alert" className="text-red-400 text-xs mt-3">{error}</p>}
         <div className="mt-6 flex flex-col-reverse sm:flex-row gap-3">
           <button
             type="button"
@@ -552,10 +579,10 @@ const InquiryModal: React.FC<{
           <button
             type="button"
             onClick={onSubmit}
-            disabled={!message.trim()}
+            disabled={isSubmitting || !message.trim()}
             className="flex-1 px-4 py-2.5 rounded-lg text-xs font-semibold text-[#FFFFFF] bg-[#285A48] hover:bg-[#408A71] transition-colors shadow-md hover:shadow-lg border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Send Inquiry
+            {isSubmitting ? 'Sending...' : 'Send Inquiry'}
           </button>
         </div>
       </div>
@@ -614,6 +641,9 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [buyerUserId, setBuyerUserId] = useState('');
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [buyerPrefs, setBuyerPrefs] = useState<BuyerPreferences | null>(null);
+  const [isPreferencesLoading, setIsPreferencesLoading] = useState(true);
+  const [preferencesLoadError, setPreferencesLoadError] = useState('');
+  const [preferencesRetryToken, setPreferencesRetryToken] = useState(0);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [propertyLoadError, setPropertyLoadError] = useState('');
@@ -624,6 +654,12 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [visitPreferredDate, setVisitPreferredDate] = useState('');
   const [visitNotes, setVisitNotes] = useState('');
   const [inquiryMessage, setInquiryMessage] = useState('');
+  const inquirySubmittingRef = useRef(false);
+  const visitSubmittingRef = useRef(false);
+  const [isInquirySubmitting, setIsInquirySubmitting] = useState(false);
+  const [isVisitSubmitting, setIsVisitSubmitting] = useState(false);
+  const [inquirySubmitError, setInquirySubmitError] = useState('');
+  const [visitSubmitError, setVisitSubmitError] = useState('');
   const [buyerInquiries, setBuyerInquiries] = useState<Inquiry[]>([]);
   const [buyerSiteVisits, setBuyerSiteVisits] = useState<SiteVisit[]>([]);
   const [isActivityLoading, setIsActivityLoading] = useState(false);
@@ -646,6 +682,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   };
 
   const handleRequestVisit = () => {
+    if (visitSubmittingRef.current) return;
     if (!selectedProperty) return;
     if (!isAuthenticated) {
       setRestrictedFeatureName('Request Site Visit');
@@ -654,10 +691,12 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     }
     setVisitPreferredDate('');
     setVisitNotes('');
+    setVisitSubmitError('');
     setIsVisitModalOpen(true);
   };
 
   const handleSendInquiry = () => {
+    if (inquirySubmittingRef.current) return;
     if (!selectedProperty) return;
     if (!isAuthenticated) {
       setRestrictedFeatureName('Send Inquiry');
@@ -665,40 +704,59 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
       return;
     }
     setInquiryMessage('');
+    setInquirySubmitError('');
     setIsInquiryModalOpen(true);
   };
 
   const handleSubmitSiteVisit = async () => {
-    if (!selectedProperty || !visitPreferredDate) return;
+    if (visitSubmittingRef.current || !selectedProperty) return;
+    const dateError = getSiteVisitDateError(visitPreferredDate);
+    if (dateError) {
+      setVisitSubmitError(dateError);
+      return;
+    }
+    visitSubmittingRef.current = true;
+    setIsVisitSubmitting(true);
+    setVisitSubmitError('');
 
     try {
-      await submitSiteVisit(
+      const created = await submitSiteVisit(
         selectedProperty.id,
         visitPreferredDate,
         visitNotes.trim()
       );
-      const updated = await getMySiteVisits();
-      setBuyerSiteVisits(updated);
+      setBuyerSiteVisits((current) => [created, ...current.filter((visit) => visit.id !== created.id)]);
       setActivityErrors((prev) => ({ ...prev, siteVisits: '' }));
       setIsVisitModalOpen(false);
+      setVisitPreferredDate('');
+      setVisitNotes('');
       setActionFeedback('Site visit request submitted. An admin will contact you soon.');
     } catch (err) {
-      setActionFeedback('Failed to submit site visit request. Please try again.');
+      setVisitSubmitError(`${err instanceof Error ? err.message : 'Failed to submit site visit request.'} Your entries have been kept. Please try again.`);
+    } finally {
+      visitSubmittingRef.current = false;
+      setIsVisitSubmitting(false);
     }
   };
 
   const handleSubmitInquiry = async () => {
-    if (!selectedProperty || !inquiryMessage.trim()) return;
+    if (inquirySubmittingRef.current || !selectedProperty || !inquiryMessage.trim()) return;
+    inquirySubmittingRef.current = true;
+    setIsInquirySubmitting(true);
+    setInquirySubmitError('');
 
     try {
-      await submitInquiry(selectedProperty.id, inquiryMessage.trim());
-      const updated = await getMyInquiries();
-      setBuyerInquiries(updated);
+      const created = await submitInquiry(selectedProperty.id, inquiryMessage.trim());
+      setBuyerInquiries((current) => [created, ...current.filter((inquiry) => inquiry.id !== created.id)]);
       setActivityErrors((prev) => ({ ...prev, inquiries: '' }));
       setIsInquiryModalOpen(false);
+      setInquiryMessage('');
       setActionFeedback('Inquiry sent successfully. Check My Inquiries for updates.');
     } catch (err) {
-      setActionFeedback('Failed to send inquiry. Please try again.');
+      setInquirySubmitError(`${err instanceof Error ? err.message : 'Failed to send inquiry.'} Your message has been kept. Please try again.`);
+    } finally {
+      inquirySubmittingRef.current = false;
+      setIsInquirySubmitting(false);
     }
   };
 
@@ -773,36 +831,19 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const persistPreferences = async (
     prefsData: Omit<BuyerPreferences, 'userId' | 'timestamp'>
   ) => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) throw new Error('Please sign in again to save your preferences.');
     const userId = buyerUserId || buyerName || 'guest';
 
-    try {
-      const saved = await saveBuyerPreferences(userId, prefsData);
-      setBuyerPrefs(saved);
-    } catch (error) {
-      setActionFeedback(
-        error instanceof Error
-          ? error.message
-          : 'Could not save your preferences. Please try again.'
-      );
-      throw error;
-    }
+    const saved = await saveBuyerPreferences(userId, prefsData);
+    setBuyerPrefs(saved);
   };
 
   const handleResetPreferences = async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) throw new Error('Please sign in again to clear your preferences.');
     const userId = buyerUserId || buyerName || 'guest';
 
-    try {
-      await removeBuyerPreferences(userId);
-      setBuyerPrefs(null);
-    } catch (error) {
-      setActionFeedback(
-        error instanceof Error
-          ? error.message
-          : 'Could not clear your preferences. Please try again.'
-      );
-    }
+    await removeBuyerPreferences(userId);
+    setBuyerPrefs(null);
   };
 
   useEffect(() => {
@@ -884,11 +925,15 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     if (!isAuthenticated) {
       setIsWelcomeModalOpen(false);
       setBuyerPrefs(null);
+      setIsPreferencesLoading(false);
+      setPreferencesLoadError('');
       setActiveTab((current) => (AUTH_REQUIRED_TABS.includes(current) ? 'Home' : current));
       return;
     }
 
     let isCancelled = false;
+    setIsPreferencesLoading(true);
+    setPreferencesLoadError('');
 
     const syncBuyerSession = async () => {
       let currentBuyerName = 'Valued Buyer';
@@ -916,12 +961,13 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
         setIsWelcomeModalOpen(!prefs);
       } catch (error) {
         if (isCancelled) return;
-        setBuyerPrefs(null);
-        setActionFeedback(
+        setPreferencesLoadError(
           error instanceof Error
             ? error.message
             : 'Could not load your saved preferences.'
         );
+      } finally {
+        if (!isCancelled) setIsPreferencesLoading(false);
       }
     };
 
@@ -930,7 +976,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, preferencesRetryToken]);
 
   if (selectedProperty) {
     const propertyName = selectedProperty.title?.trim() || selectedProperty.name;
@@ -947,6 +993,8 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
           propertyName={propertyName}
           preferredDate={visitPreferredDate}
           notes={visitNotes}
+          isSubmitting={isVisitSubmitting}
+          error={visitSubmitError}
           onPreferredDateChange={setVisitPreferredDate}
           onNotesChange={setVisitNotes}
           onClose={() => setIsVisitModalOpen(false)}
@@ -956,6 +1004,8 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
           isOpen={isInquiryModalOpen}
           propertyName={propertyName}
           message={inquiryMessage}
+          isSubmitting={isInquirySubmitting}
+          error={inquirySubmitError}
           onMessageChange={setInquiryMessage}
           onClose={() => setIsInquiryModalOpen(false)}
           onSubmit={handleSubmitInquiry}
@@ -1020,6 +1070,19 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
           />
         );
       case 'Preferences':
+        if (isPreferencesLoading) {
+          return <div role="status" className="max-w-3xl mx-auto px-4 sm:px-8 py-10 text-sm text-[#5C7A6E]">Loading your preferences…</div>;
+        }
+        if (preferencesLoadError) {
+          return (
+            <div className="max-w-3xl mx-auto px-4 sm:px-8 py-10">
+              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <p>Could not load your preferences. {preferencesLoadError}</p>
+                <button type="button" onClick={() => setPreferencesRetryToken((current) => current + 1)} className="mt-2 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold hover:bg-red-100">Retry</button>
+              </div>
+            </div>
+          );
+        }
         return (
           <BuyerPreferencesView
             buyerPrefs={buyerPrefs}
@@ -1065,13 +1128,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                       <div>
                         <h3 className="font-serif font-semibold text-[#FFFFFF]">{inquiry.propertyId?.name ?? 'Unknown property'}</h3>
                         <p className="text-xs text-[#6A9F8A] mt-1">
-                          {new Date(inquiry.createdAt).toLocaleString('en-PH', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          })}
+                          Submitted: {formatActivityTimestamp(inquiry.createdAt)}
                         </p>
                       </div>
                       <span className="text-[10px] font-semibold px-3 py-1 rounded-full bg-[#285A48] text-[#FFFFFF]">
@@ -1129,12 +1186,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                       <div>
                         <h3 className="font-serif font-semibold text-[#FFFFFF]">{visit.propertyId?.name ?? 'Unknown property'}</h3>
                         <p className="text-xs text-[#6A9F8A] mt-1">
-                          Requested{' '}
-                          {new Date(visit.createdAt).toLocaleString('en-PH', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
+                          Submitted: {formatActivityTimestamp(visit.createdAt)}
                         </p>
                       </div>
                       <span className="text-[10px] font-semibold px-3 py-1 rounded-full bg-[#285A48] text-[#FFFFFF]">

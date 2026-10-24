@@ -11,6 +11,13 @@ export const createSiteVisit = asyncHandler(async (req, res) => {
     throw new AppError('propertyId and preferredDate are required.', 400);
   }
 
+  const parsedDate = new Date(preferredDate);
+  if (!Number.isFinite(parsedDate.getTime()) ||
+      (typeof preferredDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(preferredDate) &&
+        parsedDate.toISOString().slice(0, 10) !== preferredDate)) {
+    throw new AppError('Please select a valid preferred date.', 400);
+  }
+
   // buyerId always comes from the authenticated user — never from the request body
   const visit = await siteVisitService.createSiteVisit({
     buyerId: req.user._id,

@@ -508,6 +508,9 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
   const [minLotSize, setMinLotSize] = useState<number>(buyerPrefs?.minLotSize || 0);
   const [savedMessage, setSavedMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [operationError, setOperationError] = useState('');
+  const operationInFlightRef = useRef(false);
   
   const hasUserEditedRef = useRef(false);
 
@@ -524,6 +527,7 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
 
   const markEdited = () => {
     hasUserEditedRef.current = true;
+    setSavedMessage('');
   };
 
   const handleBudgetMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -541,7 +545,11 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
   };
 
   const handleSave = async () => {
+    if (operationInFlightRef.current) return;
+    operationInFlightRef.current = true;
     setIsSaving(true);
+    setSavedMessage('');
+    setOperationError('');
     try {
       await onSavePrefs({
         budgetMin,
@@ -553,11 +561,35 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
       });
       hasUserEditedRef.current = false;
       setSavedMessage('Preferences saved successfully.');
-      window.setTimeout(() => setSavedMessage(''), 2500);
-    } catch {
-      // Error feedback is already surfaced by the parent via actionFeedback.
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'Could not save your preferences. Please try again.');
     } finally {
+      operationInFlightRef.current = false;
       setIsSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (operationInFlightRef.current) return;
+    operationInFlightRef.current = true;
+    setIsResetting(true);
+    setSavedMessage('');
+    setOperationError('');
+    try {
+      await onResetPrefs();
+      hasUserEditedRef.current = false;
+      setBudgetMin(100000);
+      setBudgetMax(5000000);
+      setLandType('');
+      setIntendedUse('');
+      setLocation('');
+      setMinLotSize(0);
+      setSavedMessage('Preferences cleared successfully.');
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'Could not clear your preferences. Please try again.');
+    } finally {
+      operationInFlightRef.current = false;
+      setIsResetting(false);
     }
   };
 
@@ -570,7 +602,9 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
         </p>
       </div>
 
-      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-[#d6c7b2] shadow-sm space-y-5">
+      {!buyerPrefs && <p className="text-xs text-[#5d503f]">You have no saved preferences yet. Choose your preferences below and save them.</p>}
+      <fieldset disabled={isSaving || isResetting} aria-busy={isSaving || isResetting} className="min-w-0 p-5 sm:p-6 rounded-2xl bg-white border border-[#d6c7b2] shadow-sm space-y-5">
+        <legend className="sr-only">Buyer preferences</legend>
         <div className="space-y-3">
           <label className="block text-xs font-bold uppercase tracking-wider text-[#7c6a57]">
             Preferred Budget Range
@@ -694,19 +728,21 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
         </div>
 
         {savedMessage && (
-          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
+          <div role="status" className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
             {savedMessage}
           </div>
         )}
 
+        {operationError && <p role="alert" className="text-xs text-red-800 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">{operationError} Your entered values have been kept. Please try again.</p>}
+
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#e8e0d5]">
           <button
             type="button"
-            onClick={onResetPrefs}
+            onClick={handleReset}
             disabled={isSaving}
             className="px-4 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors border border-rose-200 cursor-pointer"
           >
-            Clear Preferences
+            {isResetting ? 'Clearing...' : 'Clear Preferences'}
           </button>
           <button
             type="button"
@@ -717,7 +753,7 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
             {isSaving ? 'Saving...' : 'Save Preferences'}
           </button>
         </div>
-      </div>
+      </fieldset>
     </div>
   );
 };
