@@ -39,7 +39,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       type="button"
       onClick={() => onClick(property)}
       aria-label={`View ${getLabel(property)} property details`}
-      className="relative flex flex-col w-full p-0 text-left overflow-hidden cursor-pointer rounded-2xl border border-neutral-200/50 bg-white shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md focus-visible:outline-2 focus-visible:outline-emerald-700 focus-visible:outline-offset-2 group"
+      className="relative flex flex-col w-full p-0 text-left overflow-hidden cursor-pointer rounded-2xl border border-neutral-200 bg-white shadow-[0_2px_10px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_6px_18px_rgba(15,23,42,0.12)] focus-visible:outline-2 focus-visible:outline-emerald-700 focus-visible:outline-offset-2 group"
     >
       <div className="relative h-48 w-full overflow-hidden shrink-0 bg-neutral-100">
         {imageUrl && !imgFailed ? (

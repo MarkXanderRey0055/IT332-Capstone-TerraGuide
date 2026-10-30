@@ -547,6 +547,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
             <table className="admin-table admin-properties-table w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-[#d6c7b2] text-[10px] font-bold uppercase tracking-wider text-[#4d5e4d]">
+                  <th className="p-4 min-w-[3.25rem] w-12 text-center">#</th>
                   <th className="p-4 min-w-[13rem]">Property</th>
                   <th className="p-4 min-w-[7rem]">Owner</th>
                   <th className="p-4 min-w-[8rem]">Location</th>
@@ -559,10 +560,13 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#ded2c0]">
-                {filteredProperties.map((p) => {
+                {filteredProperties.map((p, index) => {
                   const propCabinet = p.cabinetId ? cabinets.find((c) => c.id === p.cabinetId) : null;
                   return (
                     <tr key={p.id} className="transition-colors">
+                      <td className="px-4 text-center font-mono font-bold text-[#7c6a57] whitespace-nowrap">
+                        {index + 1}
+                      </td>
                       <td className="px-4">
                         <div className="font-bold text-[#223127] text-sm leading-snug whitespace-normal break-words">
                           {p.name}

@@ -72,7 +72,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
 
   const variants = {
     grid: {
-      containerClass: `bg-[#FFFFFF] rounded-xl overflow-hidden border border-[rgba(40,90,72,0.12)] shadow-sm transition-all duration-300 group cursor-pointer hover:shadow-md hover:border-[#285A48] hover:-translate-y-1`,
+      containerClass: `bg-[#FFFFFF] rounded-xl overflow-hidden border border-neutral-200 shadow-[0_2px_10px_rgba(15,23,42,0.08)] transition-all duration-300 group cursor-pointer hover:shadow-[0_6px_18px_rgba(15,23,42,0.12)] hover:border-[#285A48] hover:-translate-y-1`,
       image: 'h-48 w-full',
       content: 'p-4 flex-1 flex flex-col justify-between',
       price: 'text-sm font-bold text-[#1A2D24]',
@@ -81,7 +81,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       location: 'text-[#5A7A6A]',
     },
     list: {
-      containerClass: `bg-[#FFFFFF] rounded-xl overflow-hidden border border-[rgba(40,90,72,0.12)] shadow-sm transition-all duration-300 group cursor-pointer flex flex-row hover:shadow-md hover:border-[#285A48] hover:-translate-y-1`,
+      containerClass: `bg-[#FFFFFF] rounded-xl overflow-hidden border border-neutral-200 shadow-[0_2px_10px_rgba(15,23,42,0.08)] transition-all duration-300 group cursor-pointer flex flex-row hover:shadow-[0_6px_18px_rgba(15,23,42,0.12)] hover:border-[#285A48] hover:-translate-y-1`,
       image: 'h-48 w-48 shrink-0',
       content: 'p-4 flex-1 flex flex-col justify-between',
       price: 'text-base font-bold text-[#1A2D24]',
@@ -90,7 +90,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       location: 'text-[#5A7A6A]',
     },
     compact: {
-      containerClass: `bg-[#FFFFFF] rounded-lg overflow-hidden border border-[rgba(40,90,72,0.08)] shadow-sm transition-all duration-300 group cursor-pointer hover:shadow-md hover:border-[#285A48] hover:-translate-y-1`,
+      containerClass: `bg-[#FFFFFF] rounded-lg overflow-hidden border border-neutral-200 shadow-[0_2px_10px_rgba(15,23,42,0.08)] transition-all duration-300 group cursor-pointer hover:shadow-[0_6px_18px_rgba(15,23,42,0.12)] hover:border-[#285A48] hover:-translate-y-1`,
       image: 'h-32 w-full',
       content: 'p-3 flex-1 flex flex-col justify-between',
       price: 'text-xs font-bold text-[#1A2D24]',
