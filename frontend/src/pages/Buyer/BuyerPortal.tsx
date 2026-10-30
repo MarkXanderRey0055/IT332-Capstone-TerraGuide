@@ -34,6 +34,8 @@ import { submitInquiry, getMyInquiries } from '../../services/InquiryService';
 import type { Inquiry } from '../../services/InquiryService';
 import { submitSiteVisit, getMySiteVisits } from '../../services/SiteVisitService';
 import type { SiteVisit } from '../../services/SiteVisitService';
+import { InquiryModal } from '../../components/Buyer/InquiryModal';
+import { InquiriesTab } from '../../components/Buyer/InquiriesTab';
 import { COLORS } from '../../styles/buyerTheme';
 import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 
@@ -46,7 +48,10 @@ const TYPE_ICON: Record<string, React.ElementType> = {
   'House & Lot': Home,
   Residential: Home,
 };
-const getTypeIcon = (type: string) => TYPE_ICON[type] || Landmark;
+const renderPortalTypeIcon = (type: string, className?: string) => {
+  const IconComponent = TYPE_ICON[type] || Landmark;
+  return <IconComponent className={className} />;
+};
 
 //property card
 // Property Card - LIGHT THEME VERSION
@@ -67,7 +72,6 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
 }) => {
   const [imgFailed, setImgFailed] = useState(false);
   const imageUrl = property.images?.[0];
-  const TypeIcon = getTypeIcon(property.type);
   const propertyLabel = property.title?.trim() || property.name;
 
   const variants = {
@@ -140,7 +144,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-[#5A7A6A] gap-1.5 bg-[#EAE6DF]">
-            <TypeIcon className="w-8 h-8 text-[#285A48]/50" />
+            {renderPortalTypeIcon(property.type, 'w-8 h-8 text-[#285A48]/50')}
             <span className="text-[10px] font-semibold text-[#5A7A6A] uppercase tracking-wider">
               {property.type}
             </span>
@@ -520,76 +524,6 @@ const SiteVisitModal: React.FC<{
   );
 };
 
-const InquiryModal: React.FC<{
-  isOpen: boolean;
-  propertyName: string;
-  message: string;
-  isSubmitting: boolean;
-  error: string;
-  onMessageChange: (value: string) => void;
-  onClose: () => void;
-  onSubmit: () => void;
-}> = ({ isOpen, propertyName, message, isSubmitting, error, onMessageChange, onClose, onSubmit }) => {
-  const modalRef = useModalAccessibility({ isOpen, onClose });
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-[#091413]/90 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
-      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="inquiry-modal-title" tabIndex={-1} className="w-full max-w-md bg-[#0D1F1A] rounded-2xl p-6 relative border border-[rgba(40,90,72,0.2)] shadow-2xl">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute top-4 right-4 text-[#6A9F8A] hover:text-[#E8F5EF] transition-colors bg-transparent border-none cursor-pointer p-1"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        <div className="w-14 h-14 bg-[#122A20] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[rgba(40,90,72,0.15)]">
-          <Mail className="w-6 h-6 text-[#B0E4CC]" />
-        </div>
-        <h2 id="inquiry-modal-title" className="font-serif text-xl text-[#FFFFFF] text-center">Send Inquiry</h2>
-        <p className="text-sm text-[#6A9F8A] mt-2 text-center leading-relaxed">
-          Ask about <span className="font-semibold text-[#E8F5EF]">{propertyName}</span>.
-        </p>
-
-        <div className="mt-5">
-          <label className="block text-[10px] uppercase tracking-wider font-medium text-[#6A9F8A] mb-1.5">
-            Your Message
-          </label>
-          <textarea
-            value={message}
-            disabled={isSubmitting}
-            onChange={(e) => onMessageChange(e.target.value)}
-            rows={4}
-            placeholder="I'm interested in this property and would like to know more about..."
-            className="w-full bg-[#091413] text-[#E8F5EF] border border-[rgba(40,90,72,0.3)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#285A48] focus:shadow-[0_0_0_3px_rgba(40,90,72,0.2)] transition-all resize-none placeholder:text-[#6A9F8A]"
-          />
-        </div>
-
-        {error && <p role="alert" className="text-red-400 text-xs mt-3">{error}</p>}
-        <div className="mt-6 flex flex-col-reverse sm:flex-row gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-lg text-xs font-medium text-[#E8F5EF] bg-transparent border border-[rgba(40,90,72,0.3)] hover:bg-[rgba(40,90,72,0.1)] transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={isSubmitting || !message.trim()}
-            className="flex-1 px-4 py-2.5 rounded-lg text-xs font-semibold text-[#FFFFFF] bg-[#285A48] hover:bg-[#408A71] transition-colors shadow-md hover:shadow-lg border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? 'Sending...' : 'Send Inquiry'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // ============================================================
 // MAIN BUYER PORTAL COMPONENT
 // ============================================================
@@ -739,14 +673,15 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     }
   };
 
-  const handleSubmitInquiry = async () => {
-    if (inquirySubmittingRef.current || !selectedProperty || !inquiryMessage.trim()) return;
+  const handleSubmitInquiry = async (customMessage?: string) => {
+    const messageToSend = (typeof customMessage === 'string' ? customMessage : inquiryMessage).trim();
+    if (inquirySubmittingRef.current || !selectedProperty || !messageToSend) return;
     inquirySubmittingRef.current = true;
     setIsInquirySubmitting(true);
     setInquirySubmitError('');
 
     try {
-      const created = await submitInquiry(selectedProperty.id, inquiryMessage.trim());
+      const created = await submitInquiry(selectedProperty.id, messageToSend);
       setBuyerInquiries((current) => [created, ...current.filter((inquiry) => inquiry.id !== created.id)]);
       setActivityErrors((prev) => ({ ...prev, inquiries: '' }));
       setIsInquiryModalOpen(false);
@@ -1002,6 +937,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
         />
         <InquiryModal
           isOpen={isInquiryModalOpen}
+          property={selectedProperty}
           propertyName={propertyName}
           message={inquiryMessage}
           isSubmitting={isInquirySubmitting}
@@ -1092,61 +1028,15 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
         );
       case 'Inquiries':
         return (
-          <div className="max-w-4xl mx-auto px-4 sm:px-8 py-12 sm:py-20">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-[#0D1F1A] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[rgba(40,90,72,0.15)] shadow-md">
-                <Mail className="w-8 h-8 text-[#6A9F8A]" />
-              </div>
-              <h2 className="font-serif text-2xl text-[#1A2D24]">My Inquiries</h2>
-              {activityRefreshButton}
-            </div>
-            {activityErrors.inquiries && (
-              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-800">
-                <p>{activityErrors.inquiries}</p>
-                <button
-                  type="button"
-                  onClick={syncBuyerActivity}
-                  disabled={isActivityLoading}
-                  className="mt-2 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold hover:bg-red-100 disabled:opacity-60"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-            {isActivityLoading && buyerInquiries.length === 0 ? (
-              <div className="rounded-xl bg-[#0D1F1A] p-8 text-center text-sm text-[#B0E4CC]">Loading inquiries…</div>
-            ) : activityErrors.inquiries && buyerInquiries.length === 0 ? null : buyerInquiries.length === 0 ? (
-              <EmptyState variant="inquiries" />
-            ) : (
-              <div className="space-y-3">
-                {buyerInquiries.map((inquiry) => (
-                  <div
-                    key={inquiry.id}
-                    className="bg-[#0D1F1A] rounded-xl p-5 border border-[rgba(40,90,72,0.15)] shadow-md"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-serif font-semibold text-[#FFFFFF]">{inquiry.propertyId?.name ?? 'Unknown property'}</h3>
-                        <p className="text-xs text-[#6A9F8A] mt-1">
-                          Submitted: {formatActivityTimestamp(inquiry.createdAt)}
-                        </p>
-                      </div>
-                      <span className="text-[10px] font-semibold px-3 py-1 rounded-full bg-[#285A48] text-[#FFFFFF]">
-                        {inquiry.status}
-                      </span>
-                    </div>
-                    <p className="text-sm text-[#E8F5EF] mt-3">{inquiry.message}</p>
-                    {inquiry.adminResponse && (
-                      <div className="mt-3 rounded-lg border border-[rgba(176,228,204,0.2)] bg-[rgba(40,90,72,0.35)] p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[#B0E4CC]">Admin Response</p>
-                        <p className="text-sm text-[#E8F5EF] mt-1">{inquiry.adminResponse}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <InquiriesTab
+            inquiries={buyerInquiries}
+            properties={properties}
+            isLoading={isActivityLoading}
+            error={activityErrors.inquiries}
+            onRefresh={syncBuyerActivity}
+            onSelectProperty={handleSelectProperty}
+            onBrowseProperties={() => setActiveTab('Search')}
+          />
         );
       case 'Site Visits':
         return (
