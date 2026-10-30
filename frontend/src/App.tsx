@@ -14,6 +14,8 @@ export default function App() {
   // True while we're checking for an existing session on startup, so we
   // don't briefly flash the login screen before an auto-login completes.
   const [isRestoringSession, setIsRestoringSession] = useState(true);
+  const [sessionVerificationError, setSessionVerificationError] = useState('');
+  const [sessionRetryToken, setSessionRetryToken] = useState(0);
 
   // Auto-login: if a token is already stored (from a previous visit),
   // verify it against the backend (/auth/me) and restore the session.
@@ -26,14 +28,22 @@ export default function App() {
         return;
       }
 
-      const user = await AuthService.verifyToken();
+      const verification = await AuthService.verifyToken();
 
       if (isMounted) {
         // Only buyer accounts are routed into the buyer portal here.
         // Admin sessions are handled separately via AdminLogin/MainLoginPortal.
-        if (user && user.role === 'buyer') {
+        if (verification.status === 'authenticated' && verification.user.role === 'buyer') {
           setIsAuthenticated(true);
           setView('buyerPortal');
+          setSessionVerificationError('');
+        } else if (verification.status === 'unavailable') {
+          setIsAuthenticated(false);
+          setView('login');
+          setSessionVerificationError('We could not verify your session. Check your connection and try again.');
+        } else {
+          setIsAuthenticated(false);
+          setSessionVerificationError('');
         }
         setIsRestoringSession(false);
       }
@@ -43,7 +53,7 @@ export default function App() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [sessionRetryToken]);
 
   // If any API call comes back 401 (expired/invalid token), api.ts clears
   // the stored session and fires this event — drop back to the login screen.
@@ -82,13 +92,38 @@ export default function App() {
     AuthService.logout();
     setIsAuthenticated(false);
     setLoginInitialView('selection');
+    setSessionVerificationError('');
     setView('login');
+  };
+
+  const handleRetrySessionVerification = () => {
+    setSessionVerificationError('');
+    setIsRestoringSession(true);
+    setSessionRetryToken((current) => current + 1);
   };
 
   if (isRestoringSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED]">
         <p className="text-sm text-gray-400">Loading...</p>
+      </div>
+    );
+  }
+
+  if (sessionVerificationError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] px-4">
+        <div className="w-full max-w-md rounded-2xl border border-[#d6c7b2] bg-white p-6 text-center shadow-sm">
+          <h1 className="font-serif text-xl font-semibold text-[#1C3A27]">Session verification unavailable</h1>
+          <p className="mt-2 text-sm text-[#7c6a57]">{sessionVerificationError}</p>
+          <button
+            type="button"
+            onClick={handleRetrySessionVerification}
+            className="mt-5 rounded-xl bg-[#1C3A27] px-5 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#254F35] focus-visible:outline-2 focus-visible:outline-[#1C3A27] focus-visible:outline-offset-2"
+          >
+            Retry verification
+          </button>
+        </div>
       </div>
     );
   }

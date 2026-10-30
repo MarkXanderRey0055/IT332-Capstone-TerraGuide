@@ -142,7 +142,7 @@ export const AddPropertiesToCabinetModal: React.FC<AddPropertiesToCabinetModalPr
               No properties available to file{search ? ' matching your search' : ''}.
             </p>
           ) : (
-            candidateProperties.map((p) => {
+            candidateProperties.map((p, index) => {
               const isChecked = selectedIds.includes(p.id);
               const currentCabinet = p.cabinetId
                 ? allCabinets.find((c) => c.id === p.cabinetId)
@@ -156,6 +156,9 @@ export const AddPropertiesToCabinetModal: React.FC<AddPropertiesToCabinetModalPr
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-[11px] font-mono font-bold text-[#7c6a57] w-6 shrink-0 text-right">
+                      {index + 1}.
+                    </span>
                     <input
                       type="checkbox"
                       checked={isChecked}

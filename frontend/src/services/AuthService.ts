@@ -1,4 +1,4 @@
-import { apiRequest } from "../utils/api";
+import { apiRequest, ApiError } from "../utils/api";
 
 export interface User {
   _id: string;
@@ -6,6 +6,11 @@ export interface User {
   email: string;
   role: string;
 }
+
+export type TokenVerificationResult =
+  | { status: 'authenticated'; user: User }
+  | { status: 'unauthenticated' }
+  | { status: 'unavailable'; error: Error };
 
 interface AuthResponse {
   success: boolean;
@@ -105,9 +110,9 @@ export function isAuthenticated(): boolean {
 }
 
 
-export async function verifyToken(): Promise<User | null> {
+export async function verifyToken(): Promise<TokenVerificationResult> {
   if (!getToken()) {
-    return null;
+    return { status: 'unauthenticated' };
   }
 
   try {
@@ -118,11 +123,18 @@ export async function verifyToken(): Promise<User | null> {
     };
 
     localStorage.setItem("terraguide_user", JSON.stringify(response.data));
-    return response.data;
-  } catch {
-    // Invalid/expired token — apiRequest already clears storage on 401,
-    // but clear again defensively in case of other failures.
-    logout();
-    return null;
+    return { status: 'authenticated', user: response.data };
+  } catch (error) {
+    // apiRequest clears the session and emits the unauthorized event for
+    // confirmed 401 responses. Preserve the token for all other failures so
+    // a temporary outage cannot log out a potentially valid user.
+    if (error instanceof ApiError && error.status === 401) {
+      return { status: 'unauthenticated' };
+    }
+
+    return {
+      status: 'unavailable',
+      error: error instanceof Error ? error : new Error('Unable to verify your session.'),
+    };
   }
 }
