@@ -35,6 +35,7 @@ import type { Inquiry } from '../../services/InquiryService';
 import { submitSiteVisit, getMySiteVisits } from '../../services/SiteVisitService';
 import type { SiteVisit } from '../../services/SiteVisitService';
 import { InquiryModal } from '../../components/Buyer/InquiryModal';
+import { SiteVisitModal, getSiteVisitDateError } from '../../components/Buyer/SiteVisitModal';
 import { InquiriesTab } from '../../components/Buyer/InquiriesTab';
 import { COLORS } from '../../styles/buyerTheme';
 import { useModalAccessibility } from '../../hooks/useModalAccessibility';
@@ -406,123 +407,6 @@ const LogoutConfirmModal: React.FC<{
   );
 };
 
-// Match SiteVisit.preferredDate's existing UTC calendar-day validation.
-const getSiteVisitDateError = (value: string) => {
-  if (!value) return 'Please select a preferred date.';
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
-    return 'Please select a valid date.';
-  }
-  return value < new Date().toISOString().slice(0, 10)
-    ? 'Please select today or a later date (UTC).'
-    : '';
-};
-
-const SiteVisitModal: React.FC<{
-  isOpen: boolean;
-  propertyName: string;
-  preferredDate: string;
-  notes: string;
-  isSubmitting: boolean;
-  error: string;
-  onPreferredDateChange: (value: string) => void;
-  onNotesChange: (value: string) => void;
-  onClose: () => void;
-  onSubmit: () => void;
-}> = ({
-  isOpen,
-  propertyName,
-  preferredDate,
-  notes,
-  isSubmitting,
-  error,
-  onPreferredDateChange,
-  onNotesChange,
-  onClose,
-  onSubmit,
-}) => {
-  const modalRef = useModalAccessibility({ isOpen, onClose });
-  if (!isOpen) return null;
-
-  const todayDateString = new Date().toISOString().slice(0, 10);
-  const dateError = preferredDate ? getSiteVisitDateError(preferredDate) : '';
-
-  return (
-    <div className="fixed inset-0 bg-[#091413]/90 backdrop-blur-sm flex items-center justify-center z-[60] px-4">
-      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="site-visit-modal-title" tabIndex={-1} className="w-full max-w-md bg-[#0D1F1A] rounded-2xl p-6 relative border border-[rgba(40,90,72,0.2)] shadow-2xl">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute top-4 right-4 text-[#6A9F8A] hover:text-[#E8F5EF] transition-colors bg-transparent border-none cursor-pointer p-1"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        <div className="w-14 h-14 bg-[#122A20] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[rgba(40,90,72,0.15)]">
-          <Calendar className="w-6 h-6 text-[#B0E4CC]" />
-        </div>
-        <h2 id="site-visit-modal-title" className="font-serif text-xl text-[#FFFFFF] text-center">Request Site Visit</h2>
-        <p className="text-sm text-[#6A9F8A] mt-2 text-center leading-relaxed">
-          Schedule a visit for <span className="font-semibold text-[#E8F5EF]">{propertyName}</span>.
-        </p>
-
-        <div className="mt-5 space-y-4">
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider font-medium text-[#6A9F8A] mb-1.5">
-              Preferred Date
-            </label>
-            <input
-              type="date"
-              disabled={isSubmitting}
-              aria-invalid={Boolean(dateError)}
-              aria-describedby={dateError ? 'site-visit-date-error' : undefined}
-              value={preferredDate}
-              onChange={(e) => onPreferredDateChange(e.target.value)}
-              min={todayDateString}
-              className={`w-full bg-[#091413] text-[#E8F5EF] border ${preferredDate && preferredDate < todayDateString ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.2)]' : 'border-[rgba(40,90,72,0.3)] focus:border-[#285A48] focus:shadow-[0_0_0_3px_rgba(40,90,72,0.2)]'} rounded-lg px-3 py-2.5 text-sm focus:outline-none transition-all`}
-            />
-            {dateError && (
-              <p id="site-visit-date-error" role="alert" className="text-red-400 text-xs mt-1.5 font-medium">{dateError}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider font-medium text-[#6A9F8A] mb-1.5">
-              Notes (optional)
-            </label>
-            <textarea
-              value={notes}
-              disabled={isSubmitting}
-              onChange={(e) => onNotesChange(e.target.value)}
-              rows={3}
-              placeholder="Any special requests or questions..."
-              className="w-full bg-[#091413] text-[#E8F5EF] border border-[rgba(40,90,72,0.3)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#285A48] focus:shadow-[0_0_0_3px_rgba(40,90,72,0.2)] transition-all resize-none placeholder:text-[#6A9F8A]"
-            />
-          </div>
-        </div>
-
-        {error && <p role="alert" className="text-red-400 text-xs mt-3">{error}</p>}
-        <div className="mt-6 flex flex-col-reverse sm:flex-row gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-lg text-xs font-medium text-[#E8F5EF] bg-transparent border border-[rgba(40,90,72,0.3)] hover:bg-[rgba(40,90,72,0.1)] transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={isSubmitting || !preferredDate || Boolean(dateError)}
-            className="flex-1 px-4 py-2.5 rounded-lg text-xs font-semibold text-[#FFFFFF] bg-[#285A48] hover:bg-[#408A71] transition-colors shadow-md hover:shadow-lg border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? 'Submitting...' : 'Submit Request'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ============================================================
 // MAIN BUYER PORTAL COMPONENT
@@ -586,6 +470,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [visitPreferredDate, setVisitPreferredDate] = useState('');
+  const [visitPreferredTime, setVisitPreferredTime] = useState('');
   const [visitNotes, setVisitNotes] = useState('');
   const [inquiryMessage, setInquiryMessage] = useState('');
   const inquirySubmittingRef = useRef(false);
@@ -624,6 +509,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
       return;
     }
     setVisitPreferredDate('');
+    setVisitPreferredTime('');
     setVisitNotes('');
     setVisitSubmitError('');
     setIsVisitModalOpen(true);
@@ -657,12 +543,14 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
       const created = await submitSiteVisit(
         selectedProperty.id,
         visitPreferredDate,
-        visitNotes.trim()
+        visitNotes.trim(),
+        visitPreferredTime
       );
       setBuyerSiteVisits((current) => [created, ...current.filter((visit) => visit.id !== created.id)]);
       setActivityErrors((prev) => ({ ...prev, siteVisits: '' }));
       setIsVisitModalOpen(false);
       setVisitPreferredDate('');
+      setVisitPreferredTime('');
       setVisitNotes('');
       setActionFeedback('Site visit request submitted. An admin will contact you soon.');
     } catch (err) {
@@ -925,12 +813,14 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
         />
         <SiteVisitModal
           isOpen={isVisitModalOpen}
-          propertyName={propertyName}
+          property={selectedProperty}
           preferredDate={visitPreferredDate}
+          preferredTime={visitPreferredTime}
           notes={visitNotes}
           isSubmitting={isVisitSubmitting}
           error={visitSubmitError}
           onPreferredDateChange={setVisitPreferredDate}
+          onPreferredTimeChange={setVisitPreferredTime}
           onNotesChange={setVisitNotes}
           onClose={() => setIsVisitModalOpen(false)}
           onSubmit={handleSubmitSiteVisit}
@@ -1091,6 +981,9 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                           day: 'numeric',
                           year: 'numeric',
                         })}
+                        {visit.preferredTime && (
+                          <span className="text-[#B0E4CC] ml-2 font-medium">({visit.preferredTime})</span>
+                        )}
                       </p>
                       {visit.notes && (
                         <p>

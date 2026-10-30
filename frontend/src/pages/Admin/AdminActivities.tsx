@@ -294,6 +294,7 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Buyer</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Property</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Preferred Date</th>
+                  <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Preferred Time</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Notes</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Admin Response</th>
                   <th className="text-left px-4 py-3 text-[#4d5e4d] font-bold uppercase tracking-wide text-[10px]">Submitted</th>
@@ -312,6 +313,7 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast }) => 
                       <div className="text-[#7c6a57] text-[10px]">{v.propertyId?.location}</div>
                     </td>
                     <td className="px-4 py-3 text-[#4d5e4d] whitespace-nowrap">{formatDay(v.preferredDate)}</td>
+                    <td className="px-4 py-3 text-[#4d5e4d] whitespace-nowrap">{v.preferredTime || '—'}</td>
                     <td className="px-4 py-3 max-w-xs">
                       <p className="text-[#4d5e4d] leading-relaxed line-clamp-3">{v.notes || '—'}</p>
                     </td>

@@ -20,6 +20,7 @@ export interface SiteVisit {
   buyerId: SiteVisitBuyer;
   propertyId: SiteVisitProperty;
   preferredDate: string;
+  preferredTime: string;
   notes: string;
   adminResponse: string;
   status: 'Pending' | 'Scheduled' | 'Completed';
@@ -30,11 +31,12 @@ export interface SiteVisit {
 export async function submitSiteVisit(
   propertyId: string,
   preferredDate: string,
-  notes: string
+  notes: string,
+  preferredTime: string = ''
 ): Promise<SiteVisit> {
   const res = await apiRequest('/site-visits', {
     method: 'POST',
-    body: JSON.stringify({ propertyId, preferredDate, notes }),
+    body: JSON.stringify({ propertyId, preferredDate, preferredTime, notes }),
   });
   return res.data as SiteVisit;
 }

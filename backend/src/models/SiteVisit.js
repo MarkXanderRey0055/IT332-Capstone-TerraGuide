@@ -27,6 +27,18 @@ const siteVisitSchema = new mongoose.Schema(
         message: 'Preferred date cannot be in the past',
       },
     },
+    preferredTime: {
+      type: String,
+      trim: true,
+      default: '',
+      validate: {
+        validator: function (value) {
+          if (!value) return true; // optional field
+          return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+        },
+        message: 'Preferred time must be in HH:MM 24-hour format.',
+      },
+    },
     notes: {
       type: String,
       trim: true,

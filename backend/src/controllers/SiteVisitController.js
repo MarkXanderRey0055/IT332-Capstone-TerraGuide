@@ -5,7 +5,7 @@ import AppError from '../utils/errors.js';
 
 // Buyer: submit a new site visit request
 export const createSiteVisit = asyncHandler(async (req, res) => {
-  const { propertyId, preferredDate, notes } = req.body;
+  const { propertyId, preferredDate, preferredTime, notes } = req.body;
 
   if (!propertyId || !preferredDate) {
     throw new AppError('propertyId and preferredDate are required.', 400);
@@ -18,11 +18,16 @@ export const createSiteVisit = asyncHandler(async (req, res) => {
     throw new AppError('Please select a valid preferred date.', 400);
   }
 
+  if (preferredTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(preferredTime)) {
+    throw new AppError('Preferred time must be in HH:MM 24-hour format.', 400);
+  }
+
   // buyerId always comes from the authenticated user — never from the request body
   const visit = await siteVisitService.createSiteVisit({
     buyerId: req.user._id,
     propertyId,
     preferredDate,
+    preferredTime: preferredTime || '',
     notes,
   });
 
