@@ -8,31 +8,58 @@ export const TRANSACTION_STATUSES = ['Reserved', 'Processing', 'Completed', 'Can
 export type TransactionStatus = (typeof TRANSACTION_STATUSES)[number];
 
 export interface TransactionBuyer {
-  id: string;
-  fullName: string;
-  username: string;
-  email: string;
+  id?: string;
+  _id?: string;
+  fullName?: string;
+  username?: string;
+  email?: string;
 }
 
 export interface TransactionProperty {
-  id: string;
-  name: string;
-  location: string;
-  type: string;
-  status: string;
-  price: number;
+  id?: string;
+  _id?: string;
+  name?: string;
+  title?: string;
+  location?: string;
+  type?: string;
+  status?: string;
+  price?: number;
+  owner?: string;
+  size?: number;
+  lotSize?: number;
+}
+
+export interface TransactionCreatedBy {
+  id?: string;
+  _id?: string;
+  fullName?: string;
+  username?: string;
 }
 
 export interface Transaction {
   id: string;
+  _id?: string;
   reference: string;
   buyerId: TransactionBuyer | null;
   propertyId: TransactionProperty | null;
   amount: number;
+  listingPriceAtCreation?: number | null;
   status: TransactionStatus;
   notes: string;
+  createdBy?: TransactionCreatedBy | null;
   createdAt: string;
+  updatedAt?: string;
   completedAt: string | null;
+  correctionHistory?: TransactionCorrection[];
+}
+
+export interface TransactionCorrection {
+  id: string;
+  reason: string;
+  correctedBy?: { id?: string; _id?: string; fullName?: string; username?: string } | null;
+  correctedAt: string;
+  original: { amount: number; notes: string };
+  revised: { amount: number; notes: string };
 }
 
 export interface CreateTransactionPayload {
@@ -46,6 +73,8 @@ export interface UpdateTransactionPayload {
   amount?: number;
   notes?: string;
   status?: TransactionStatus;
+  buyerId?: string;
+  propertyId?: string;
 }
 
 interface ApiEnvelope<T> {
@@ -92,6 +121,17 @@ export async function createTransaction(payload: CreateTransactionPayload): Prom
 export async function updateTransaction(id: string, payload: UpdateTransactionPayload): Promise<Transaction> {
   const response = (await apiRequest(`/transactions/${id}`, {
     method: 'PUT',
+    body: JSON.stringify(payload),
+  })) as ApiEnvelope<Transaction>;
+  return response.data;
+}
+
+export async function correctTransaction(
+  id: string,
+  payload: { amount: number; notes: string; reason: string }
+): Promise<Transaction> {
+  const response = (await apiRequest(`/transactions/${id}/correct`, {
+    method: 'POST',
     body: JSON.stringify(payload),
   })) as ApiEnvelope<Transaction>;
   return response.data;

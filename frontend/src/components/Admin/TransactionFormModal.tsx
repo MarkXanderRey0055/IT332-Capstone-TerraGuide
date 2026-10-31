@@ -31,6 +31,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   const [selectedBuyerId, setSelectedBuyerId] = useState('');
   const [selectedPropertyId, setSelectedPropertyId] = useState('');
   const [amount, setAmount] = useState<number | ''>('');
+  const [amountManuallyEdited, setAmountManuallyEdited] = useState(false);
   const [notes, setNotes] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -42,6 +43,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
     setSelectedBuyerId('');
     setSelectedPropertyId('');
     setAmount('');
+    setAmountManuallyEdited(false);
     setNotes('');
     setErrorMsg('');
 
@@ -74,6 +76,12 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
 
   const selectedProperty = properties.find((p) => p.id === selectedPropertyId);
 
+  const handlePropertyChange = (propertyId: string) => {
+    setSelectedPropertyId(propertyId);
+    const property = properties.find((p) => p.id === propertyId);
+    if (property && !amountManuallyEdited) setAmount(property.price);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -86,8 +94,8 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       setErrorMsg('Select a property for this transaction.');
       return;
     }
-    if (amount === '' || amount < 0) {
-      setErrorMsg('Enter a valid transaction amount.');
+    if (amount === '' || amount <= 0) {
+      setErrorMsg('Enter a transaction amount greater than zero.');
       return;
     }
 
@@ -209,7 +217,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
                         type="radio"
                         name="property"
                         checked={selectedPropertyId === p.id}
-                        onChange={() => setSelectedPropertyId(p.id)}
+                        onChange={() => handlePropertyChange(p.id)}
                         className="accent-emerald-600 cursor-pointer shrink-0"
                       />
                       <span className="font-bold text-[#2f2417] truncate">{p.name}</span>
@@ -230,9 +238,15 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
               required
               placeholder={selectedProperty ? selectedProperty.price.toLocaleString('en-US') : 'e.g. 500,000'}
               value={amount}
-              onChange={setAmount}
+                onChange={(value) => {
+                  setAmount(value);
+                  setAmountManuallyEdited(true);
+                }}
               className="admin-input w-full px-3 py-2 rounded-lg text-xs"
             />
+              {selectedProperty && !amountManuallyEdited && amount !== '' && (
+                <p className="text-[10px] text-emerald-700 mt-1">Automatically populated from the current listing price.</p>
+              )}
           </div>
 
           <div>

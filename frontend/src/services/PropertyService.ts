@@ -33,6 +33,8 @@ export interface PropertyApiRecord {
     deed: 'pending' | 'verified' | 'missing';
     survey: 'pending' | 'verified' | 'missing';
   };
+  verificationRemarks?: string;
+  documentVerificationHistory?: Property['documentVerificationHistory'];
   cabinetId?: string | null;
   createdAt?: string;
   updatedAt?: string;
@@ -80,6 +82,8 @@ export function mapToProperty(raw: PropertyApiRecord): Property {
     lng: raw.lng,
     images: raw.images ?? [],
     documents: raw.documents,
+    verificationRemarks: raw.verificationRemarks,
+    documentVerificationHistory: raw.documentVerificationHistory,
     cabinetId: raw.cabinetId ?? null,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,

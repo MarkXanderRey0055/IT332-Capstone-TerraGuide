@@ -35,7 +35,24 @@ export const createTransaction = asyncHandler(async (req, res) => {
 
 
 export const updateTransaction = asyncHandler(async (req, res) => {
-  const { amount, notes, status } = req.body;
-  const transaction = await transactionService.updateTransaction(req.params.id, { amount, notes, status });
+  const { amount, notes, status, buyerId, propertyId } = req.body;
+  const transaction = await transactionService.updateTransaction(req.params.id, {
+    amount,
+    notes,
+    status,
+    buyerId,
+    propertyId,
+  });
   return sendSuccess(res, 200, 'Transaction updated successfully', transaction);
+});
+
+export const correctTransaction = asyncHandler(async (req, res) => {
+  const { amount, notes, reason } = req.body;
+  const transaction = await transactionService.correctCompletedTransaction(req.params.id, {
+    amount,
+    notes,
+    reason,
+    correctedByUserId: req.user._id || req.user.id,
+  });
+  return sendSuccess(res, 200, 'Completed transaction corrected successfully', transaction);
 });

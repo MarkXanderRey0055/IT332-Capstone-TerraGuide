@@ -5,6 +5,8 @@ import Transaction from './src/models/Transaction.js';
 import User from './src/models/User.js';
 import Property from './src/models/Property.js';
 import * as transactionService from './src/services/transactionService.js';
+import { deleteProperty } from './src/services/propertyService.js';
+import { deleteBuyer } from './src/services/adminBuyerService.js';
 
 const oid = () => new mongoose.Types.ObjectId();
 
@@ -182,5 +184,116 @@ Transaction.countDocuments = async (filter) => {
 const pendingCount = await transactionService.getPendingTransactionCount();
 assert.equal(pendingCount, 4);
 console.log('✅ Scenario 10 (pending transaction count queries only active statuses) passed');
+
+// ---- Scenario 11: editing permitted fields (amount, notes) preserves existing buyer and property ----
+const activeEditTxn = makeTransactionDoc({
+  status: 'Reserved',
+  amount: 450000,
+  notes: 'Old notes',
+  buyerId,
+  propertyId,
+});
+Transaction.findById = () => mockQuery(activeEditTxn);
+
+const editedTxn = await transactionService.updateTransaction(activeEditTxn._id, {
+  amount: 480000,
+  notes: 'Updated reservation terms',
+});
+assert.equal(activeEditTxn.amount, 480000);
+assert.equal(activeEditTxn.notes, 'Updated reservation terms');
+assert.equal(activeEditTxn.buyerId.toString(), buyerId.toString(), 'buyer association must be preserved');
+assert.equal(activeEditTxn.propertyId.toString(), propertyId.toString(), 'property association must be preserved');
+console.log('✅ Scenario 11 (editing permitted fields updates amount/notes while preserving associations) passed');
+
+// ---- Scenario 12: editing buyer explicitly updates association when valid ----
+const newBuyerId = oid();
+const newBuyerDoc = { _id: newBuyerId, role: 'buyer', fullName: 'Maria Santos', username: 'maria' };
+User.findOne = async ({ _id, role }) => {
+  if (_id.toString() === newBuyerId.toString() && role === 'buyer') return newBuyerDoc;
+  return null;
+};
+await transactionService.updateTransaction(activeEditTxn._id, {
+  buyerId: newBuyerId,
+});
+assert.equal(activeEditTxn.buyerId.toString(), newBuyerId.toString());
+console.log('✅ Scenario 12 (editing buyer explicitly updates association) passed');
+
+// ---- Scenario 13: editing property explicitly transfers reservation cleanly ----
+const newPropId = oid();
+const newPropertyStore = { _id: newPropId, status: 'Available', name: 'Tagaytay Highlands Lot', price: 900000 };
+propertyStore = { _id: propertyId, status: 'Reserved', name: 'Balayan Farm Lot', price: 500000 };
+
+Property.findById = async (id) => {
+  if (id.toString() === newPropId.toString()) return { ...newPropertyStore };
+  if (id.toString() === propertyId.toString()) return { ...propertyStore };
+  return null;
+};
+Property.findByIdAndUpdate = async (id, data) => {
+  if (id.toString() === newPropId.toString()) {
+    Object.assign(newPropertyStore, data);
+    return { ...newPropertyStore };
+  }
+  if (id.toString() === propertyId.toString()) {
+    Object.assign(propertyStore, data);
+    return { ...propertyStore };
+  }
+  return null;
+};
+Transaction.findOne = async () => null; // No collision
+
+await transactionService.updateTransaction(activeEditTxn._id, {
+  propertyId: newPropId,
+});
+assert.equal(activeEditTxn.propertyId.toString(), newPropId.toString());
+assert.equal(propertyStore.status, 'Available', 'old property must revert to Available');
+assert.equal(newPropertyStore.status, 'Reserved', 'new property must be Reserved');
+console.log('✅ Scenario 13 (editing property transfers reservation between properties) passed');
+
+// ---- Scenario 14: Completed transactions reject modifying amount, notes, or associations ----
+const finalCompletedTxn = makeTransactionDoc({ status: 'Completed', amount: 500000 });
+Transaction.findById = () => mockQuery(finalCompletedTxn);
+await assert.rejects(
+  () => transactionService.updateTransaction(finalCompletedTxn._id, { amount: 600000 }),
+  (err) => {
+    assert.equal(err.statusCode, 400);
+    assert.match(err.message, /Cannot modify a Completed transaction/);
+    return true;
+  }
+);
+console.log('✅ Scenario 14 (Completed transactions are immutable — rejects edits) passed');
+
+// ---- Scenario 15: deleteProperty blocks deleting a property with an active transaction ----
+Transaction.findOne = async ({ propertyId, status }) => {
+  if (status?.$in?.includes('Reserved')) {
+    return makeTransactionDoc({ status: 'Reserved', reference: 'TXN-ACT001' });
+  }
+  return null;
+};
+await assert.rejects(
+  () => deleteProperty(propertyId),
+  (err) => {
+    assert.equal(err.statusCode, 409);
+    assert.match(err.message, /Cannot delete property because it has an active transaction/);
+    return true;
+  }
+);
+console.log('✅ Scenario 15 (deleteProperty blocks deleting a property with an active transaction) passed');
+
+// ---- Scenario 16: deleteBuyer blocks deleting a buyer account with an active transaction ----
+Transaction.findOne = async ({ buyerId, status }) => {
+  if (status?.$in?.includes('Reserved')) {
+    return makeTransactionDoc({ status: 'Reserved', reference: 'TXN-ACT002' });
+  }
+  return null;
+};
+await assert.rejects(
+  () => deleteBuyer(buyerId),
+  (err) => {
+    assert.equal(err.statusCode, 409);
+    assert.match(err.message, /Cannot delete buyer because they have an active transaction/);
+    return true;
+  }
+);
+console.log('✅ Scenario 16 (deleteBuyer blocks deleting a buyer with an active transaction) passed');
 
 console.log('\nALL TRANSACTION MANAGEMENT TESTS PASSED ✅');

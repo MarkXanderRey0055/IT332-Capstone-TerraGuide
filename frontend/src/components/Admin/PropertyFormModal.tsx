@@ -47,6 +47,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const [docTax, setDocTax] = useState<'pending' | 'verified' | 'missing'>('pending');
   const [docDeed, setDocDeed] = useState<'pending' | 'verified' | 'missing'>('pending');
   const [docSurvey, setDocSurvey] = useState<'pending' | 'verified' | 'missing'>('pending');
+  const [verificationRemarks, setVerificationRemarks] = useState('');
   const [status, setStatus] = useState<'Available' | 'Sold' | 'Reserved'>('Available');
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
@@ -69,6 +70,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       setDocTax(property.documents?.tax || 'pending');
       setDocDeed(property.documents?.deed || 'pending');
       setDocSurvey(property.documents?.survey || 'pending');
+      setVerificationRemarks(property.verificationRemarks || '');
       setStatus(property.status || 'Available');
       setLat(property.lat.toString());
       setLng(property.lng.toString());
@@ -84,6 +86,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       setDocTax('pending');
       setDocDeed('pending');
       setDocSurvey('pending');
+      setVerificationRemarks('');
       setStatus('Available');
       setLat('');
       setLng('');
@@ -173,6 +176,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
           deed: docDeed,
           survey: docSurvey,
         },
+        verificationRemarks: verificationRemarks.trim(),
         lat: parsedLat,
         lng: parsedLng,
       });
@@ -475,13 +479,14 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
           {/* ── Section: Document Status ── */}
           <section aria-labelledby="property-documents-title" className="border-t border-[#d6c7b2] pt-4 space-y-4">
             <div>
-              <h4 id="property-documents-title" className="text-sm font-bold text-[#223127]">Documents &amp; listing status</h4>
-              <p className="text-xs text-[#5d503f] mt-1">Record each document's current status and the listing's availability.</p>
+              <h4 id="property-documents-title" className="text-sm font-bold text-[#223127]">Document verification</h4>
+              <p className="text-xs text-[#5d503f] mt-1">Record the manual verification state for each document. These values do not change listing availability.</p>
             </div>
           <div className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl border border-[#d6c7b2] bg-[#eef3ea]">
               <div>
                 <label htmlFor="property-tax" className={subLabelCls}>Tax Declaration</label>
+                <p className="text-[10px] text-[#7c6a57] mb-1">Confirm the tax record is available for review.</p>
                 <select
                   id="property-tax"
                   value={docTax}
@@ -495,6 +500,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               </div>
               <div>
                 <label htmlFor="property-deed" className={subLabelCls}>Title Deed</label>
+                <p className="text-[10px] text-[#7c6a57] mb-1">Record the current manual title-deed review state.</p>
                 <select
                   id="property-deed"
                   value={docDeed}
@@ -508,6 +514,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               </div>
               <div>
                 <label htmlFor="property-survey" className={subLabelCls}>Survey Plan</label>
+                <p className="text-[10px] text-[#7c6a57] mb-1">Record whether the survey plan is available and reviewed.</p>
                 <select
                   id="property-survey"
                   value={docSurvey}
@@ -519,6 +526,23 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                   <option value="missing">Missing</option>
                 </select>
               </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="verification-remarks" className={subLabelCls}>Verification Remarks <span className="normal-case font-normal text-[#7c6a57]">(optional)</span></label>
+                <textarea id="verification-remarks" value={verificationRemarks} onChange={(e) => setVerificationRemarks(e.target.value)} rows={2} placeholder="Add context for pending or missing documents, or explain a status change..." className="admin-input w-full px-3 py-2 rounded-lg text-xs resize-none" />
+              </div>
+              {property?.documentVerificationHistory && property.documentVerificationHistory.length > 0 && (
+                <div className="sm:col-span-2 rounded-lg border border-[#d6c7b2] bg-[#fcfaf5] p-3">
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-[#5d503f] mb-2">Verification history</p>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {[...property.documentVerificationHistory].reverse().map((entry) => (
+                      <div key={entry.id} className="text-[10px] text-[#5d503f] border-t border-[#ded2c0] pt-1.5 first:border-t-0 first:pt-0">
+                        <span className="font-bold capitalize">{entry.document}</span>: {entry.previousStatus} → {entry.newStatus} · {new Date(entry.changedAt).toLocaleString('en-PH')}
+                        <span className="block text-[#7c6a57]">By {entry.changedBy?.fullName || entry.changedBy?.username || 'Administrator'}{entry.remarks ? ` — ${entry.remarks}` : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
           {/* Listing status shares the two-column document grid. */}
           <div className="space-y-2">
             <label htmlFor="property-status" className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">

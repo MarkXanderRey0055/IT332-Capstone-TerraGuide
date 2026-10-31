@@ -1,5 +1,14 @@
 import mongoose from 'mongoose';
 
+const documentVerificationChangeSchema = new mongoose.Schema({
+  document: { type: String, enum: ['deed', 'tax', 'survey'], required: true },
+  previousStatus: { type: String, enum: ['pending', 'verified', 'missing'], required: true },
+  newStatus: { type: String, enum: ['pending', 'verified', 'missing'], required: true },
+  remarks: { type: String, trim: true, default: '' },
+  changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  changedAt: { type: Date, default: Date.now },
+});
+
 const propertySchema = new mongoose.Schema(
   {
     name: {
@@ -92,6 +101,8 @@ const propertySchema = new mongoose.Schema(
         default: 'pending',
       },
     },
+    verificationRemarks: { type: String, trim: true, default: '' },
+    documentVerificationHistory: { type: [documentVerificationChangeSchema], default: [] },
     
     cabinetId: {
       type: mongoose.Schema.Types.ObjectId,
