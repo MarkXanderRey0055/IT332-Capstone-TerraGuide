@@ -22,6 +22,16 @@ export interface Property {
     deed: 'pending' | 'verified' | 'missing';
     survey: 'pending' | 'verified' | 'missing';
   };
+  verificationRemarks?: string;
+  documentVerificationHistory?: {
+    id: string;
+    document: 'deed' | 'tax' | 'survey';
+    previousStatus: 'pending' | 'verified' | 'missing';
+    newStatus: 'pending' | 'verified' | 'missing';
+    remarks?: string;
+    changedBy?: { fullName?: string; username?: string } | null;
+    changedAt: string;
+  }[];
   // Which Filing Cabinet this property is currently organized under.
   // null/undefined means the property is Unassigned.
   cabinetId?: string | null;

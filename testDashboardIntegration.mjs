@@ -9,6 +9,8 @@ import Property from './src/models/Property.js';
 import User from './src/models/User.js';
 import Audit from './src/models/Audit.js';
 import Transaction from './src/models/Transaction.js';
+import Inquiry from './src/models/Inquiry.js';
+import SiteVisit from './src/models/SiteVisit.js';
 import * as analyticsService from './src/services/analyticsService.js';
 import * as activityService from './src/services/activityService.js';
 import { getManilaYearBounds, getStartOfManilaMonth } from './src/utils/manilaTime.js';
@@ -25,6 +27,8 @@ function mockQuery(data) {
 }
 
 Audit.aggregate = async () => [];
+Inquiry.find = () => mockQuery([]);
+SiteVisit.find = () => mockQuery([]);
 
 // ---- Scenario 1: getDashboardSummary reports real this-month counts ----
 const now = new Date();

@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import BuyerPreference from '../models/BuyerPreference.js';
+import Transaction, { ACTIVE_TRANSACTION_STATUSES } from '../models/Transaction.js';
 import AppError from '../utils/errors.js';
 import { registerUser } from './authService.js';
 import { createOrUpdatePreference } from './buyerPreferenceService.js';
@@ -168,6 +169,17 @@ export const updateBuyer = async (userId, payload) => {
 };
 
 export const deleteBuyer = async (userId) => {
+  const activeTx = await Transaction.findOne({
+    buyerId: userId,
+    status: { $in: ACTIVE_TRANSACTION_STATUSES },
+  });
+  if (activeTx) {
+    throw new AppError(
+      `Cannot delete buyer because they have an active transaction (${activeTx.reference || activeTx.status}). Please complete or cancel the transaction first.`,
+      409
+    );
+  }
+
   const buyer = await User.findOneAndDelete({ _id: userId, role: 'buyer' });
   if (!buyer) {
     throw new AppError('Buyer account not found.', 404);

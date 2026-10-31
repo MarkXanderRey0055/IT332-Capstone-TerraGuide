@@ -12,7 +12,7 @@ function populateSiteVisit(query) {
     .populate('propertyId', POPULATE_PROPERTY);
 }
 
-export const createSiteVisit = async ({ buyerId, propertyId, preferredDate, notes }) => {
+export const createSiteVisit = async ({ buyerId, propertyId, preferredDate, preferredTime, notes }) => {
   if (!mongoose.Types.ObjectId.isValid(propertyId)) {
     throw new AppError('Invalid property ID.', 400);
   }
@@ -22,7 +22,7 @@ export const createSiteVisit = async ({ buyerId, propertyId, preferredDate, note
     throw new AppError('Property not found.', 404);
   }
 
-  const visit = await SiteVisit.create({ buyerId, propertyId, preferredDate, notes: notes || '' });
+  const visit = await SiteVisit.create({ buyerId, propertyId, preferredDate, preferredTime: preferredTime || '', notes: notes || '' });
   return populateSiteVisit(SiteVisit.findById(visit._id));
 };
 

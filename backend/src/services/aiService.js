@@ -126,7 +126,7 @@ async function callNvidiaModel(apiKey, prompt) {
   const url = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
   const payload = {
-    model: 'meta/llama-3.2-11b-vision-instruct', // Active Llama 3.2 model on NVIDIA NIM
+    model: 'openai/gpt-oss-20b', // Active Llama 3.2 model on NVIDIA NIM
     messages: [
       {
         role: 'system',

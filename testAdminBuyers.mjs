@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 
 import User from './src/models/User.js';
 import BuyerPreference from './src/models/BuyerPreference.js';
+import Transaction from './src/models/Transaction.js';
 import * as adminBuyerService from './src/services/adminBuyerService.js';
 
 const oid = () => new mongoose.Types.ObjectId();
@@ -14,6 +15,8 @@ function mockQuery(data) {
   promise.sort = () => mockQuery(data);
   return promise;
 }
+
+Transaction.findOne = async () => null;
 
 const buyerAId = oid();
 const buyerBId = oid();

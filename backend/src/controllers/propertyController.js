@@ -24,7 +24,7 @@ export const createProperty = asyncHandler(async (req, res) => {
 //edit
 export const updateProperty = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const updatedProperty = await propertyService.updateProperty(id, req.body);
+  const updatedProperty = await propertyService.updateProperty(id, req.body, req.user._id || req.user.id);
   return sendSuccess(res, 200, 'Property listing updated successfully', updatedProperty);
 });
 

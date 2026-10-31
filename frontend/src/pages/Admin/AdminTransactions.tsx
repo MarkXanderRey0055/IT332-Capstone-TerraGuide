@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, Handshake, Download, Loader2 } from 'lucide-react';
+import { Plus, Search, Handshake, Download, Loader2, Eye, Edit2, Ban } from 'lucide-react';
 import type { Property } from '../../types/types';
 import { getProperties } from '../../services/PropertyService';
 import type { Transaction, TransactionStatus } from '../../services/TransactionService.ts';
 import { getTransactions } from '../../services/TransactionService.ts';
 import { TransactionFormModal } from '../../components/Admin/TransactionFormModal';
 import { TransactionDetailModal } from '../../components/Admin/TransactionDetailModal';
+import { TransactionEditModal } from '../../components/Admin/TransactionEditModal';
+import { TransactionCancelModal } from '../../components/Admin/TransactionCancelModal';
+import { TransactionCorrectionModal } from '../../components/Admin/TransactionCorrectionModal';
 import { exportDataset } from '../../services/ExportService';
 
 interface AdminTransactionsProps {
@@ -21,7 +24,7 @@ const STATUS_FILTERS: Array<'All' | TransactionStatus> = ['All', 'Reserved', 'Pr
 
 const getStatusBadge = (status: TransactionStatus) => {
   const badgeClass =
-    'inline-flex items-center px-2.5 py-1 text-[10px] font-bold rounded-md border';
+    'inline-flex items-center px-2.5 py-1 text-[10px] font-bold rounded-md border tracking-wide';
   switch (status) {
     case 'Reserved':
       return <span className={`${badgeClass} bg-amber-100 text-amber-950 border-amber-700/35`}>Reserved</span>;
@@ -32,6 +35,34 @@ const getStatusBadge = (status: TransactionStatus) => {
     case 'Cancelled':
       return <span className={`${badgeClass} bg-stone-200 text-stone-900 border-stone-500/40`}>Cancelled</span>;
   }
+};
+
+const getPropertyDisplay = (t: Transaction, propertyList: Property[]) => {
+  const propId =
+    t.propertyId?.id ||
+    t.propertyId?._id ||
+    (typeof t.propertyId === 'string' ? t.propertyId : '');
+
+  const match = propId
+    ? propertyList.find((p) => p.id === propId || (p as any)._id === propId)
+    : null;
+
+  const name =
+    t.propertyId?.name ||
+    t.propertyId?.title ||
+    match?.name ||
+    match?.title ||
+    'Unknown property';
+
+  const location = t.propertyId?.location || match?.location || '';
+
+  return { name, location };
+};
+
+const getBuyerDisplay = (t: Transaction) => {
+  const fullName = t.buyerId?.fullName || t.buyerId?.username || 'Unknown buyer';
+  const email = t.buyerId?.email || '';
+  return { fullName, email };
 };
 
 export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, onDataChanged }) => {
@@ -45,6 +76,9 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   const showToast = (message: string) => onToast?.(message);
@@ -86,20 +120,33 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
       .filter((t) => {
         const q = searchQuery.trim().toLowerCase();
         if (!q) return true;
-        const buyerName = t.buyerId?.fullName?.toLowerCase() || '';
-        const propertyName = t.propertyId?.name?.toLowerCase() || '';
+        const buyer = getBuyerDisplay(t);
+        const prop = getPropertyDisplay(t, properties);
         return (
           t.reference.toLowerCase().includes(q) ||
-          buyerName.includes(q) ||
-          propertyName.includes(q)
+          buyer.fullName.toLowerCase().includes(q) ||
+          buyer.email.toLowerCase().includes(q) ||
+          prop.name.toLowerCase().includes(q) ||
+          prop.location.toLowerCase().includes(q)
         );
       });
-  }, [transactions, statusFilter, searchQuery]);
+  }, [transactions, statusFilter, searchQuery, properties]);
 
   const handleOpenDetail = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setIsDetailModalOpen(true);
   };
+
+  const handleOpenEdit = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsEditModalOpen(true);
+  };
+
+  const handleOpenCancel = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsCancelModalOpen(true);
+  };
+  const handleOpenCorrection = (transaction: Transaction) => { setSelectedTransaction(transaction); setIsCorrectionModalOpen(true); };
 
   const handleCreated = () => {
     showToast('Transaction created and property reserved.');
@@ -108,7 +155,13 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
   };
 
   const handleUpdated = () => {
-    showToast('Transaction updated.');
+    showToast('Transaction updated successfully.');
+    loadAll();
+    onDataChanged?.();
+  };
+
+  const handleCancelled = () => {
+    showToast('Transaction cancelled and property returned to Available.');
     loadAll();
     onDataChanged?.();
   };
@@ -214,48 +267,87 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
                 </p>
               </div>
             ) : (
-          <div className="overflow-x-auto">
-            <table className="admin-table w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-[#d6c7b2] text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">
-                  <th className="p-4">Reference</th>
-                  <th className="p-4">Buyer</th>
-                  <th className="p-4">Property</th>
-                  <th className="p-4 text-right">Amount</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4">Date</th>
-                  <th className="p-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#ded2c0]">
-                {filteredTransactions.map((t) => (
-                  <tr key={t.id} className="transition-colors">
-                    <td className="p-4 font-mono font-bold text-[#7c6a57]">{t.reference}</td>
-                    <td className="p-4">
-                      <div className="font-bold text-[#2f2417]">{t.buyerId?.fullName ?? 'Unknown buyer'}</div>
-                      <div className="text-[10px] text-[#5d503f]">{t.buyerId?.email ?? ''}</div>
-                    </td>
-                    <td className="p-4">
-                      <div className="font-bold text-[#2f2417]">{t.propertyId?.name ?? 'Unknown property'}</div>
-                      <div className="text-[10px] text-[#5d503f]">{t.propertyId?.location ?? ''}</div>
-                    </td>
-                    <td className="p-4 text-right font-mono font-bold text-[#2f2417]">{formatPrice(t.amount)}</td>
-                    <td className="p-4">{getStatusBadge(t.status)}</td>
-                    <td className="p-4 text-[#6f604d]">{formatDate(t.createdAt)}</td>
-                    <td className="p-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDetail(t)}
-                        className="admin-button-secondary px-3 py-1.5 text-[#5d503f] rounded-lg hover:text-[#2f2417] transition-colors cursor-pointer text-[11px] font-bold"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              <div className="overflow-x-auto">
+                <table className="admin-table w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-[#d6c7b2] text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">
+                      <th className="p-4">Reference</th>
+                      <th className="p-4">Buyer</th>
+                      <th className="p-4">Property</th>
+                      <th className="p-4 text-right">Amount</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4">Date</th>
+                      <th className="p-4 text-right min-w-[13rem]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#ded2c0]">
+                    {filteredTransactions.map((t) => {
+                      const buyer = getBuyerDisplay(t);
+                      const prop = getPropertyDisplay(t, properties);
+                      const isEligible = t.status === 'Reserved' || t.status === 'Processing';
+
+                      return (
+                        <tr key={t.id} className="transition-colors hover:bg-black/[0.015]">
+                          <td className="p-4 font-mono font-bold text-[#7c6a57]">{t.reference}</td>
+                          <td className="p-4">
+                            <div className="font-bold text-[#2f2417]">{buyer.fullName}</div>
+                            <div className="text-[10px] text-[#5d503f]">{buyer.email}</div>
+                          </td>
+                          <td className="p-4">
+                            <div className="font-bold text-[#2f2417]">{prop.name}</div>
+                            <div className="text-[10px] text-[#5d503f]">{prop.location}</div>
+                          </td>
+                          <td className="p-4 text-right font-mono font-bold text-[#2f2417]">
+                            {formatPrice(t.amount)}
+                          </td>
+                          <td className="p-4">{getStatusBadge(t.status)}</td>
+                          <td className="p-4 text-[#6f604d]">{formatDate(t.createdAt)}</td>
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDetail(t)}
+                                className="admin-button-secondary px-2.5 py-1 text-[#5d503f] rounded-lg hover:text-[#2f2417] transition-colors cursor-pointer text-[11px] font-bold flex items-center gap-1"
+                                title="View Details"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                View
+                              </button>
+                              {isEligible && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEdit(t)}
+                                  className="admin-button-secondary px-2.5 py-1 text-[#2f4736] rounded-lg hover:text-[#1e3024] transition-colors cursor-pointer text-[11px] font-bold flex items-center gap-1"
+                                  title="Edit Transaction"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5 text-emerald-800" />
+                                  Edit
+                                </button>
+                              )}
+                              {t.status === 'Completed' && (
+                                <button type="button" onClick={() => handleOpenCorrection(t)} className="admin-button-secondary px-2.5 py-1 text-amber-800 rounded-lg text-[11px] font-bold flex items-center gap-1" title="Correct Completed Transaction">
+                                  <Edit2 className="w-3.5 h-3.5" /> Correct
+                                </button>
+                              )}
+                              {isEligible && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenCancel(t)}
+                                  className="admin-button-secondary px-2.5 py-1 text-rose-700 hover:text-rose-900 border-rose-300 rounded-lg transition-colors cursor-pointer text-[11px] font-bold flex items-center gap-1"
+                                  title="Cancel / Void Transaction"
+                                >
+                                  <Ban className="w-3.5 h-3.5 text-rose-600" />
+                                  Cancel
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </>
         )}
@@ -273,8 +365,27 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
         transaction={selectedTransaction}
         properties={properties}
         onClose={() => setIsDetailModalOpen(false)}
+        onEdit={handleOpenEdit}
+        onCancel={handleOpenCancel}
+        onCorrect={handleOpenCorrection}
         onUpdated={handleUpdated}
       />
+
+      <TransactionEditModal
+        isOpen={isEditModalOpen}
+        transaction={selectedTransaction}
+        properties={properties}
+        onClose={() => setIsEditModalOpen(false)}
+        onUpdated={handleUpdated}
+      />
+
+      <TransactionCancelModal
+        isOpen={isCancelModalOpen}
+        transaction={selectedTransaction}
+        onClose={() => setIsCancelModalOpen(false)}
+        onCancelled={handleCancelled}
+      />
+      <TransactionCorrectionModal isOpen={isCorrectionModalOpen} transaction={selectedTransaction} onClose={() => setIsCorrectionModalOpen(false)} onCorrected={() => { showToast('Completed transaction correction saved.'); loadAll(); onDataChanged?.(); }} />
     </>
   );
 };
