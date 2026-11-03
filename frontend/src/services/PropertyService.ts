@@ -60,6 +60,16 @@ interface PropertySingleResponse {
   data: PropertyApiRecord;
 }
 
+interface PropertyImageUploadResponse {
+  success: boolean;
+  message: string;
+  data: {
+    property: PropertyApiRecord;
+    images: string[];
+    uploadedImages: Array<{ url: string; publicId: string; format: string; bytes: number }>;
+  };
+}
+
 // Turns whatever Mongoose hands back into the plain Property shape the
 // rest of the app already knows how to work with, so nothing downstream
 // has to care that this came from MongoDB instead of the old mock array.
@@ -204,6 +214,18 @@ export async function updateProperty(
   })) as PropertySingleResponse;
 
   return mapToProperty(response.data);
+}
+
+export async function uploadPropertyImages(id: string, files: File[]): Promise<Property> {
+  const formData = new FormData();
+  files.forEach((file) => formData.append('images', file));
+
+  const response = (await apiRequest(`/properties/${id}/images`, {
+    method: 'POST',
+    body: formData,
+  })) as PropertyImageUploadResponse;
+
+  return mapToProperty(response.data.property);
 }
 
 export async function deleteProperty(id: string): Promise<void> {

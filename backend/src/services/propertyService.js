@@ -1,6 +1,8 @@
 import Property from '../models/Property.js';
 import Transaction, { ACTIVE_TRANSACTION_STATUSES } from '../models/Transaction.js';
 import AppError from '../utils/errors.js';
+import { cleanupCloudinaryAssets, uploadPropertyImagesToCloudinary } from './imageStorageService.js';
+import mongoose from 'mongoose';
 
 export const getAllProperties = async (queryParams = {}) => {
   const {
@@ -103,6 +105,36 @@ export const getPropertyById = async (id) => {
 
 export const createProperty = async (data) => {
   return await Property.create(data);
+};
+
+export const appendPropertyImages = async (id, files) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new AppError('Invalid property ID.', 400);
+  }
+  if (!Array.isArray(files) || files.length === 0) {
+    throw new AppError('At least one image file is required.', 400);
+  }
+
+  const existing = await Property.findById(id);
+  if (!existing) throw new AppError('Property listing not found', 404);
+
+  const currentImages = Array.isArray(existing.images) ? existing.images : [];
+  if (currentImages.length + files.length > 5) {
+    throw new AppError(`This property can have a maximum of 5 images. It currently has ${currentImages.length}.`, 400);
+  }
+
+  const uploaded = await uploadPropertyImagesToCloudinary(id, files);
+  const nextImages = [...currentImages, ...uploaded.map((asset) => asset.url)];
+
+  try {
+    existing.images = nextImages;
+    await existing.save();
+  } catch (error) {
+    await cleanupCloudinaryAssets(uploaded);
+    throw error;
+  }
+
+  return { property: existing, uploadedImages: uploaded };
 };
 
 export const updateProperty = async (id, data, updatedByUserId) => {

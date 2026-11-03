@@ -258,17 +258,18 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     }
   };
 
-  const handleSaveProperty = async (formData: Omit<Property, 'id'>) => {
+  const handleSaveProperty = async (formData: Omit<Property, 'id'>): Promise<Property> => {
+    let savedProperty: Property;
     if (selectedProperty) {
-      await updateProperty(selectedProperty.id, formData);
+      savedProperty = await updateProperty(selectedProperty.id, formData);
       showToast(`Updated listing "${formData.name}"`);
     } else {
-      await createProperty(formData);
+      savedProperty = await createProperty(formData);
       showToast(`Added new listing "${formData.name}"`);
     }
-    setIsPropertyModalOpen(false);
     await refreshProperties();
     onDataChanged?.();
+    return savedProperty;
   };
 
   // ---- Filing Cabinet handlers ----
