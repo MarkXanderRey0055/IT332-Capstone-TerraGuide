@@ -32,9 +32,10 @@ export async function apiRequest(
   options: RequestInit = {}
 ) {
   const token = localStorage.getItem("terraguide_token");
+  const isFormDataBody = typeof FormData !== "undefined" && options.body instanceof FormData;
 
   const headers: HeadersInit = {
-    "Content-Type": "application/json",
+    ...(isFormDataBody ? {} : { "Content-Type": "application/json" }),
     ...(token && {
       Authorization: `Bearer ${token}`,
     }),

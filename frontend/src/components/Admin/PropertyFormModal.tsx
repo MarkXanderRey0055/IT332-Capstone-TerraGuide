@@ -1,15 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { X, Image as ImageIcon, Compass, MapPin, Home } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { X, Image as ImageIcon, Compass, MapPin, Home, UploadCloud } from 'lucide-react';
 import type { Property } from '../../types/types';
 import { getLotSize } from '../../services/buyerPrefs';
+import { uploadPropertyImages } from '../../services/PropertyService';
 import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 
 interface PropertyFormModalProps {
   isOpen: boolean;
   property: Property | null;
   onClose: () => void;
-  onSave: (data: Omit<Property, 'id'>) => Promise<void>;
+  onSave: (data: Omit<Property, 'id'>) => Promise<Property>;
 }
+
+type ImageMode = 'url' | 'upload';
+type SelectedImage = { id: string; file: File; previewUrl: string };
+const MAX_IMAGES = 5;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png']);
 
 const PROPERTY_TYPES: Property['type'][] = [
   'Agricultural',
@@ -44,6 +51,13 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const [type, setType] = useState<Property['type'] | ''>('');
   const [suitableFor, setSuitableFor] = useState<NonNullable<Property['suitableFor']>>([]);
   const [image, setImage] = useState('');
+  const [imageMode, setImageMode] = useState<ImageMode>('url');
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [removedExistingImages, setRemovedExistingImages] = useState<Set<string>>(new Set());
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const [imageError, setImageError] = useState('');
+  const [uploadRecoveryId, setUploadRecoveryId] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [docTax, setDocTax] = useState<'pending' | 'verified' | 'missing'>('pending');
   const [docDeed, setDocDeed] = useState<'pending' | 'verified' | 'missing'>('pending');
   const [docSurvey, setDocSurvey] = useState<'pending' | 'verified' | 'missing'>('pending');
@@ -55,8 +69,21 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const [imgPreviewFailed, setImgPreviewFailed] = useState(false);
+  const selectedImagesRef = useRef<SelectedImage[]>([]);
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
+  const clearSelectedImages = useCallback(() => {
+    selectedImagesRef.current.forEach((selected) => URL.revokeObjectURL(selected.previewUrl));
+    setSelectedImages([]);
+  }, []);
 
   useEffect(() => {
+    if (!isOpen) {
+      clearSelectedImages();
+      setUploadRecoveryId(null);
+      return;
+    }
+    clearSelectedImages();
+    setImageMode('url');
     if (property) {
       setName(property.name);
       setOwner(property.owner ?? '');
@@ -66,6 +93,8 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       setType(property.type);
       setSuitableFor(property.suitableFor ?? []);
       setImage(property.images?.[0] || '');
+      setExistingImages(property.images ?? []);
+      setRemovedExistingImages(new Set());
       setImgPreviewFailed(false);
       setDocTax(property.documents?.tax || 'pending');
       setDocDeed(property.documents?.deed || 'pending');
@@ -83,6 +112,8 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       setType('');
       setSuitableFor([]);
       setImage('');
+      setExistingImages([]);
+      setRemovedExistingImages(new Set());
       setDocTax('pending');
       setDocDeed('pending');
       setDocSurvey('pending');
@@ -92,7 +123,90 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       setLng('');
     }
     setErrorMsg('');
-  }, [property, isOpen]);
+    setImageError('');
+    setUploadRecoveryId(null);
+  }, [property, isOpen, clearSelectedImages]);
+
+  useEffect(() => {
+    selectedImagesRef.current = selectedImages;
+  }, [selectedImages]);
+
+  useEffect(() => () => {
+    selectedImagesRef.current.forEach((selected) => URL.revokeObjectURL(selected.previewUrl));
+  }, []);
+
+  const retainedExistingImages = useMemo(
+    () => existingImages.filter((url) => !removedExistingImages.has(url)),
+    [existingImages, removedExistingImages]
+  );
+
+  const handleImageModeChange = (mode: ImageMode) => {
+    setImageMode(mode);
+    setImageError('');
+    if (mode === 'url') clearSelectedImages();
+    else setImage('');
+  };
+
+  const handleFiles = (files: File[]) => {
+    setImageError('');
+    const availableSlots = MAX_IMAGES - retainedExistingImages.length - selectedImages.length;
+    if (files.length > availableSlots) {
+      setImageError(`You can select ${Math.max(availableSlots, 0)} more image${availableSlots === 1 ? '' : 's'} for this property.`);
+      return;
+    }
+
+    const validFiles: SelectedImage[] = [];
+    for (const file of files) {
+      if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
+        setImageError(`${file.name} is not supported. Choose a JPG, JPEG, or PNG image.`);
+        continue;
+      }
+      if (file.size === 0) {
+        setImageError(`${file.name} is empty.`);
+        continue;
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        setImageError(`${file.name} is larger than 5 MB.`);
+        continue;
+      }
+      validFiles.push({ id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`, file, previewUrl: URL.createObjectURL(file) });
+    }
+    setSelectedImages((current) => [...current, ...validFiles]);
+  };
+
+  const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleFiles(Array.from(event.target.files ?? []));
+    event.target.value = '';
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (!isSaving) setIsDragOver(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
+    if (!isSaving) handleFiles(Array.from(event.dataTransfer.files));
+  };
+
+  const removeSelectedImage = (id: string) => {
+    setSelectedImages((current) => {
+      const selected = current.find((item) => item.id === id);
+      if (selected) URL.revokeObjectURL(selected.previewUrl);
+      return current.filter((item) => item.id !== id);
+    });
+  };
+
+  const removeExistingImage = (url: string) => {
+    if (image.trim() === url) setImage('');
+    setRemovedExistingImages((current) => new Set(current).add(url));
+  };
 
   if (!isOpen) return null;
 
@@ -116,6 +230,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
 
   const handleSave = async () => {
     setErrorMsg('');
+    setImageError('');
     const parsedPrice = parseFloat(price.replace(/,/g, ''));
 
     if (!name.trim()) {
@@ -157,9 +272,26 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
 
     const size = Number(lotSize);
 
+    let desiredImages = retainedExistingImages;
+    const trimmedImage = image.trim();
+    if (imageMode === 'url' && trimmedImage) {
+      try {
+        const parsedUrl = new URL(trimmedImage);
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error();
+      } catch {
+        setImageError('Image URL must be a valid HTTP or HTTPS URL.');
+        return;
+      }
+      if (!desiredImages.includes(trimmedImage)) desiredImages = [...desiredImages, trimmedImage];
+    }
+    if (desiredImages.length + selectedImages.length > MAX_IMAGES) {
+      setImageError(`A property can have a maximum of ${MAX_IMAGES} images.`);
+      return;
+    }
+
     try {
       setIsSaving(true);
-      await onSave({
+      const savedProperty = await onSave({
         name: name.trim(),
         owner: owner.trim(),
         price: parsedPrice,
@@ -170,7 +302,9 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
         suitableFor,
         status,
         pricePerSqm: Math.round(parsedPrice / size),
-        images: image.trim() ? [image.trim()] : [],
+        // When files are pending, preserve saved images until the upload
+        // succeeds. This keeps failed uploads from removing existing images.
+        images: selectedImages.length > 0 ? existingImages : desiredImages,
         documents: {
           tax: docTax,
           deed: docDeed,
@@ -180,14 +314,48 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
         lat: parsedLat,
         lng: parsedLng,
       });
-      // onSave (in AdminProperties) already closes the modal on success,
-      // so there's nothing else to do here once the await resolves.
+      if (selectedImages.length > 0) {
+        try {
+          const uploadedProperty = await uploadPropertyImages(savedProperty.id, selectedImages.map((selected) => selected.file));
+          if (removedExistingImages.size > 0) {
+            await onSave({
+              name: name.trim(), owner: owner.trim(), price: parsedPrice, size, lotSize: size,
+              location: location.trim(), type, suitableFor, status,
+              pricePerSqm: Math.round(parsedPrice / size),
+              images: (uploadedProperty.images ?? []).filter((url) => !removedExistingImages.has(url)),
+              documents: { tax: docTax, deed: docDeed, survey: docSurvey },
+              verificationRemarks: verificationRemarks.trim(), lat: parsedLat, lng: parsedLng,
+            });
+          }
+          clearSelectedImages();
+        } catch (error) {
+          setUploadRecoveryId(savedProperty.id);
+          setErrorMsg(`Property saved, but image upload failed: ${error instanceof Error ? error.message : 'Please retry the image upload.'}`);
+          return;
+        }
+      }
+      onClose();
     } catch (error) {
       setErrorMsg(
         error instanceof Error
           ? error.message
           : 'Could not save this listing. Please try again.'
       );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const retryImageUpload = async () => {
+    if (!uploadRecoveryId || selectedImages.length === 0) return;
+    setIsSaving(true);
+    setErrorMsg('');
+    try {
+      await uploadPropertyImages(uploadRecoveryId, selectedImages.map((selected) => selected.file));
+      clearSelectedImages();
+      onClose();
+    } catch (error) {
+      setErrorMsg(`Image upload failed again: ${error instanceof Error ? error.message : 'Please try again.'}`);
     } finally {
       setIsSaving(false);
     }
@@ -437,42 +605,98 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             </div>
           </div>
 
-          {/* ── Section: Image URL ── */}
-          <div className="space-y-2">
-            <label htmlFor="property-image" className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
-              <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
-              <ImageIcon className="w-3.5 h-3.5 text-emerald-700" />
-              Image URL
-              <span className="normal-case font-normal text-[#5d503f] ml-1">(optional)</span>
-            </label>
-            <input
-              id="property-image"
-              type="text"
-              placeholder="https://example.com/image.jpg"
-              value={image}
-              onChange={(e) => {
-                setImage(e.target.value);
-                setImgPreviewFailed(false);
-              }}
-              className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
-            />
-            {image.trim() && (
-              <div className="mt-2 h-36 w-full rounded-xl overflow-hidden border border-[#d6c7b2] bg-[#f0ece4] flex items-center justify-center">
-                {!imgPreviewFailed ? (
-                  <img
-                    src={image}
-                    alt="Property Preview"
-                    className="w-full h-full object-cover"
-                    onError={() => setImgPreviewFailed(true)}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-[#5d503f] gap-1.5 p-3 text-center">
-                    <ImageIcon className="w-6 h-6 text-[#c4b49e]" />
-                    <span className="text-xs text-[#7c6a57]">Unable to load image from URL</span>
+          {/* ── Section: Property Images ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
+                <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
+                <ImageIcon className="w-3.5 h-3.5 text-emerald-700" />
+                Property Images <span className="normal-case font-normal text-[#5d503f]">(optional)</span>
+              </label>
+              <span className="text-[10px] text-[#7c6a57]">{retainedExistingImages.length + selectedImages.length}/{MAX_IMAGES}</span>
+            </div>
+            <div className="flex rounded-lg border border-[#d6c7b2] overflow-hidden w-fit" role="tablist" aria-label="Property image input method">
+              <button type="button" role="tab" aria-selected={imageMode === 'url'} onClick={() => handleImageModeChange('url')} className={`px-3 py-1.5 text-xs font-semibold ${imageMode === 'url' ? 'bg-emerald-700 text-white' : 'bg-[#fcfaf5] text-[#5d503f]'}`}>Image URL</button>
+              <button type="button" role="tab" aria-selected={imageMode === 'upload'} onClick={() => handleImageModeChange('upload')} className={`px-3 py-1.5 text-xs font-semibold ${imageMode === 'upload' ? 'bg-emerald-700 text-white' : 'bg-[#fcfaf5] text-[#5d503f]'}`}>Upload Images</button>
+            </div>
+
+            {imageMode === 'url' ? (
+              <div className="space-y-2">
+                <label htmlFor="property-image" className={subLabelCls}>HTTP/HTTPS image URL</label>
+                <input id="property-image" type="url" placeholder="https://example.com/image.jpg" value={image} onChange={(e) => { setImage(e.target.value); setImgPreviewFailed(false); setImageError(''); }} className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30" />
+                {image.trim() && (
+                  <div className="h-36 w-full rounded-xl overflow-hidden border border-[#d6c7b2] bg-[#f0ece4] flex items-center justify-center">
+                    {!imgPreviewFailed ? <img src={image} alt="Property URL preview" className="w-full h-full object-cover" onError={() => setImgPreviewFailed(true)} /> : <div className="text-xs text-[#7c6a57] flex flex-col items-center gap-1"><ImageIcon className="w-6 h-6 text-[#c4b49e]" /><span>Unable to load image from URL</span></div>}
                   </div>
                 )}
               </div>
+            ) : (
+              <div className="space-y-2">
+                <div
+                  role="region"
+                  aria-label="Property image upload"
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`rounded-xl border-2 border-dashed p-5 sm:p-7 text-center transition-colors ${
+                    isDragOver
+                      ? 'border-emerald-700 bg-[#e3eee0]'
+                      : 'border-[#9eaf9e] bg-[#eef3ea]/70 hover:border-emerald-700/60 hover:bg-[#eef3ea]'
+                  }`}
+                >
+                  <UploadCloud aria-hidden="true" className="mx-auto mb-2 h-8 w-8 text-emerald-700" />
+                  <h5 className="text-sm font-bold text-[#2f2417]">Drag and drop your images here</h5>
+                  <p className="mt-1 text-xs text-[#7c6a57]">or</p>
+                  <button
+                    type="button"
+                    onClick={() => imageFileInputRef.current?.click()}
+                    disabled={retainedExistingImages.length + selectedImages.length >= MAX_IMAGES || isSaving}
+                    className="mt-2 inline-flex items-center rounded-lg bg-emerald-700 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-emerald-800 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ImageIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
+                    Browse Images
+                  </button>
+                  <p id="property-image-upload-help" className="mt-3 text-[10px] text-[#5d503f]">
+                    JPG, JPEG or PNG · Maximum 5 MB per image · Up to 5 images
+                  </p>
+                  <label htmlFor="property-image-files" className="sr-only">Select property images</label>
+                  <input
+                    ref={imageFileInputRef}
+                    id="property-image-files"
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                    onChange={handleFileSelection}
+                    disabled={retainedExistingImages.length + selectedImages.length >= MAX_IMAGES || isSaving}
+                    aria-describedby="property-image-upload-help"
+                    className="sr-only"
+                  />
+                </div>
+              </div>
             )}
+
+            {(retainedExistingImages.length > 0 || selectedImages.length > 0) && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" aria-label="Property image previews">
+                {retainedExistingImages.map((url) => (
+                  <div key={url} className="relative h-24 rounded-lg overflow-hidden border border-[#d6c7b2] bg-[#f0ece4]">
+                    <img src={url} alt="Existing property image" className="w-full h-full object-cover" onError={(event) => { event.currentTarget.style.opacity = '0.35'; }} />
+                    <button type="button" onClick={() => removeExistingImage(url)} aria-label="Remove existing property image" className="absolute top-1 right-1 rounded-full bg-black/65 text-white p-1 text-xs">×</button>
+                  </div>
+                ))}
+                {selectedImages.map((selected) => (
+                  <div key={selected.id} className="relative overflow-hidden rounded-lg border border-emerald-400 bg-[#f0ece4]">
+                    <div className="h-24">
+                      <img src={selected.previewUrl} alt={`Selected property image ${selected.file.name}`} className="w-full h-full object-cover" />
+                    </div>
+                    <p className="truncate px-2 py-1 text-[10px] text-[#5d503f]" title={selected.file.name}>{selected.file.name}</p>
+                    <button type="button" onClick={() => removeSelectedImage(selected.id)} aria-label={`Remove ${selected.file.name}`} className="absolute top-1 right-1 rounded-full bg-black/65 text-white p-1 text-xs focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2">×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {removedExistingImages.size > 0 && <p className="text-[10px] text-amber-800">{removedExistingImages.size} existing image{removedExistingImages.size === 1 ? '' : 's'} marked for removal. Save to apply.</p>}
+            {imageError && <p className="text-xs text-red-600" role="alert" aria-live="polite">{imageError}</p>}
+            {uploadRecoveryId && <button type="button" onClick={retryImageUpload} disabled={isSaving} className="admin-button-secondary px-3 py-2 rounded-lg text-xs font-bold">{isSaving ? 'Retrying upload...' : 'Retry image upload'}</button>}
           </div>
           </section>
 

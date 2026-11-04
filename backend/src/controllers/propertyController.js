@@ -21,6 +21,16 @@ export const createProperty = asyncHandler(async (req, res) => {
   return sendSuccess(res, 201, 'Property listing created successfully', property);
 });
 
+export const uploadPropertyImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await propertyService.appendPropertyImages(id, req.files);
+  return sendSuccess(res, 200, 'Property images uploaded successfully', {
+    property: result.property,
+    images: result.property.images,
+    uploadedImages: result.uploadedImages,
+  });
+});
+
 //edit
 export const updateProperty = asyncHandler(async (req, res) => {
   const { id } = req.params;
