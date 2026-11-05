@@ -1,5 +1,5 @@
 /**
- * ULTRA-FAST AI SERVICE USING NVIDIA NIM (LLAMA 3.1 8B)
+ * AI SERVICE USING NVIDIA NIM (NEMOTRON 3.5 LIGHTNING 30B A3B)
  *
  * Replaces Google Gemini SDK calls with direct NVIDIA NIM API requests.
  * Exposes both generateComplianceInsights and generatePortfolioNarrative
@@ -28,7 +28,7 @@ export async function generateComplianceInsights(facts) {
 
   let parsed;
   try {
-    parsed = JSON.parse(rawText);
+    parsed = parseJsonResponse(rawText);
   } catch (err) {
     throw new Error('Failed to parse AI Compliance Insights as JSON.');
   }
@@ -60,7 +60,7 @@ export async function generatePortfolioNarrative(snapshot) {
 
   let parsed;
   try {
-    parsed = JSON.parse(rawText);
+    parsed = parseJsonResponse(rawText);
   } catch (err) {
     throw new Error('Failed to parse AI Portfolio Narrative as JSON.');
   }
@@ -102,7 +102,7 @@ export async function generateBuyerMarketNarrative(snapshot) {
 
   let parsed;
   try {
-    parsed = JSON.parse(rawText);
+    parsed = parseJsonResponse(rawText);
   } catch (err) {
     throw new Error('Failed to parse AI Market Insight as JSON.');
   }
@@ -126,7 +126,7 @@ async function callNvidiaModel(apiKey, prompt) {
   const url = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
   const payload = {
-    model: 'openai/gpt-oss-20b', // Active Llama 3.2 model on NVIDIA NIM
+    model: 'nvidia/nemotron-3.5-lightning-30b-a3b',
     messages: [
       {
         role: 'system',
@@ -140,6 +140,8 @@ async function callNvidiaModel(apiKey, prompt) {
     ],
     temperature: 0.1, // Low temperature for factual consistency
     max_tokens: 700,
+    response_format: { type: 'json_object' },
+    chat_template_kwargs: { enable_thinking: false },
   };
 
   const response = await fetch(url, {
@@ -158,7 +160,20 @@ async function callNvidiaModel(apiKey, prompt) {
   }
 
   const data = await response.json();
-  let responseText = data.choices[0].message.content.trim();
+  const message = data?.choices?.[0]?.message;
+  const rawContent = message?.content ?? message?.reasoning_content;
+
+  const normalizedContent = Array.isArray(rawContent)
+    ? rawContent
+        .map((part) => (typeof part === 'string' ? part : part?.text ?? ''))
+        .join('')
+    : rawContent;
+
+  if (typeof normalizedContent !== 'string' || !normalizedContent.trim()) {
+    throw new Error('NVIDIA API returned no usable text content for the AI response.');
+  }
+
+  let responseText = normalizedContent.trim();
 
   // Strip markdown code block wrappers if included by the LLM
   if (responseText.startsWith('```json')) {
@@ -168,6 +183,18 @@ async function callNvidiaModel(apiKey, prompt) {
   }
 
   return responseText;
+}
+
+function parseJsonResponse(rawText) {
+  const text = rawText.trim();
+  const jsonStart = text.indexOf('{');
+  const jsonEnd = text.lastIndexOf('}');
+
+  if (jsonStart === -1 || jsonEnd <= jsonStart) {
+    throw new Error('AI response did not contain a JSON object.');
+  }
+
+  return JSON.parse(text.slice(jsonStart, jsonEnd + 1));
 }
 
 /**
