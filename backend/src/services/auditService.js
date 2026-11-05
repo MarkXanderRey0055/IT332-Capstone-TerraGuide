@@ -72,7 +72,7 @@ export async function generateAudit(propertyId, adminUserId) {
   // 5. Save complete record to MongoDB
   const audit = await Audit.create({
     propertyId: property._id,
-    model: 'openai/gpt-oss-20b',
+    model: 'nvidia/nemotron-3.5-lightning-30b-a3b',
     complianceScore,
     estimatedSuccessRate,
     potentialSuccessRate,
