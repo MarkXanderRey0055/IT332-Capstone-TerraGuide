@@ -93,20 +93,23 @@ const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#112a1d] p-4 relative overflow-hidden font-sans">
+    <div className="login-entrance min-h-screen flex items-center justify-center bg-[#112a1d] p-4 relative overflow-hidden font-sans">
       <div className="absolute inset-0 opacity-5 pointer-events-none bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]" />
 
-      <div className="w-full max-w-md p-10 rounded-[2rem] border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-2xl relative z-10">
+      <div className="login-entrance__card w-full max-w-md p-10 rounded-[2rem] border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-2xl relative z-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-white font-serif mb-2">
+          <p className="login-entrance__logo text-emerald-400 font-serif text-sm font-bold tracking-[0.24em] uppercase mb-5">
+            TerraGuide
+          </p>
+          <h1 className="login-entrance__heading text-3xl font-bold tracking-tight text-white font-serif mb-2">
             Welcome Back
           </h1>
-          <p className="text-sm text-gray-400">
+          <p className="login-entrance__subtitle text-sm text-gray-400">
             Sign in to your portal or browse the market as a guest.
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="login-entrance__actions space-y-4">
           <button
             type="button"
             onClick={() => setCurrentView('buyer')}
@@ -156,7 +159,7 @@ const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
  
         </div>
 
-        <div className="mt-8 pt-6 border-t border-white/[0.05] text-center text-sm text-gray-400">
+        <div className="login-entrance__footer mt-8 pt-6 border-t border-white/[0.05] text-center text-sm text-gray-400">
           <span>Just looking? </span>
           <span
             onClick={() => {

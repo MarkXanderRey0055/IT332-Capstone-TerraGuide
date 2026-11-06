@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import MainLoginPortal from './pages/Buyer/MainLoginPortal';
 import BuyerPortal from './pages/Buyer/BuyerPortal';
 import * as AuthService from './services/AuthService';
 import { AUTH_UNAUTHORIZED_EVENT } from './utils/api';
+import ServerConnectionLoader from './components/ServerConnectionLoader';
 
 type AppView = 'login' | 'buyerPortal';
 type LoginInitialView = 'selection' | 'buyer' | 'admin';
+const MIN_LOADING_DURATION_MS = 5000;
 
 export default function App() {
   const [view, setView] = useState<AppView>('login');
@@ -16,19 +18,36 @@ export default function App() {
   const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [sessionVerificationError, setSessionVerificationError] = useState('');
   const [sessionRetryToken, setSessionRetryToken] = useState(0);
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-login: if a token is already stored (from a previous visit),
   // verify it against the backend (/auth/me) and restore the session.
   useEffect(() => {
     let isMounted = true;
+    const loadingStartedAt = performance.now();
+
+    const waitForMinimumLoadingDuration = async () => {
+      const elapsed = performance.now() - loadingStartedAt;
+      const remaining = Math.max(0, MIN_LOADING_DURATION_MS - elapsed);
+      if (remaining === 0) return;
+
+      await new Promise<void>((resolve) => {
+        loadingTimerRef.current = setTimeout(() => {
+          loadingTimerRef.current = null;
+          resolve();
+        }, remaining);
+      });
+    };
 
     const restoreSession = async () => {
       if (!AuthService.isAuthenticated()) {
+        await waitForMinimumLoadingDuration();
         if (isMounted) setIsRestoringSession(false);
         return;
       }
 
       const verification = await AuthService.verifyToken();
+      await waitForMinimumLoadingDuration();
 
       if (isMounted) {
         // Only buyer accounts are routed into the buyer portal here.
@@ -52,6 +71,10 @@ export default function App() {
     restoreSession();
     return () => {
       isMounted = false;
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
     };
   }, [sessionRetryToken]);
 
@@ -103,29 +126,11 @@ export default function App() {
   };
 
   if (isRestoringSession) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED]">
-        <p className="text-sm text-gray-400">Loading...</p>
-      </div>
-    );
+    return <ServerConnectionLoader />;
   }
 
   if (sessionVerificationError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] px-4">
-        <div className="w-full max-w-md rounded-2xl border border-[#d6c7b2] bg-white p-6 text-center shadow-sm">
-          <h1 className="font-serif text-xl font-semibold text-[#1C3A27]">Session verification unavailable</h1>
-          <p className="mt-2 text-sm text-[#7c6a57]">{sessionVerificationError}</p>
-          <button
-            type="button"
-            onClick={handleRetrySessionVerification}
-            className="mt-5 rounded-xl bg-[#1C3A27] px-5 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#254F35] focus-visible:outline-2 focus-visible:outline-[#1C3A27] focus-visible:outline-offset-2"
-          >
-            Retry verification
-          </button>
-        </div>
-      </div>
-    );
+    return <ServerConnectionLoader error={sessionVerificationError} onRetry={handleRetrySessionVerification} />;
   }
 
   if (view === 'buyerPortal') {
