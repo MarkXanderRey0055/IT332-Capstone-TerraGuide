@@ -7,7 +7,7 @@ import ServerConnectionLoader from './components/ServerConnectionLoader';
 
 type AppView = 'login' | 'buyerPortal';
 type LoginInitialView = 'selection' | 'buyer' | 'admin';
-const MIN_LOADING_DURATION_MS = 5000;
+const MIN_LOADING_DURATION_MS = import.meta.env.DEV ? 5000 : 0;
 
 export default function App() {
   const [view, setView] = useState<AppView>('login');
