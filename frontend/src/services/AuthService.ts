@@ -115,8 +115,13 @@ export async function verifyToken(): Promise<TokenVerificationResult> {
     return { status: 'unauthenticated' };
   }
 
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 30_000);
+
   try {
-    const response = (await apiRequest("/auth/me")) as {
+    const response = (await apiRequest("/auth/me", {
+      signal: controller.signal,
+    })) as {
       success: boolean;
       message: string;
       data: User;
@@ -132,9 +137,18 @@ export async function verifyToken(): Promise<TokenVerificationResult> {
       return { status: 'unauthenticated' };
     }
 
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        status: 'unavailable',
+        error: new Error('Session verification timed out. Check your connection and try again.'),
+      };
+    }
+
     return {
       status: 'unavailable',
       error: error instanceof Error ? error : new Error('Unable to verify your session.'),
     };
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 }
