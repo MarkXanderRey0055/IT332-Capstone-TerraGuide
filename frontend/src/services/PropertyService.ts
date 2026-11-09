@@ -113,7 +113,8 @@ export function mapToProperty(raw: PropertyApiRecord): Property {
  */
 export async function getProperties(): Promise<Property[]> {
   const response = (await apiRequest(
-    '/properties?limit=1000'
+    '/properties?limit=1000',
+    { omitAuth: true }
   )) as PropertyListResponse;
 
   return response.data.properties.map(mapToProperty);
@@ -163,7 +164,8 @@ export async function searchProperties(
 
   const qs = query.toString();
   const response = (await apiRequest(
-    `/properties${qs ? `?${qs}` : ''}`
+    `/properties${qs ? `?${qs}` : ''}`,
+    { omitAuth: true }
   )) as PropertyListResponse;
 
   return {
@@ -180,7 +182,8 @@ export async function searchProperties(
  */
 export async function getPropertyById(id: string): Promise<Property> {
   const response = (await apiRequest(
-    `/properties/${id}`
+    `/properties/${id}`,
+    { omitAuth: true }
   )) as PropertySingleResponse;
 
   return mapToProperty(response.data);

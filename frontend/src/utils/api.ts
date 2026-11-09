@@ -22,6 +22,11 @@ export class ApiError extends Error {
   }
 }
 
+export type ApiRequestOptions = RequestInit & {
+  /** Public endpoints must not inherit a stale token from local storage. */
+  omitAuth?: boolean;
+};
+
 function clearSession() {
   localStorage.removeItem("terraguide_token");
   localStorage.removeItem("terraguide_user");
@@ -29,21 +34,22 @@ function clearSession() {
 
 export async function apiRequest(
   endpoint: string,
-  options: RequestInit = {}
+  options: ApiRequestOptions = {}
 ) {
   const token = localStorage.getItem("terraguide_token");
   const isFormDataBody = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const { omitAuth = false, ...requestOptions } = options;
 
   const headers: HeadersInit = {
     ...(isFormDataBody ? {} : { "Content-Type": "application/json" }),
-    ...(token && {
+    ...(!omitAuth && token && {
       Authorization: `Bearer ${token}`,
     }),
-    ...(options.headers || {}),
+    ...(requestOptions.headers || {}),
   };
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
+    ...requestOptions,
     headers,
   });
 
