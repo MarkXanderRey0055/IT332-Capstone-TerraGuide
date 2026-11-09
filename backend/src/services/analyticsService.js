@@ -6,6 +6,7 @@ import Transaction from '../models/Transaction.js';
 import AppError from '../utils/errors.js';
 import { getStartOfManilaMonth, getManilaYearBounds } from '../utils/manilaTime.js';
 import { generatePortfolioNarrative, generateBuyerMarketNarrative } from './aiService.js';
+import { classifyAuditRisk } from '../utils/auditReadiness.js';
 
 const COMPLIANCE_READY_THRESHOLD = 70;
 async function getLatestAuditsByProperty() {
@@ -23,12 +24,7 @@ async function getLatestAuditsByProperty() {
 
 function computeRiskLevel(audit) {
   if (!audit) return 'High';
-
-  const missingCount = audit.missingItems ? audit.missingItems.length : 0;
-
-  if (audit.complianceScore < 40 || missingCount >= 2) return 'High';
-  if (audit.complianceScore < COMPLIANCE_READY_THRESHOLD || missingCount >= 1) return 'Medium';
-  return 'Low';
+  return classifyAuditRisk(audit.documentCompleteness ?? audit.complianceScore);
 }
 
 function computeMarketReadinessScore(property, audit) {

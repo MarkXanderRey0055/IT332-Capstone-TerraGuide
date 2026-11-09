@@ -1,10 +1,32 @@
 import { apiRequest } from '../utils/api';
 
+export type AuditFreshnessStatus = 'CURRENT' | 'STALE' | 'UNKNOWN';
+export type AuditNarrativeOrigin = 'AI_GENERATED' | 'SYSTEM_FALLBACK';
+export type AuditNarrativeFallbackReason =
+  | 'AI_UNAVAILABLE'
+  | 'AI_INVALID_RESPONSE'
+  | 'AI_CONTRADICTORY_RESPONSE';
+
+export interface AuditStaleReason {
+  field: string;
+  label: string;
+  previousValue?: unknown;
+  currentValue?: unknown;
+}
+
 export interface Audit {
   id: string;
   propertyId: string;
   generatedAt: string;
   model: string;
+  methodologyVersion?: string | null;
+  documentWeights?: { deed?: number; tax?: number; survey?: number };
+  documentStatuses?: {
+    deed?: 'pending' | 'verified' | 'missing';
+    tax?: 'pending' | 'verified' | 'missing';
+    survey?: 'pending' | 'verified' | 'missing';
+  };
+  documentCompleteness?: number;
   complianceScore: number;
   estimatedSuccessRate: number;
   potentialSuccessRate: number;
@@ -12,9 +34,17 @@ export interface Audit {
   verifiedDocuments: number;
   totalDocuments: number;
   missingItems: string[];
+  pendingItems?: string[];
+  unknownStatuses?: Array<{ document: string; receivedStatus: string | null }>;
   summary: string;
   recommendation: string;
+  narrativeOrigin?: AuditNarrativeOrigin | null;
+  narrativeFallbackReason?: AuditNarrativeFallbackReason | null;
   createdBy: string;
+  freshnessStatus?: AuditFreshnessStatus;
+  isStale?: boolean;
+  staleReasons?: AuditStaleReason[];
+  snapshotAvailable?: boolean;
 }
 
 interface AuditApiResponse {

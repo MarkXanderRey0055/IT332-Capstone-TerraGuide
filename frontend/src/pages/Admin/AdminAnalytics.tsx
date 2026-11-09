@@ -659,7 +659,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
                         <th className="py-3 pr-4 font-semibold">Rank</th>
                         <th className="py-3 pr-4 font-semibold">Property</th>
                         <th className="py-3 pr-4 font-semibold">Compliance</th>
-                        <th className="py-3 pr-4 font-semibold">Success Rate</th>
+                        <th className="py-3 pr-4 font-semibold">Portfolio Percentile</th>
                         <th className="py-3 pr-4 font-semibold">Market Readiness</th>
                         <th className="py-3 font-semibold">Risk</th>
                       </tr>
@@ -739,8 +739,8 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
               )}
               <p className="text-[11px] text-[#7c6a57] mt-4 flex items-center gap-1.5">
                 <Info className="w-3.5 h-3.5" />
-                Success Rate reflects how this property's compliance score compares to the rest of the
-                audited portfolio. Market Readiness blends compliance completeness with price
+                Portfolio Percentile reflects how this property's document-readiness score compares to the rest of the
+                audited portfolio. Market Readiness blends document completeness with price
                 competitiveness against similar listings.
               </p>
             </div>

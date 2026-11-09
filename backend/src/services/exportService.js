@@ -511,7 +511,7 @@ async function buildAnalyticsRows() {
       section: 'Top Ranked Properties',
       metric: `#${entry.rank} ${entry.name}`,
       value: `${entry.marketReadinessScore}%`,
-      details: `Compliance ${entry.complianceScore}%, Success ${entry.successRate}%, Risk ${entry.riskLevel}.`,
+      details: `Document completeness ${entry.complianceScore}%, Portfolio percentile ${entry.successRate}%, Risk ${entry.riskLevel}.`,
     });
   });
 
