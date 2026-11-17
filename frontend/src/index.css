@@ -236,6 +236,28 @@
 }
 
 :root {
+  --color-brand: #386b4f;
+  --color-brand-dark: #1c3a27;
+  --color-success: #166534;
+  --color-success-bg: #dcfce7;
+  --color-success-border: #86efac;
+  --color-warning: #92400e;
+  --color-warning-bg: #fef3c7;
+  --color-warning-border: #fcd34d;
+  --color-danger: #991b1b;
+  --color-danger-bg: #fee2e2;
+  --color-danger-border: #fca5a5;
+  --color-neutral: #475569;
+  --color-neutral-bg: #f1f5f9;
+  --color-neutral-border: #cbd5e1;
+  --color-neutral-dark: #223127;
+  --color-filing-info: #475569;
+  --color-cabinet-accent-1: #5c8068;
+  --color-cabinet-accent-2: #627f9e;
+  --color-cabinet-accent-3: #a66f4d;
+  --color-cabinet-accent-4: #a36b76;
+  --color-cabinet-accent-5: #9a7a3d;
+  --color-cabinet-accent-6: #4f8580;
   --admin-bg: #f7f4ed;
   --admin-surface: #c7d3c0;
   --admin-surface-strong: #8fa28a;
@@ -384,7 +406,7 @@
 }
 
 .admin-button {
-  background: linear-gradient(180deg, #55735a 0%, #45654d 100%);
+  background: linear-gradient(180deg, var(--color-brand) 0%, var(--color-brand-dark) 100%);
   border: 1px solid rgba(66, 83, 63, 0.5);
   box-shadow:
     0 10px 18px rgba(92, 108, 88, 0.24),
@@ -453,11 +475,85 @@
 }
 
 .admin-properties-table .admin-icon-btn--warn {
-  color: #78350f;
+  color: var(--color-neutral);
 }
 
 .admin-properties-table .admin-icon-btn--danger {
-  color: #9f1239;
+  color: var(--color-danger);
+}
+
+.status-success,
+.status-warning,
+.status-neutral,
+.status-danger {
+  border-width: 1px;
+  border-style: solid;
+}
+
+.status-success {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+}
+
+.status-warning {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+}
+
+.status-neutral {
+  color: var(--color-neutral);
+  background: var(--color-neutral-bg);
+  border-color: var(--color-neutral-border);
+}
+
+.status-danger {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+}
+
+.text-brand {
+  color: var(--color-brand);
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+.text-warning {
+  color: var(--color-warning);
+}
+
+.text-danger {
+  color: var(--color-danger);
+}
+
+.text-neutral {
+  color: var(--color-neutral);
+}
+
+.text-neutral-dark {
+  color: var(--color-neutral-dark);
+}
+
+.filing-info {
+  color: var(--color-filing-info);
+}
+
+.selection-brand {
+  background: color-mix(in srgb, var(--color-brand) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+}
+
+.cabinet-accent-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--cabinet-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cabinet-accent) 18%, transparent);
 }
 
 .admin-scroll-cue {

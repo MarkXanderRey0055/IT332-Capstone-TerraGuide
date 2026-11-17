@@ -381,7 +381,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
         <div className="shrink-0 flex items-start justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[#d6c7b2] bg-[#fcfaf5]">
           <div>
           <h3 id="property-form-modal-title" className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
-            <Home className="w-4 h-4 text-emerald-700" />
+            <Home className="w-4 h-4 text-neutral" />
             {property ? 'Edit Property Listing' : 'Add Property Listing'}
           </h3>
           <p className="text-xs text-[#5d503f] mt-1">Fields marked * are required. Review all sections before saving.</p>
@@ -401,14 +401,14 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
 
           {/* Error banner */}
           {errorMsg && (
-            <div className="px-3 py-2.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg">
+            <div className="status-warning px-3 py-2.5 text-xs font-semibold rounded-lg">
               {errorMsg}
             </div>
           )}
 
           <section aria-labelledby="property-essentials-title" className="space-y-4">
             <div>
-              <h4 id="property-essentials-title" className="text-sm font-bold text-[#223127] flex items-center gap-2"><Home aria-hidden="true" className="w-4 h-4 text-emerald-800" />Essentials</h4>
+              <h4 id="property-essentials-title" className="text-sm font-bold text-[#223127] flex items-center gap-2"><Home aria-hidden="true" className="w-4 h-4 text-neutral" />Essentials</h4>
               <p className="text-xs text-[#5d503f] mt-1">Identify the property, its value, and suitable uses.</p>
             </div>
           <div className="space-y-4">
@@ -416,7 +416,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="property-name" className={labelCls}>
-                  Property Name <span className="text-red-500">*</span>
+                  Property Name <span className="text-warning">*</span>
                 </label>
                 <input
                   type="text"
@@ -429,7 +429,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               </div>
               <div>
                 <label htmlFor="property-owner" className={labelCls}>
-                  Owner Name <span className="text-red-500">*</span>
+                  Owner Name <span className="text-warning">*</span>
                 </label>
                 <input
                   type="text"
@@ -445,7 +445,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="property-price" className={labelCls}>
-                  Price (₱) <span className="text-red-500">*</span>
+                  Price (₱) <span className="text-warning">*</span>
                 </label>
                 <input
                   type="text"
@@ -458,7 +458,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               </div>
               <div>
                 <label htmlFor="property-size" className={labelCls}>
-                  Lot Size (sqm) <span className="text-red-500">*</span>
+                  Lot Size (sqm) <span className="text-warning">*</span>
                 </label>
                 <input
                   type="number"
@@ -474,7 +474,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="property-type" className={labelCls}>
-                  Property Type <span className="text-red-500">*</span>
+                  Property Type <span className="text-warning">*</span>
                 </label>
                 <select
                   id="property-type"
@@ -496,7 +496,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
           {/* ── Section: Suitable For ── */}
           <div className="space-y-2">
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
-              <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
+              <span className="w-1 h-3.5 bg-[var(--color-brand)] rounded-full inline-block" />
               Suitable For
               <span className="normal-case font-normal text-[#5d503f] ml-1">(optional)</span>
             </p>
@@ -529,18 +529,18 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
           {/* ── Section: GPS Coordinates ── */}
           <section aria-labelledby="property-location-title" className="border-t border-[#d6c7b2] pt-4 space-y-4">
             <div>
-              <h4 id="property-location-title" className="text-sm font-bold text-[#223127] flex items-center gap-2"><MapPin aria-hidden="true" className="w-4 h-4 text-emerald-800" />Location &amp; photos</h4>
+              <h4 id="property-location-title" className="text-sm font-bold text-[#223127] flex items-center gap-2"><MapPin aria-hidden="true" className="w-4 h-4 text-neutral" />Location &amp; photos</h4>
               <p className="text-xs text-[#5d503f] mt-1">Set the location and coordinates, then add an optional image URL.</p>
             </div>
             <div>
-              <label htmlFor="property-location" className={labelCls}>Location <span className="text-red-500">*</span></label>
+              <label htmlFor="property-location" className={labelCls}>Location <span className="text-warning">*</span></label>
               <input id="property-location" type="text" placeholder="e.g. Balayan, Batangas" value={location} onChange={(e) => setLocation(e.target.value)} className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30" />
             </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
-                <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
-                <MapPin className="w-3.5 h-3.5 text-emerald-700" />
+                <span className="w-1 h-3.5 bg-[var(--color-brand)] rounded-full inline-block" />
+                <MapPin className="w-3.5 h-3.5 text-neutral" />
                 GPS Coordinates
               </p>
               <span className="text-[10px] text-[#5d503f] font-mono">WGS-84</span>
@@ -576,7 +576,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             {/* Batangas preset quick-fills */}
             <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-[#d6c7b2] bg-[#eef3ea] text-xs">
               <span className="text-[#5d503f] font-semibold flex items-center gap-1 text-[11px]">
-                <Compass className="w-3.5 h-3.5 text-emerald-700" />
+                <Compass className="w-3.5 h-3.5 text-neutral" />
                 Batangas Presets:
               </span>
               <div className="flex gap-1.5 flex-wrap">
@@ -609,15 +609,15 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <label className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
-                <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
-                <ImageIcon className="w-3.5 h-3.5 text-emerald-700" />
+                <span className="w-1 h-3.5 bg-[var(--color-brand)] rounded-full inline-block" />
+                <ImageIcon className="w-3.5 h-3.5 text-neutral" />
                 Property Images <span className="normal-case font-normal text-[#5d503f]">(optional)</span>
               </label>
               <span className="text-[10px] text-[#7c6a57]">{retainedExistingImages.length + selectedImages.length}/{MAX_IMAGES}</span>
             </div>
             <div className="flex rounded-lg border border-[#d6c7b2] overflow-hidden w-fit" role="tablist" aria-label="Property image input method">
-              <button type="button" role="tab" aria-selected={imageMode === 'url'} onClick={() => handleImageModeChange('url')} className={`px-3 py-1.5 text-xs font-semibold ${imageMode === 'url' ? 'bg-emerald-700 text-white' : 'bg-[#fcfaf5] text-[#5d503f]'}`}>Image URL</button>
-              <button type="button" role="tab" aria-selected={imageMode === 'upload'} onClick={() => handleImageModeChange('upload')} className={`px-3 py-1.5 text-xs font-semibold ${imageMode === 'upload' ? 'bg-emerald-700 text-white' : 'bg-[#fcfaf5] text-[#5d503f]'}`}>Upload Images</button>
+              <button type="button" role="tab" aria-selected={imageMode === 'url'} onClick={() => handleImageModeChange('url')} className={`px-3 py-1.5 text-xs font-semibold ${imageMode === 'url' ? 'bg-[var(--color-brand)] text-white' : 'bg-[#fcfaf5] text-[#5d503f]'}`}>Image URL</button>
+              <button type="button" role="tab" aria-selected={imageMode === 'upload'} onClick={() => handleImageModeChange('upload')} className={`px-3 py-1.5 text-xs font-semibold ${imageMode === 'upload' ? 'bg-[var(--color-brand)] text-white' : 'bg-[#fcfaf5] text-[#5d503f]'}`}>Upload Images</button>
             </div>
 
             {imageMode === 'url' ? (
@@ -640,18 +640,18 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                   onDrop={handleDrop}
                   className={`rounded-xl border-2 border-dashed p-5 sm:p-7 text-center transition-colors ${
                     isDragOver
-                      ? 'border-emerald-700 bg-[#e3eee0]'
-                      : 'border-[#9eaf9e] bg-[#eef3ea]/70 hover:border-emerald-700/60 hover:bg-[#eef3ea]'
+                      ? 'border-[var(--color-brand)] bg-[#e3eee0]'
+                      : 'border-[#9eaf9e] bg-[#eef3ea]/70 hover:border-[var(--color-brand)] hover:bg-[#eef3ea]'
                   }`}
                 >
-                  <UploadCloud aria-hidden="true" className="mx-auto mb-2 h-8 w-8 text-emerald-700" />
+                  <UploadCloud aria-hidden="true" className="mx-auto mb-2 h-8 w-8 text-neutral" />
                   <h5 className="text-sm font-bold text-[#2f2417]">Drag and drop your images here</h5>
                   <p className="mt-1 text-xs text-[#7c6a57]">or</p>
                   <button
                     type="button"
                     onClick={() => imageFileInputRef.current?.click()}
                     disabled={retainedExistingImages.length + selectedImages.length >= MAX_IMAGES || isSaving}
-                    className="mt-2 inline-flex items-center rounded-lg bg-emerald-700 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-emerald-800 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mt-2 inline-flex items-center rounded-lg bg-[var(--color-brand)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--color-brand-dark)] focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ImageIcon aria-hidden="true" className="mr-1.5 h-4 w-4" />
                     Browse Images
@@ -684,7 +684,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                   </div>
                 ))}
                 {selectedImages.map((selected) => (
-                  <div key={selected.id} className="relative overflow-hidden rounded-lg border border-emerald-400 bg-[#f0ece4]">
+                  <div key={selected.id} className="relative overflow-hidden rounded-lg border border-[var(--color-brand)] bg-[#f0ece4]">
                     <div className="h-24">
                       <img src={selected.previewUrl} alt={`Selected property image ${selected.file.name}`} className="w-full h-full object-cover" />
                     </div>
@@ -694,8 +694,8 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                 ))}
               </div>
             )}
-            {removedExistingImages.size > 0 && <p className="text-[10px] text-amber-800">{removedExistingImages.size} existing image{removedExistingImages.size === 1 ? '' : 's'} marked for removal. Save to apply.</p>}
-            {imageError && <p className="text-xs text-red-600" role="alert" aria-live="polite">{imageError}</p>}
+            {removedExistingImages.size > 0 && <p className="text-[10px] text-warning">{removedExistingImages.size} existing image{removedExistingImages.size === 1 ? '' : 's'} marked for removal. Save to apply.</p>}
+            {imageError && <p className="text-xs text-warning" role="alert" aria-live="polite">{imageError}</p>}
             {uploadRecoveryId && <button type="button" onClick={retryImageUpload} disabled={isSaving} className="admin-button-secondary px-3 py-2 rounded-lg text-xs font-bold">{isSaving ? 'Retrying upload...' : 'Retry image upload'}</button>}
           </div>
           </section>
@@ -770,7 +770,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
           {/* Listing status shares the two-column document grid. */}
           <div className="space-y-2">
             <label htmlFor="property-status" className="text-[11px] font-bold uppercase tracking-wider text-[#4d5e4d] flex items-center gap-1.5">
-              <span className="w-1 h-3.5 bg-emerald-600 rounded-full inline-block" />
+              <span className="w-1 h-3.5 bg-[var(--color-brand)] rounded-full inline-block" />
               Listing Status
             </label>
             <select
