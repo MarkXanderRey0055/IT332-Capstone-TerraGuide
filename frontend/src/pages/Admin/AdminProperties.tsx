@@ -1,24 +1,24 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus,
   Search,
   Edit2,
   Trash2,
-  CheckCircle2,
-  XCircle,
-  Clock,
   Sparkles,
+  Eye,
   FolderMinus,
   Archive,
   X,
+  MoreHorizontal,
 } from 'lucide-react';
 import type { Property } from '../../types/types';
 import { PropertyFormModal } from '../../components/Admin/PropertyFormModal';
 import { AuditModal } from '../../components/Admin/AuditModal';
 import { CabinetFormModal } from '../../components/Admin/CabinetFormModal';
 import { AddPropertiesToCabinetModal } from '../../components/Admin/AddPropertiesToCabinetModal';
+import { ViewPropertyModal } from '../../components/Admin/ViewPropertyModal';
 import { FilingCabinetPanel } from '../../components/Admin/FilingCabinetPanel';
-import { CABINET_COLOR_STYLES } from '../../components/Admin/cabinetColors';
 import { getLotSize } from '../../services/buyerPrefs';
 import { filterAndSortProperties, getPropertyFilterOptions } from '../../utils/propertyFilters';
 import {
@@ -47,88 +47,27 @@ interface AdminPropertiesProps {
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
 
-type DocStatus = 'pending' | 'verified' | 'missing';
-type DocKind = 'deed' | 'tax' | 'survey';
-
-const DOC_LABELS: Record<DocKind, string> = {
-  deed: 'Title Deed',
-  tax: 'Tax Declaration',
-  survey: 'Survey Plan',
-};
-
-const DOC_SHORT: Record<DocKind, string> = {
-  deed: 'Deed',
-  tax: 'Tax',
-  survey: 'Survey',
-};
-
-const DOC_STATUS_LABELS: Record<DocStatus, string> = {
-  verified: 'Verified',
-  pending: 'Pending review',
-  missing: 'Missing',
-};
-
-const getDocIcon = (status: DocStatus) => {
-  switch (status) {
-    case 'verified':
-      return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-800 shrink-0" aria-hidden="true" />;
-    case 'pending':
-      return <Clock className="w-3.5 h-3.5 text-amber-800 shrink-0" aria-hidden="true" />;
-    case 'missing':
-      return <XCircle className="w-3.5 h-3.5 text-rose-800 shrink-0" aria-hidden="true" />;
-  }
-};
-
-const getDocChipClass = (status: DocStatus) => {
-  switch (status) {
-    case 'verified':
-      return 'border-emerald-700/35 bg-emerald-100 text-emerald-950';
-    case 'pending':
-      return 'border-amber-700/35 bg-amber-100 text-amber-950';
-    case 'missing':
-      return 'border-rose-700/35 bg-rose-100 text-rose-950';
-  }
-};
-
-const ComplianceIndicator = ({ kind, status }: { kind: DocKind; status: DocStatus }) => {
-  const description = `${DOC_LABELS[kind]}: ${DOC_STATUS_LABELS[status]}`;
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-1 ${getDocChipClass(status)}`}
-      title={description}
-      aria-label={description}
-    >
-      {getDocIcon(status)}
-      <span className="text-[10px] font-bold leading-none">{DOC_SHORT[kind]}</span>
-    </span>
-  );
-};
-
 const getStatusBadge = (status: Property['status']) => {
   const badgeClass =
     'inline-flex items-center px-2.5 py-1 text-[10px] font-bold rounded-md border';
   switch (status) {
     case 'Available':
       return (
-        <span className={`${badgeClass} bg-emerald-100 text-emerald-950 border-emerald-700/35`}>
+        <span className={`${badgeClass} status-success`}>
           Available
         </span>
       );
     case 'Reserved':
       return (
-        <span className={`${badgeClass} bg-amber-100 text-amber-950 border-amber-700/35`}>
+        <span className={`${badgeClass} status-neutral`}>
           Reserved
         </span>
       );
     case 'Sold':
-      return (
-        <span className={`${badgeClass} bg-stone-200 text-stone-900 border-stone-500/40`}>
-          Sold
-        </span>
-      );
+      return <span className={`${badgeClass} status-neutral`}>Sold</span>;
     default:
       return (
-        <span className={`${badgeClass} bg-emerald-100 text-emerald-950 border-emerald-700/35`}>
+        <span className={`${badgeClass} status-success`}>
           Available
         </span>
       );
@@ -136,19 +75,8 @@ const getStatusBadge = (status: Property['status']) => {
 };
 
 const getTypeBadgeClass = (type: Property['type']) => {
-  switch (type) {
-    case 'Residential':
-    case 'House & Lot':
-      return 'bg-emerald-100 text-emerald-950 border-emerald-700/30';
-    case 'Agricultural':
-      return 'bg-amber-100 text-amber-950 border-amber-700/30';
-    case 'Commercial':
-      return 'bg-teal-100 text-teal-950 border-teal-700/30';
-    case 'Condominium':
-      return 'bg-sky-100 text-sky-950 border-sky-700/30';
-    default:
-      return 'bg-stone-200 text-stone-900 border-stone-500/35';
-  }
+  void type;
+  return 'status-neutral';
 };
 
 export const AdminProperties: React.FC<AdminPropertiesProps> = ({
@@ -169,6 +97,11 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [auditProperty, setAuditProperty] = useState<Property | null>(null);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [isViewPropertyModalOpen, setIsViewPropertyModalOpen] = useState(false);
+  const [moreMenuPropertyId, setMoreMenuPropertyId] = useState<string | null>(null);
+  const [moreMenuPosition, setMoreMenuPosition] = useState({ top: 0, left: 0 });
+  const moreMenuAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const moreMenuRef = useRef<HTMLDivElement | null>(null);
 
   // ---- Filing Cabinet state ----
   const [cabinets, setCabinets] = useState<Cabinet[]>([]);
@@ -218,6 +151,83 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     setAuditProperty(property);
     setIsAuditModalOpen(true);
   };
+
+  const handleViewPropertyClick = (property: Property) => {
+    setSelectedProperty(property);
+    setIsViewPropertyModalOpen(true);
+  };
+
+  const openMoreMenu = (property: Property, anchor: HTMLButtonElement) => {
+    moreMenuAnchorRef.current = anchor;
+    const rect = anchor.getBoundingClientRect();
+    setMoreMenuPosition({ top: rect.bottom + 4, left: Math.max(8, rect.right - 224) });
+    setMoreMenuPropertyId(property.id);
+  };
+
+  const handleMoreMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(moreMenuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []);
+    if (!items.length) return;
+    const index = items.indexOf(document.activeElement as HTMLButtonElement);
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      items[0].focus();
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      items[items.length - 1].focus();
+    }
+  };
+
+  useEffect(() => {
+    if (!moreMenuPropertyId || !moreMenuAnchorRef.current || !moreMenuRef.current) return;
+
+    const updatePosition = () => {
+      const anchorRect = moreMenuAnchorRef.current?.getBoundingClientRect();
+      const menu = moreMenuRef.current;
+      if (!anchorRect || !menu) return;
+      const margin = 8;
+      const width = menu.offsetWidth;
+      const height = menu.offsetHeight;
+      const left = Math.max(margin, Math.min(anchorRect.right - width, window.innerWidth - width - margin));
+      const below = window.innerHeight - anchorRect.bottom - margin;
+      const top = below >= height || anchorRect.top < height
+        ? Math.min(anchorRect.bottom + 4, window.innerHeight - height - margin)
+        : anchorRect.top - height - 4;
+      setMoreMenuPosition({ top: Math.max(margin, top), left });
+    };
+
+    updatePosition();
+    const focusTimer = window.setTimeout(() => {
+      moreMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+    }, 0);
+    const handleOutsidePointer = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (!moreMenuRef.current?.contains(target) && !moreMenuAnchorRef.current?.contains(target)) {
+        setMoreMenuPropertyId(null);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setMoreMenuPropertyId(null);
+        moreMenuAnchorRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsidePointer);
+    document.addEventListener('keydown', handleEscape);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener('mousedown', handleOutsidePointer);
+      document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [moreMenuPropertyId]);
 
   const refreshProperties = async () => {
     try {
@@ -332,6 +342,15 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     await refreshProperties();
   };
 
+  const handleAssignPropertyToCabinet = async (propertyId: string, cabinetId: string) => {
+    const cabinet = cabinets.find((item) => item.id === cabinetId);
+    if (!cabinet) return;
+    await assignPropertiesToCabinet(cabinetId, [propertyId]);
+    showToast(`Filed property into "${cabinet.name}"`);
+    await refreshCabinets();
+    await refreshProperties();
+  };
+
   const handleRemoveFromCabinet = async (property: Property) => {
     const cabinetName = cabinets.find((c) => c.id === property.cabinetId)?.name || 'its cabinet';
     if (
@@ -402,7 +421,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-          <Archive className="w-4 h-4 text-emerald-700" />
+          <Archive className="w-4 h-4 text-neutral" />
           <h3 className="text-[#2f2417] font-serif text-lg font-bold">Filing Cabinet</h3>
           <span className="text-[10px] text-[#7c6a57]">Organize where each property record is filed</span>
           </div>
@@ -500,7 +519,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
         )}
         <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
           <span className="text-[10px] text-[#7c6a57]">Showing {filteredProperties.length} of {cabinetFilteredProperties.length} listings</span>
-          <button type="button" onClick={clearPropertyFilters} className="text-xs font-bold text-emerald-800 underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-emerald-700 focus-visible:outline-offset-2">Clear all</button>
+          <button type="button" onClick={clearPropertyFilters} className="text-xs font-bold text-brand underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] focus-visible:outline-offset-2">Clear all</button>
         </div>
       </div>
 
@@ -542,48 +561,27 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <p className="px-5 py-2 border-b border-[#d6c7b2] text-[10px] text-[#7c6a57]">
-              Scroll horizontally to view all columns and actions.
-            </p>
             <table className="admin-table admin-properties-table w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-[#d6c7b2] text-[10px] font-bold uppercase tracking-wider text-[#4d5e4d]">
-                  <th className="p-4 min-w-[3.25rem] w-12 text-center">#</th>
                   <th className="p-4 min-w-[13rem]">Property</th>
-                  <th className="p-4 min-w-[7rem]">Owner</th>
-                  <th className="p-4 min-w-[8rem]">Location</th>
                   <th className="p-4 min-w-[6.5rem]">Type</th>
-                  <th className="p-4 min-w-[9.5rem]">Deed / Tax / Survey</th>
-                  {selectedFilter === 'all' && <th className="p-4 min-w-[7rem]">Filing Cabinet</th>}
                   <th className="p-4 min-w-[7rem] text-right">Price</th>
                   <th className="p-4 min-w-[5.5rem]">Status</th>
-                  <th className="p-4 min-w-[10.5rem] text-right">Actions</th>
+                  <th className="p-4 min-w-[14rem] text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#ded2c0]">
-                {filteredProperties.map((p, index) => {
-                  const propCabinet = p.cabinetId ? cabinets.find((c) => c.id === p.cabinetId) : null;
+                {filteredProperties.map((p) => {
                   return (
                     <tr key={p.id} className="transition-colors">
-                      <td className="px-4 text-center font-mono font-bold text-[#7c6a57] whitespace-nowrap">
-                        {index + 1}
-                      </td>
                       <td className="px-4">
                         <div className="font-bold text-[#223127] text-sm leading-snug whitespace-normal break-words">
                           {p.name}
                         </div>
-                        <div className="text-[11px] text-[#4d5e4d] mt-1 leading-snug">
-                          Size: {getLotSize(p).toLocaleString()} sqm
+                        <div className="text-[11px] text-[#4d5e4d] mt-1 leading-snug break-words">
+                          {p.location || 'Location not provided'} · {getLotSize(p).toLocaleString()} sqm
                         </div>
-                        <div className="text-[11px] text-[#4d5e4d] font-mono leading-snug whitespace-normal break-all">
-                          GPS: {p.lat.toFixed(5)}, {p.lng.toFixed(5)}
-                        </div>
-                      </td>
-                      <td className="px-4 text-[#3d4a3d] font-medium whitespace-normal break-words leading-snug">
-                        {p.owner || '—'}
-                      </td>
-                      <td className="px-4 text-[#3d4a3d] font-semibold whitespace-normal break-words leading-snug">
-                        {p.location}
                       </td>
                       <td className="px-4">
                         <span
@@ -592,33 +590,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
                           {p.type}
                         </span>
                       </td>
-                      <td className="px-4">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <ComplianceIndicator kind="deed" status={p.documents?.deed || 'pending'} />
-                          <ComplianceIndicator kind="tax" status={p.documents?.tax || 'pending'} />
-                          <ComplianceIndicator kind="survey" status={p.documents?.survey || 'pending'} />
-                        </div>
-                      </td>
-                      {selectedFilter === 'all' && (
-                        <td className="px-4">
-                          {propCabinet ? (
-                            <span
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold border border-black/10"
-                              style={{
-                                background: CABINET_COLOR_STYLES[propCabinet.color].badgeBg,
-                                color: CABINET_COLOR_STYLES[propCabinet.color].badgeText,
-                              }}
-                            >
-                              <Archive className="w-3 h-3" /> {propCabinet.name}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-bold rounded-md bg-amber-100 text-amber-950 border border-amber-700/35">
-                              Unassigned
-                            </span>
-                          )}
-                        </td>
-                      )}
-                      <td className="px-4 text-right font-bold text-emerald-900 font-mono text-sm whitespace-nowrap">
+                      <td className="px-4 text-right font-bold text-neutral-dark font-mono text-sm whitespace-nowrap">
                         {formatPrice(p.price)}
                       </td>
                       <td className="px-4">{getStatusBadge(p.status)}</td>
@@ -626,42 +598,37 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
                         <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                           <button
                             type="button"
+                            onClick={() => handleViewPropertyClick(p)}
+                            className="admin-icon-btn rounded-lg cursor-pointer"
+                            title="View Property"
+                            aria-label={`View ${p.name}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleEditPropertyClick(p)}
                             className="admin-icon-btn rounded-lg cursor-pointer"
-                            title="Edit Listing"
-                            aria-label="Edit Listing"
+                            title="Edit Property"
+                            aria-label={`Edit ${p.name}`}
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleAuditPropertyClick(p)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (moreMenuPropertyId === p.id) setMoreMenuPropertyId(null);
+                              else openMoreMenu(p, event.currentTarget);
+                            }}
                             className="admin-icon-btn rounded-lg cursor-pointer"
-                            title="AI Compliance Audit"
-                            aria-label="AI Compliance Audit"
+                            title="More actions"
+                            aria-label={`More actions for ${p.name}`}
+                            aria-haspopup="menu"
+                            aria-expanded={moreMenuPropertyId === p.id}
+                            aria-controls={moreMenuPropertyId === p.id ? 'property-row-actions-menu' : undefined}
                           >
-                            <Sparkles className="w-4 h-4" />
-                          </button>
-                          {p.cabinetId && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveFromCabinet(p)}
-                              className="admin-icon-btn admin-icon-btn--warn rounded-lg cursor-pointer"
-                              title="Remove from Filing Cabinet (does not delete the property)"
-                              aria-label="Remove from Filing Cabinet"
-                            >
-                              <FolderMinus className="w-4 h-4" />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteProperty(p.id, p.name)}
-                            disabled={deletingId === p.id}
-                            className="admin-icon-btn admin-icon-btn--danger rounded-lg cursor-pointer"
-                            title="Delete Listing"
-                            aria-label="Delete Listing"
-                          >
-                            <Trash2 className="w-4 h-4" />
+                            <MoreHorizontal className="w-4 h-4" aria-hidden="true" />
                           </button>
                         </div>
                       </td>
@@ -674,11 +641,81 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
         )}
       </div>
 
+      {moreMenuPropertyId && createPortal((() => {
+        const menuProperty = properties.find((property) => property.id === moreMenuPropertyId);
+        if (!menuProperty) return null;
+        const menuItemClass = 'flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs font-semibold text-[#3d4a3d] transition-colors hover:bg-[#f1f5f9] focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[var(--color-brand)]';
+        return (
+          <div
+            ref={moreMenuRef}
+            id="property-row-actions-menu"
+            role="menu"
+            aria-label={`Actions for ${menuProperty.name}`}
+            onKeyDown={handleMoreMenuKeyDown}
+            className="fixed z-[10001] w-56 rounded-xl border border-[#d6c7b2] bg-white p-1.5 shadow-xl"
+            style={{ top: moreMenuPosition.top, left: moreMenuPosition.left }}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              className={menuItemClass}
+              onClick={(event) => {
+                event.stopPropagation();
+                setMoreMenuPropertyId(null);
+                handleAuditPropertyClick(menuProperty);
+              }}
+            >
+              <Sparkles className="h-4 w-4 text-neutral" aria-hidden="true" /> AI Compliance Audit
+            </button>
+            {menuProperty.cabinetId && (
+              <button
+                type="button"
+                role="menuitem"
+                className={menuItemClass}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMoreMenuPropertyId(null);
+                  void handleRemoveFromCabinet(menuProperty);
+                }}
+              >
+                <FolderMinus className="h-4 w-4 text-neutral" aria-hidden="true" /> Remove from Filing Cabinet
+              </button>
+            )}
+            <div className="my-1 border-t border-[#e8dfd3]" role="separator" />
+            <button
+              type="button"
+              role="menuitem"
+              disabled={deletingId === menuProperty.id}
+              className={`${menuItemClass} text-danger hover:bg-[var(--color-danger-bg)] disabled:cursor-not-allowed disabled:opacity-50`}
+              onClick={(event) => {
+                event.stopPropagation();
+                setMoreMenuPropertyId(null);
+                void handleDeleteProperty(menuProperty.id, menuProperty.name);
+              }}
+            >
+              <Trash2 className="h-4 w-4 text-danger" aria-hidden="true" /> Delete Property
+            </button>
+          </div>
+        );
+      })(), document.body)}
+
       <PropertyFormModal
         isOpen={isPropertyModalOpen}
         property={selectedProperty}
         onClose={() => setIsPropertyModalOpen(false)}
         onSave={handleSaveProperty}
+      />
+
+      <ViewPropertyModal
+        isOpen={isViewPropertyModalOpen}
+        property={selectedProperty}
+        cabinets={cabinets}
+        onClose={() => setIsViewPropertyModalOpen(false)}
+        onAssignCabinet={handleAssignPropertyToCabinet}
+        onEdit={(property) => {
+          setIsViewPropertyModalOpen(false);
+          handleEditPropertyClick(property);
+        }}
       />
 
       <AuditModal

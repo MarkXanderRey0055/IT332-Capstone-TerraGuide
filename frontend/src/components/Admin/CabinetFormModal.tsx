@@ -81,7 +81,7 @@ export const CabinetFormModal: React.FC<CabinetFormModalProps> = ({
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#d6c7b2]">
           <h3 id="cabinet-form-modal-title" className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
-            <Archive className="w-4 h-4 text-emerald-700" />
+            <Archive className="w-4 h-4 text-neutral" />
             {cabinet ? 'Edit Filing Cabinet' : 'Create Filing Cabinet'}
           </h3>
           <button
@@ -97,7 +97,7 @@ export const CabinetFormModal: React.FC<CabinetFormModalProps> = ({
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
             <label className="text-[10px] uppercase tracking-wider font-bold text-[#7c6a57] block mb-1">
-              Cabinet Name <span className="text-red-500">*</span>
+              Cabinet Name <span className="text-warning">*</span>
             </label>
             <input
               type="text"
@@ -126,7 +126,7 @@ export const CabinetFormModal: React.FC<CabinetFormModalProps> = ({
 
           <div>
             <label className="text-[10px] uppercase tracking-wider font-bold text-[#7c6a57] block mb-1">
-              Capacity (number of slots) <span className="text-red-500">*</span>
+              Capacity (number of slots) <span className="text-warning">*</span>
             </label>
             <input
               type="number"
@@ -161,10 +161,10 @@ export const CabinetFormModal: React.FC<CabinetFormModalProps> = ({
                     title={style.label}
                     className="w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer border-2"
                     style={{
-                      background: style.handle,
-                      borderColor: isSelected ? style.text : 'transparent',
-                      boxShadow: isSelected ? `0 0 0 2px ${style.badgeBg}` : 'none',
-                      outline: isSelected ? `1px solid ${style.text}` : 'none',
+                      background: style.accent,
+                      borderColor: isSelected ? 'var(--color-brand)' : 'transparent',
+                      boxShadow: isSelected ? '0 0 0 2px color-mix(in srgb, var(--color-brand) 22%, transparent)' : 'none',
+                      outline: isSelected ? '1px solid var(--color-brand)' : 'none',
                       outlineOffset: '2px',
                     }}
                   />
@@ -173,7 +173,7 @@ export const CabinetFormModal: React.FC<CabinetFormModalProps> = ({
             </div>
           </div>
 
-          {errorMsg && <p className="text-red-500 text-xs">{errorMsg}</p>}
+          {errorMsg && <p className="text-warning text-xs">{errorMsg}</p>}
 
           <div className="pt-2 flex justify-end gap-3">
             <button

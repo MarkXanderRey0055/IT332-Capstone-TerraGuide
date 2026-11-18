@@ -88,7 +88,7 @@ export const AddPropertiesToCabinetModal: React.FC<AddPropertiesToCabinetModalPr
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#d6c7b2]">
           <div>
             <h3 id="add-properties-cabinet-modal-title" className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
-              <FolderPlus className="w-4 h-4 text-emerald-700" />
+              <FolderPlus className="w-4 h-4 text-neutral" />
               Add Properties to {cabinet.name}
             </h3>
             <p className="text-[10px] text-[#7c6a57] mt-1">
@@ -152,7 +152,7 @@ export const AddPropertiesToCabinetModal: React.FC<AddPropertiesToCabinetModalPr
                 <label
                   key={p.id}
                   className={`flex items-center justify-between gap-3 p-3 rounded-xl border text-xs cursor-pointer transition-colors ${
-                    isChecked ? 'bg-emerald-500/10 border-emerald-600/40' : 'admin-panel-muted border-transparent'
+                    isChecked ? 'selection-brand' : 'admin-panel-muted border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -169,7 +169,7 @@ export const AddPropertiesToCabinetModal: React.FC<AddPropertiesToCabinetModalPr
                       <div className="font-bold text-[#2f2417] flex items-center gap-1.5 flex-wrap">
                         <span className="truncate">{p.name}</span>
                         {currentCabinet && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 uppercase tracking-wide shrink-0">
+                          <span className="status-neutral text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0">
                             Move from {currentCabinet.name}
                           </span>
                         )}
@@ -188,12 +188,12 @@ export const AddPropertiesToCabinetModal: React.FC<AddPropertiesToCabinetModalPr
 
         <div className="px-6 py-4 border-t border-[#d6c7b2] space-y-3">
           {exceedsCapacity && (
-            <p className="text-[10px] font-bold text-red-600 bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl text-center">
+            <p className="status-warning text-[10px] font-bold p-2.5 rounded-xl text-center">
               This cabinet only has {cabinet.remainingCapacity} slot{cabinet.remainingCapacity === 1 ? '' : 's'}{' '}
               remaining, but {selectedIds.length} properties are selected.
             </p>
           )}
-          {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+          {errorMsg && <p className="text-warning text-xs text-center">{errorMsg}</p>}
           <div className="flex justify-end gap-3">
             <button
               type="button"

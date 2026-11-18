@@ -62,13 +62,13 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
           onClick={() => onFilterChange('all')}
           className={`min-h-[9rem] p-3.5 rounded-xl border text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-emerald-700 focus-visible:outline-offset-2 flex flex-col ${
             selectedFilter === 'all'
-              ? 'admin-panel border-emerald-700/50 ring-2 ring-emerald-700/20'
+              ? 'admin-panel border-[var(--color-brand)] ring-2 ring-[var(--color-brand)]/20'
               : 'admin-panel-muted border-transparent hover:border-[#d6c7b2]'
           }`}
         >
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">All Listings</span>
-            <Home className="w-4 h-4 text-emerald-700/70" />
+            <Home className="w-4 h-4 text-neutral" />
           </div>
           <div className="text-2xl font-bold text-[#2f2417]">{totalCount}</div>
           <div className="text-[10px] text-[#5d503f] mt-1">Every registered property record</div>
@@ -78,15 +78,15 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
         <button
           type="button"
           onClick={() => onFilterChange('unassigned')}
-          className={`min-h-[9rem] p-3.5 rounded-xl border text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-amber-700 focus-visible:outline-offset-2 flex flex-col ${
+            className={`min-h-[9rem] p-3.5 rounded-xl border text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] focus-visible:outline-offset-2 flex flex-col ${
             selectedFilter === 'unassigned'
-              ? 'admin-panel border-amber-600/50 ring-2 ring-amber-600/20'
+              ? 'admin-panel border-[var(--color-neutral-border)] ring-2 ring-[var(--color-neutral-border)]/40'
               : 'admin-panel-muted border-transparent hover:border-[#d6c7b2]'
           }`}
         >
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Unassigned</span>
-            <AlertCircle className="w-4 h-4 text-amber-600" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral">Unassigned</span>
+            <AlertCircle className="w-4 h-4 text-neutral" />
           </div>
           <div className="text-2xl font-bold text-[#2f2417]">{unassignedCount}</div>
           <div className="text-[10px] text-[#5d503f] mt-1">
@@ -115,27 +115,19 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
               tabIndex={0}
               aria-pressed={isSelected}
               aria-label={`Select cabinet ${cabinet.name}`}
-              className="relative min-h-[9rem] rounded-xl border overflow-hidden cursor-pointer transition-all group focus-visible:outline-2 focus-visible:outline-emerald-700 focus-visible:outline-offset-2 admin-panel-muted"
-              style={{
-                borderColor: isSelected ? style.border : 'rgba(0,0,0,0.08)',
-                boxShadow: isSelected ? `0 0 0 2px ${style.badgeBg}` : 'none',
-                background: isSelected ? style.header : undefined,
-              }}
+              className={`relative min-h-[9rem] rounded-xl border overflow-hidden cursor-pointer transition-all group focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] focus-visible:outline-offset-2 admin-panel-muted ${isSelected ? 'border-[var(--color-brand)] ring-2 ring-[var(--color-brand)]/20' : 'border-transparent hover:border-[#d6c7b2]'}`}
             >
-              {/* "Drawer handle" accent bar */}
-              <div className="h-1.5 w-full" style={{ background: style.handle }} />
-
               <div className="p-3.5">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-1.5 min-w-0">
                     {isSelected ? (
-                      <FolderOpen className="w-4 h-4 shrink-0" style={{ color: style.text }} />
+                      <FolderOpen className="w-4 h-4 shrink-0 text-neutral" />
                     ) : (
-                      <Archive className="w-4 h-4 shrink-0" style={{ color: style.text }} />
+                      <Archive className="w-4 h-4 shrink-0 text-neutral" />
                     )}
+                    <span className="cabinet-accent-dot" style={{ '--cabinet-accent': style.accent } as React.CSSProperties} aria-hidden="true" />
                     <span
-                      className="text-[10px] font-bold uppercase tracking-wider truncate"
-                      style={{ color: style.text }}
+                      className="text-[10px] font-bold uppercase tracking-wider truncate text-neutral"
                       title={cabinet.name}
                     >
                       {cabinet.name}
@@ -153,7 +145,7 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
                       title="Edit Cabinet"
                       aria-label="Edit cabinet"
                     >
-                      <Edit2 className="w-3 h-3" style={{ color: style.text }} />
+                    <Edit2 className="w-3 h-3 text-neutral" />
                     </button>
                     <button
                       type="button"
@@ -165,7 +157,7 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
                       title="Delete Cabinet"
                       aria-label="Delete cabinet"
                     >
-                      <Trash2 className="w-3 h-3 text-red-600" />
+                      <Trash2 className="w-3 h-3 text-danger" />
                     </button>
                   </div>
                 </div>
@@ -176,7 +168,7 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
                   </p>
                 )}
 
-                <FolderRow count={cabinet.filedCount} color={style.text} />
+                <FolderRow count={cabinet.filedCount} color="var(--color-neutral)" />
 
                 <div className="text-lg font-bold text-[#2f2417] mt-2">
                   {cabinet.filedCount} <span className="text-xs font-semibold text-[#5d503f]">/ {cabinet.capacity} folders</span>
@@ -187,11 +179,11 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
                     className="h-full transition-all"
                     style={{
                       width: `${Math.min((cabinet.filedCount / cabinet.capacity) * 100, 100)}%`,
-                      background: isFull ? '#c04c4c' : style.handle,
+                      background: isFull ? 'var(--color-warning)' : 'var(--color-neutral)',
                     }}
                   />
                 </div>
-                <div className="text-[9px] mt-1 font-bold" style={{ color: isFull ? '#c04c4c' : style.text }}>
+                <div className={`text-[9px] mt-1 font-bold ${isFull ? 'text-warning' : 'text-neutral'}`}>
                   {isFull ? 'Full capacity' : `${cabinet.remainingCapacity} slots remaining`}
                 </div>
               </div>
@@ -206,15 +198,9 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
         <div className="admin-panel rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <Archive className="w-4 h-4" style={{ color: CABINET_COLOR_STYLES[selectedCabinet.color].text }} />
+              <Archive className="w-4 h-4 text-neutral" />
               <h3 className="text-[#2f2417] font-serif text-lg font-bold">{selectedCabinet.name}</h3>
-              <span
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                style={{
-                  background: CABINET_COLOR_STYLES[selectedCabinet.color].badgeBg,
-                  color: CABINET_COLOR_STYLES[selectedCabinet.color].badgeText,
-                }}
-              >
+              <span className="status-neutral text-[10px] font-bold px-2 py-0.5 rounded-full">
                 {selectedCabinet.filedCount} / {selectedCabinet.capacity} folders
               </span>
             </div>
@@ -234,7 +220,7 @@ export const FilingCabinetPanel: React.FC<FilingCabinetPanelProps> = ({
             <button
               type="button"
               onClick={() => onDeleteCabinet(selectedCabinet)}
-              className="admin-button-secondary flex items-center gap-1.5 px-3.5 py-2 text-[#7c6a57] hover:text-red-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              className="admin-button-secondary flex items-center gap-1.5 px-3.5 py-2 text-danger hover:text-danger rounded-xl text-xs font-bold transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" /> Delete Cabinet
             </button>
