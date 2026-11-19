@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   LayoutDashboard,
   Home,
@@ -14,19 +14,26 @@ import {
   Sparkles,
   Gauge,
   RefreshCw,
+  AlertTriangle,
+  ShieldCheck,
+  Loader2,
 } from 'lucide-react';
-import { getProperties } from '../../services/PropertyService';
+import { getProperties, getPropertyById } from '../../services/PropertyService';
 import { getAiUsageStatus, type AIUsageStatus } from '../../services/AIUsageService';
 import { getPendingTransactionCount } from '../../services/TransactionService';
 import {
   getDashboardSummary,
   getSalesPerformance,
   getRecentActivity,
+  getAttentionProperties,
   type DashboardSummary,
   type SalesPerformance,
   type RecentActivityItem,
   type RecentActivityType,
+  type AttentionProperty,
+  type RiskLevel,
 } from '../../services/AnalyticsService';
+import { AuditModal } from '../../components/Admin/AuditModal';
 import { AdminTransactions } from './AdminTransactions';
 import { AdminProperties } from './AdminProperties';
 import { AdminBuyers } from './AdminBuyers';
@@ -82,11 +89,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null);
   const [salesPerformance, setSalesPerformance] = useState<SalesPerformance | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>([]);
+  const [attentionProperties, setAttentionProperties] = useState<AttentionProperty[]>([]);
+  const [isLoadingAttention, setIsLoadingAttention] = useState(true);
+  const [attentionError, setAttentionError] = useState('');
+  const [attentionRefreshToken, setAttentionRefreshToken] = useState(0);
+  const [openingAuditPropertyId, setOpeningAuditPropertyId] = useState<string | null>(null);
+  const [pendingEditPropertyId, setPendingEditPropertyId] = useState<string | null>(null);
+  const [auditProperty, setAuditProperty] = useState<Property | null>(null);
+  const [isAttentionAuditOpen, setIsAttentionAuditOpen] = useState(false);
   const [isLoadingDashboardData, setIsLoadingDashboardData] = useState(true);
   const [activityScrollCueDirection, setActivityScrollCueDirection] = useState<'down' | 'up' | null>(null);
   const [isActivityCardHovered, setIsActivityCardHovered] = useState(false);
   const [dashboardRefreshToken, setDashboardRefreshToken] = useState(0);
   const activityListRef = useRef<HTMLDivElement | null>(null);
+  const aiUsageRefreshInFlightRef = useRef(false);
+  const aiUsageRefreshQueuedRef = useRef(false);
+  const clearPendingEditProperty = useCallback(() => setPendingEditPropertyId(null), []);
+
+  const riskStyles: Record<RiskLevel, string> = {
+    Low: 'bg-emerald-100 text-emerald-800',
+    Medium: 'bg-amber-100 text-amber-800',
+    High: 'bg-rose-100 text-rose-800',
+  };
 
   const navItems: NavItem[] = NAV_ITEMS;
 
@@ -209,22 +233,40 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     };
   }, [recentActivity, isLoadingDashboardData]);
 
-  const fetchAiUsage = async () => {
-    try {
-      const status = await getAiUsageStatus();
-      setAiUsage(status);
-      setAiUsageError('');
-    } catch (error) {
-      setAiUsageError(
-        error instanceof Error ? error.message : 'Could not load AI usage status.'
-      );
+  const fetchAiUsage = useCallback(async () => {
+    if (aiUsageRefreshInFlightRef.current) {
+      // Coalesce repeated activations into one follow-up request so the final
+      // displayed snapshot reflects usage changes made during the active read.
+      aiUsageRefreshQueuedRef.current = true;
+      return;
     }
-  };
+
+    aiUsageRefreshInFlightRef.current = true;
+    setIsLoadingAiUsage(true);
+    try {
+      do {
+        aiUsageRefreshQueuedRef.current = false;
+        try {
+          const status = await getAiUsageStatus();
+          setAiUsage(status);
+          setAiUsageError('');
+        } catch (error) {
+          setAiUsageError(
+            error instanceof Error ? error.message : 'Could not load AI usage status.'
+          );
+        }
+      } while (aiUsageRefreshQueuedRef.current);
+    } finally {
+      aiUsageRefreshInFlightRef.current = false;
+      setIsLoadingAiUsage(false);
+    }
+  }, []);
 
   useEffect(() => {
-    setIsLoadingAiUsage(true);
-    fetchAiUsage().finally(() => setIsLoadingAiUsage(false));
-  }, []);
+    if (activeNav === 'dashboard') {
+      void fetchAiUsage();
+    }
+  }, [activeNav, fetchAiUsage]);
 
   useEffect(() => {
     getPendingTransactionCount()
@@ -232,10 +274,51 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       .catch(() => setPendingTransactionCount(null));
   }, [dashboardRefreshToken]);
 
-  const handleRefreshAiUsage = async () => {
-    setIsLoadingAiUsage(true);
-    await fetchAiUsage();
-    setIsLoadingAiUsage(false);
+  const handleRefreshAiUsage = () => {
+    void fetchAiUsage();
+  };
+
+  useEffect(() => {
+    if (activeNav !== 'dashboard') return;
+
+    let isCancelled = false;
+    const loadAttentionProperties = async () => {
+      setIsLoadingAttention(true);
+      setAttentionError('');
+      try {
+        const items = await getAttentionProperties();
+        if (!isCancelled) setAttentionProperties(items);
+      } catch (error) {
+        if (isCancelled) return;
+        setAttentionError(error instanceof Error ? error.message : 'Could not load properties requiring attention.');
+      } finally {
+        if (!isCancelled) setIsLoadingAttention(false);
+      }
+    };
+
+    void loadAttentionProperties();
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeNav, dashboardRefreshToken, attentionRefreshToken]);
+
+  const openAttentionAudit = async (propertyId: string) => {
+    setOpeningAuditPropertyId(propertyId);
+    try {
+      const property = await getPropertyById(propertyId);
+      setAuditProperty(property);
+      setIsAttentionAuditOpen(true);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : 'Could not open the property audit.');
+    } finally {
+      setOpeningAuditPropertyId(null);
+    }
+  };
+
+  const openAttentionPropertyForEdit = (propertyId: string) => {
+    setPendingEditPropertyId(propertyId);
+    setActiveNav('properties');
+    setSidebarOpen(false);
   };
 
   useEffect(() => {
@@ -409,7 +492,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     : activeNav === 'transactions'
                       ? 'Track deals from reservation through to a completed sale.'
                       : activeNav === 'activities'
-                        ? 'Inquiries and site-visit requests from buyers.'
+                        ? 'Review and manage buyer inquiries and site visit requests. Update request statuses and send responses to buyers directly from this page.'
                         : activeNav === 'settings'
                           ? 'Export and back up your property, buyer, and transaction records.'
                           : 'Manage listings, buyers, and transactions from one place.'}
@@ -462,6 +545,97 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     </div>
                   ))}
                 </div>
+
+                <section className="admin-panel rounded-2xl p-6" aria-labelledby="attention-properties-heading">
+                  <div className="flex items-center justify-between gap-3 border-b border-[#d6c7b2] pb-4 mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 rounded-lg bg-rose-50" aria-hidden="true">
+                        <AlertTriangle className="w-4 h-4 text-rose-600" />
+                      </span>
+                      <div>
+                        <h2 id="attention-properties-heading" className="text-[#2f2417] font-semibold text-base">Properties Requiring Attention</h2>
+                        <p className="text-[#7c6a57] text-xs mt-0.5">
+                          {isLoadingAttention && attentionProperties.length === 0
+                            ? 'Loading properties…'
+                            : `${attentionProperties.length} ${attentionProperties.length === 1 ? 'property' : 'properties'}`}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAttentionRefreshToken((current) => current + 1)}
+                      disabled={isLoadingAttention}
+                      aria-label="Refresh properties requiring attention"
+                      className="text-[#5d503f] hover:text-[#2f2417] bg-transparent border-none cursor-pointer p-2 disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isLoadingAttention ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+
+                  {attentionError ? (
+                    <div role="alert" className="flex flex-wrap items-center justify-between gap-3 text-sm text-rose-700">
+                      <span>{attentionError}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAttentionRefreshToken((current) => current + 1)}
+                        className="underline font-medium"
+                      >Retry</button>
+                    </div>
+                  ) : isLoadingAttention && attentionProperties.length === 0 ? (
+                    <p role="status" className="text-[#7c6a57] text-sm">Loading properties requiring attention…</p>
+                  ) : attentionProperties.length === 0 ? (
+                    <div className="text-center py-5">
+                      <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto mb-2" strokeWidth={1.5} />
+                      <p className="text-[#7c6a57] text-sm">Nothing needs attention right now.</p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                      {attentionProperties.map((item) => (
+                        <li key={item.propertyId} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl bg-white/50 p-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-[#2f2417] text-sm font-medium">{item.name}</p>
+                              <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${riskStyles[item.riskLevel]}`}>
+                                {item.riskLevel} risk
+                              </span>
+                            </div>
+                            <p className="text-[#5d503f] text-xs mt-1">
+                              Compliance score: {item.complianceScore === null ? 'Not available' : `${item.complianceScore}%`}
+                            </p>
+                            {item.reasons.length > 0 && (
+                              <ul className="mt-1 text-xs text-[#7c6a57] list-disc list-inside">
+                                {item.reasons.map((reason) => <li key={reason}>{reason}</li>)}
+                              </ul>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => openAttentionPropertyForEdit(item.propertyId)}
+                              aria-label={`Edit property ${item.name}`}
+                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#c9b89f] px-3 py-2 text-xs font-semibold text-[#45654d] hover:bg-[#f2f5ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#45654d]"
+                            >
+                              <Home className="w-3.5 h-3.5" />
+                              Edit Property
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void openAttentionAudit(item.propertyId)}
+                              disabled={openingAuditPropertyId === item.propertyId}
+                              aria-label={`Open AI Compliance Audit for ${item.name}`}
+                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#c9b89f] px-3 py-2 text-xs font-semibold text-[#45654d] hover:bg-[#f2f5ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#45654d] disabled:opacity-50"
+                            >
+                              {openingAuditPropertyId === item.propertyId
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <Sparkles className="w-3.5 h-3.5" />}
+                              AI Compliance Audit
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
 
                 {/* AI Usage — operational status card, not a second analytics page */}
                 <div className="admin-panel rounded-2xl p-6">
@@ -649,6 +823,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 onToast={setToast}
                 isLoading={isLoadingProperties}
                 onDataChanged={refreshDashboardCards}
+                pendingEditPropertyId={pendingEditPropertyId}
+                onPendingEditHandled={clearPendingEditProperty}
               />
             )}
 
@@ -667,6 +843,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               activeNav !== 'buyers' &&
               activeNav !== 'analytics' &&
               activeNav !== 'transactions' &&
+              activeNav !== 'activities' &&
               activeNav !== 'settings' && (
               <div className="admin-panel rounded-2xl p-8 text-center">
                 <div className="admin-button w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -682,6 +859,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           </div>
         </main>
       </div>
+
+      <AuditModal
+        isOpen={isAttentionAuditOpen}
+        property={auditProperty}
+        onClose={() => {
+          setIsAttentionAuditOpen(false);
+          setAttentionRefreshToken((current) => current + 1);
+        }}
+      />
 
       {logoutConfirmOpen && (
         <div className="fixed inset-0 z-[700] flex items-center justify-center p-4">
