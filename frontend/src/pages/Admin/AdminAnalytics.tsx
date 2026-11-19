@@ -9,6 +9,7 @@ import {
   PointElement,
   Tooltip,
   Legend,
+  type Plugin,
 } from 'chart.js';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import {
@@ -33,14 +34,12 @@ import {
 import {
   getDashboardSummary,
   getChartData,
-  getAttentionProperties,
   getPropertyRankings,
   getBuyerIntelligence,
   getSalesPerformance,
   generatePortfolioInsights,
   type DashboardSummary,
   type ChartData as AnalyticsChartData,
-  type AttentionProperty,
   type PropertyRankingsResult,
   type BuyerIntelligence,
   type SalesPerformance,
@@ -98,6 +97,41 @@ const horizontalBarOptions = {
   indexAxis: 'y' as const,
 };
 
+const preferredLocationsOptions = {
+  ...horizontalBarOptions,
+  layout: { padding: { right: 18 } },
+  scales: {
+    ...horizontalBarOptions.scales,
+    x: { ...horizontalBarOptions.scales.x, grace: '20%' },
+  },
+};
+
+const preferredLocationsValueLabels: Plugin<'bar'> = {
+  id: 'preferred-locations-value-labels',
+  afterDatasetsDraw: (chart) => {
+    const dataset = chart.data.datasets[0];
+    const meta = chart.getDatasetMeta(0);
+    if (!dataset || !chart.isDatasetVisible(0)) return;
+
+    const context = chart.ctx;
+    context.save();
+    context.font = '600 11px sans-serif';
+    context.fillStyle = LEGEND_COLOR;
+    context.textAlign = 'left';
+    context.textBaseline = 'middle';
+
+    meta.data.forEach((element, index) => {
+      if (!chart.getDataVisibility(index)) return;
+      const value = Number(dataset.data[index] ?? 0);
+      const { x, y, width } = (element as BarElement).getProps(['x', 'y', 'width'], true);
+      if (x === null || y === null || width === null) return;
+      context.fillText(String(value), x + width / 2 + 6, y);
+    });
+
+    context.restore();
+  },
+};
+
 const lineOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -120,6 +154,55 @@ const doughnutOptions = {
       labels: { color: LEGEND_COLOR, font: { size: 11 }, padding: 14 },
     },
     tooltip: TOOLTIP_STYLE,
+  },
+};
+
+const preferredTypesSliceLabels: Plugin<'doughnut'> = {
+  id: 'preferred-types-slice-labels',
+  afterDatasetsDraw: (chart) => {
+    if (!chart.isDatasetVisible(0)) return;
+
+    const dataset = chart.data.datasets[0];
+    const meta = chart.getDatasetMeta(0);
+    if (!dataset || !meta.data.length) return;
+
+    const visibleTotal = dataset.data.reduce((total, value, index) => {
+      return chart.getDataVisibility(index) ? total + Number(value ?? 0) : total;
+    }, 0);
+    if (visibleTotal <= 0) return;
+
+    const context = chart.ctx;
+    context.save();
+    context.font = '600 11px sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.lineJoin = 'round';
+    context.lineWidth = 3;
+    context.strokeStyle = 'rgba(34, 49, 39, 0.9)';
+    context.fillStyle = '#ffffff';
+
+    meta.data.forEach((element, index) => {
+      const value = Number(dataset.data[index] ?? 0);
+      if (!chart.getDataVisibility(index) || value <= 0) return;
+
+      const arc = element as ArcElement;
+      const { x, y, startAngle, endAngle, innerRadius, outerRadius } = arc.getProps(
+        ['x', 'y', 'startAngle', 'endAngle', 'innerRadius', 'outerRadius'],
+        true
+      );
+      if (x === null || y === null) return;
+      const midpointAngle = (startAngle + endAngle) / 2;
+      const midpointRadius = (innerRadius + outerRadius) / 2;
+      const labelX = x + Math.cos(midpointAngle) * midpointRadius;
+      const labelY = y + Math.sin(midpointAngle) * midpointRadius;
+      const percentage = Math.round((value / visibleTotal) * 100);
+      const label = `${percentage}%`;
+
+      context.strokeText(label, labelX, labelY);
+      context.fillText(label, labelX, labelY);
+    });
+
+    context.restore();
   },
 };
 
@@ -193,7 +276,6 @@ const MetricTooltip: React.FC<{ tooltip: string }> = ({ tooltip }) => (
 export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [charts, setCharts] = useState<AnalyticsChartData | null>(null);
-  const [attentionProperties, setAttentionProperties] = useState<AttentionProperty[]>([]);
   const [rankingsResult, setRankingsResult] = useState<PropertyRankingsResult | null>(null);
   const [buyerIntel, setBuyerIntel] = useState<BuyerIntelligence | null>(null);
   const [salesPerf, setSalesPerf] = useState<SalesPerformance | null>(null);
@@ -232,14 +314,12 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
         const [
           summaryData,
           chartData,
-          attentionData,
           rankingsData,
           buyerData,
           salesData,
         ] = await Promise.all([
           getDashboardSummary(),
           getChartData(),
-          getAttentionProperties(),
           getPropertyRankings(),
           getBuyerIntelligence(),
           getSalesPerformance(),
@@ -248,7 +328,6 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
         if (isCancelled) return;
         setSummary(summaryData);
         setCharts(chartData);
-        setAttentionProperties(attentionData);
         setRankingsResult(rankingsData);
         setBuyerIntel(buyerData);
         setSalesPerf(salesData);
@@ -745,39 +824,6 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
               </p>
             </div>
 
-            {/* Properties Requiring Attention */}
-            <div className="admin-panel rounded-2xl p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-1.5 rounded-lg bg-rose-50">
-                  <AlertTriangle className="w-4 h-4 text-rose-500" />
-                </div>
-                <h4 className="text-[#2f2417] font-semibold text-sm">Properties Requiring Attention</h4>
-              </div>
-              {attentionProperties.length === 0 ? (
-                <div className="text-center py-6">
-                  <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto mb-2" strokeWidth={1.5} />
-                  <p className="text-[#7c6a57] text-sm">Nothing needs attention right now.</p>
-                </div>
-              ) : (
-                <ul className="space-y-2 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-[#d6c7b2] scrollbar-track-transparent">
-                  {attentionProperties.map((p) => (
-                    <li key={p.propertyId} className="p-3 rounded-xl bg-white/40 hover:bg-white/60 transition-colors">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-[#2f2417] text-sm font-medium truncate">{p.name}</p>
-                        <RiskBadge level={p.riskLevel} />
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {p.reasons.map((reason) => (
-                          <span key={reason} className="text-[10px] text-[#7c6a57] bg-white/30 px-2 py-0.5 rounded-full">
-                            {reason}
-                          </span>
-                        ))}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
           </>
         )}
       </section>
@@ -848,7 +894,11 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
                     {buyerIntel.preferredTypes.length === 0 ? (
                       <EmptyState message="No data yet." icon={Home} />
                     ) : (
-                      <Doughnut data={preferredTypesChartData} options={doughnutOptions} />
+                      <Doughnut
+                        data={preferredTypesChartData}
+                        options={doughnutOptions}
+                        plugins={[preferredTypesSliceLabels]}
+                      />
                     )}
                   </div>
                 </div>
@@ -861,7 +911,11 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
                     {buyerIntel.preferredLocations.length === 0 ? (
                       <EmptyState message="No data yet." icon={MapPin} />
                     ) : (
-                      <Bar data={preferredLocationsChartData} options={horizontalBarOptions} />
+                      <Bar
+                        data={preferredLocationsChartData}
+                        options={preferredLocationsOptions}
+                        plugins={[preferredLocationsValueLabels]}
+                      />
                     )}
                   </div>
                 </div>

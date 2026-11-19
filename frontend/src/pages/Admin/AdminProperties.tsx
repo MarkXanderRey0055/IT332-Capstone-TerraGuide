@@ -9,7 +9,6 @@ import {
   Eye,
   FolderMinus,
   Archive,
-  X,
   MoreHorizontal,
 } from 'lucide-react';
 import type { Property } from '../../types/types';
@@ -43,6 +42,8 @@ interface AdminPropertiesProps {
   onToast?: (message: string) => void;
   isLoading?: boolean;
   onDataChanged?: () => void;
+  pendingEditPropertyId?: string | null;
+  onPendingEditHandled?: () => void;
 }
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
@@ -85,6 +86,8 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
   onToast,
   isLoading,
   onDataChanged,
+  pendingEditPropertyId,
+  onPendingEditHandled,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -146,6 +149,21 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     setSelectedProperty(property);
     setIsPropertyModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!pendingEditPropertyId || isLoading) return;
+
+    const property = properties.find((item) => item.id === pendingEditPropertyId);
+    if (!property) {
+      onToast?.('That property could not be found. It may have been removed or is no longer available.');
+      onPendingEditHandled?.();
+      return;
+    }
+
+    setSelectedProperty(property);
+    setIsPropertyModalOpen(true);
+    onPendingEditHandled?.();
+  }, [pendingEditPropertyId, isLoading, properties, onPendingEditHandled, onToast]);
 
   const handleAuditPropertyClick = (property: Property) => {
     setAuditProperty(property);
@@ -505,19 +523,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
             Reserved
           </button>
         </div>
-        {(searchQuery || typeFilter || locationFilter || documentStatusFilter || listingStatusFilter || propertySort !== 'latest' || selectedFilter !== 'all') && (
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-[#7c6a57]">Active</span>
-            {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="admin-properties-active-chip">Search: {searchQuery}<X aria-hidden="true" /></button>}
-            {typeFilter && <button type="button" onClick={() => setTypeFilter('')} className="admin-properties-active-chip">Type: {typeFilter}<X aria-hidden="true" /></button>}
-            {locationFilter && <button type="button" onClick={() => setLocationFilter('')} className="admin-properties-active-chip">Location: {locationFilter}<X aria-hidden="true" /></button>}
-            {documentStatusFilter && <button type="button" onClick={() => setDocumentStatusFilter('')} className="admin-properties-active-chip">Documents: {documentStatusFilter}<X aria-hidden="true" /></button>}
-            {listingStatusFilter && <button type="button" onClick={() => setListingStatusFilter('')} className="admin-properties-active-chip">Status: {listingStatusFilter}<X aria-hidden="true" /></button>}
-            {propertySort !== 'latest' && <button type="button" onClick={() => setPropertySort('latest')} className="admin-properties-active-chip">Sort: {propertySort === 'priceAsc' ? 'Low to High' : 'High to Low'}<X aria-hidden="true" /></button>}
-            {selectedFilter !== 'all' && <button type="button" onClick={() => setSelectedFilter('all')} className="admin-properties-active-chip">Cabinet: {selectedFilter === 'unassigned' ? 'Unfiled' : selectedCabinetName ?? 'Selected'}<X aria-hidden="true" /></button>}
-          </div>
-        )}
-        <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
           <span className="text-[10px] text-[#7c6a57]">Showing {filteredProperties.length} of {cabinetFilteredProperties.length} listings</span>
           <button type="button" onClick={clearPropertyFilters} className="text-xs font-bold text-brand underline underline-offset-2 rounded-sm focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] focus-visible:outline-offset-2">Clear all</button>
         </div>

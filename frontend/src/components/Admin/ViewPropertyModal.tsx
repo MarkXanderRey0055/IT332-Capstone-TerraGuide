@@ -89,6 +89,7 @@ export const ViewPropertyModal: React.FC<ViewPropertyModalProps> = ({
   }, [property?.id, property?.cabinetId, isOpen]);
 
   const images = useMemo(() => property?.images?.filter((image) => image.trim()) ?? [], [property]);
+  const hasSingleImage = images.length === 1;
 
   if (!isOpen || !property) return null;
 
@@ -138,8 +139,8 @@ export const ViewPropertyModal: React.FC<ViewPropertyModalProps> = ({
         aria-modal="true"
         aria-labelledby="view-property-title"
         tabIndex={-1}
-        className="admin-panel relative z-[10000] flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-        style={{ background: '#ffffff' }}
+        className="admin-panel relative z-[10000] flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white"
+        style={{ background: '#ffffff', boxShadow: '0 12px 32px rgba(15, 23, 42, 0.18)' }}
       >
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[#e8dfd3] bg-white px-5 py-3.5">
           <div className="min-w-0">
@@ -169,7 +170,39 @@ export const ViewPropertyModal: React.FC<ViewPropertyModalProps> = ({
               <h3 id="property-images-heading" className="flex items-center gap-2 text-[11px] font-bold text-[#2f2417]"><ImageIcon className="h-3.5 w-3.5 text-neutral" aria-hidden="true" /> Property images</h3>
               <span className="text-[10px] text-[#7c6a57]">{images.length} image{images.length === 1 ? '' : 's'}</span>
             </div>
-            {images.length === 0 ? <div className="rounded-xl border border-dashed border-[#cdbda6] bg-[#faf6ef]/60 p-8 text-center text-sm text-[#7c6a57]">No property images available.</div> : <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">{images.map((image, index) => brokenImages.has(image) ? <div key={`${image}-${index}`} className={`${index === 0 ? 'col-span-2 row-span-2' : ''} flex aspect-square flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[#cdbda6] bg-[#faf6ef]/60 p-3 text-center text-[10px] text-[#7c6a57]`}><ImageOff className="h-5 w-5" aria-hidden="true" />Image unavailable</div> : <img key={`${image}-${index}`} src={image} alt={`${readable(property.name)} image ${index + 1}`} className={`${index === 0 ? 'col-span-2 row-span-2' : ''} aspect-square w-full rounded-lg object-cover`} onError={() => setBrokenImages((current) => new Set(current).add(image))} />)}</div>}
+            {images.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-[#cdbda6] bg-[#faf6ef]/60 p-8 text-center text-sm text-[#7c6a57]">
+                No property images available.
+              </div>
+            ) : (
+              <div className={hasSingleImage ? 'grid grid-cols-1' : 'grid grid-cols-3 gap-1.5 sm:grid-cols-4'}>
+                {images.map((image, index) => {
+                  const imageLayoutClass = hasSingleImage
+                    ? 'min-h-48 max-h-72 w-full max-w-full object-cover'
+                    : index === 0
+                      ? 'col-span-2 row-span-2 aspect-square w-full object-cover'
+                      : 'aspect-square w-full object-cover';
+
+                  return brokenImages.has(image) ? (
+                    <div
+                      key={`${image}-${index}`}
+                      className={`${imageLayoutClass} flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[#cdbda6] bg-[#faf6ef]/60 p-3 text-center text-[10px] text-[#7c6a57]`}
+                    >
+                      <ImageOff className="h-5 w-5" aria-hidden="true" />
+                      Image unavailable
+                    </div>
+                  ) : (
+                    <img
+                      key={`${image}-${index}`}
+                      src={image}
+                      alt={`${readable(property.name)} image ${index + 1}`}
+                      className={`${imageLayoutClass} rounded-lg`}
+                      onError={() => setBrokenImages((current) => new Set(current).add(image))}
+                    />
+                  );
+                })}
+              </div>
+            )}
           </section>
 
           <section aria-labelledby="property-cabinet-heading" className={`${filingStateClass} mt-3 rounded-xl px-3 py-2.5`}>
