@@ -363,6 +363,10 @@ export const AuditModal: React.FC<AuditModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-[#f7f4ed]">
+          <p className="text-[11px] leading-relaxed text-[#7c6a57]">
+            This is an administrative readiness check based on document verification status and listing data completeness. It does not confirm legal compliance, ownership, title validity, or sale probability.
+          </p>
+
           {errorMsg && (
             <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
@@ -441,6 +445,11 @@ export const AuditModal: React.FC<AuditModalProps> = ({
                         {estimatedSuccessRate}%
                       </span>
                     </div>
+                    {latestAudit.methodologyVersion && (
+                      <p className="mt-2 text-[10px] leading-snug text-[#7c6a57]">
+                        Derived from document completeness — not a market or sale probability estimate.
+                      </p>
+                    )}
                   </div>
 
                   {/* Risk Level Badge */}
