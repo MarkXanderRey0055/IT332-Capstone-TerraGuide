@@ -228,7 +228,7 @@ export const AdminActivities: React.FC<AdminActivitiesProps> = ({ onToast, initi
     });
     setIsLoadingConversionProperties(true);
     try {
-      const properties = await getProperties();
+      const properties = await getProperties({ includeAuth: true });
       setTransactionProperties(properties);
     } catch {
       setTransactionProperties([]);

@@ -4,7 +4,7 @@ import { asyncHandler } from '../middleware/errorMiddleware.js';
 
 //fetch all listed property
 export const getProperties = asyncHandler(async (req, res) => {
-  const result = await propertyService.getAllProperties(req.query);
+  const result = await propertyService.getAllProperties(req.query, req.user);
   return sendSuccess(res, 200, 'Properties fetched successfully', result);
 });
 

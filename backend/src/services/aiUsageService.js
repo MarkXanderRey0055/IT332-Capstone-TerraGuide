@@ -139,7 +139,25 @@ export async function reserveAiUsage(feature) {
     );
   }
 
-  return { dateKey, featureField };
+  return { dateKey, featureField, windowId };
+}
+
+/** Release a completed reservation when an AI narrative request fails. */
+export async function releaseAiUsage({ dateKey, featureField, windowId }) {
+  if (!dateKey || !Object.values(FEATURE_FIELDS).includes(featureField) || !Number.isFinite(windowId)) {
+    return;
+  }
+
+  await Promise.all([
+    AIUsage.updateOne(
+      { date: dateKey, totalRequests: { $gt: 0 }, [featureField]: { $gt: 0 } },
+      { $inc: { totalRequests: -1, [featureField]: -1 } }
+    ),
+    AIRateLimit.updateOne(
+      { windowId, count: { $gt: 0 } },
+      { $inc: { count: -1 } }
+    ),
+  ]);
 }
 
 /**

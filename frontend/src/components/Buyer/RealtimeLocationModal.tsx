@@ -53,7 +53,6 @@ export const PropertyLocationModal: React.FC<PropertyLocationModalProps> = ({
             initialMapStyle="satellite"
             mapTitle="Satellite & Map View"
             mapSubtitle="Geographic coordinates & surrounding area"
-            recenterLabel={`Re-center on ${property.title?.trim() || property.name}`}
             focusZoom={18}
             scrollWheelZoom
           />

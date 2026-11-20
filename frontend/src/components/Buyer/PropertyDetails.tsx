@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Calendar, Mail, MapPin, Eye, Trees, Building2, Home, Landmark } from 'lucide-react';
 import type { Property } from '../../types/types';
+import { isBuyerVisibleStatus } from '../../../../shared/propertyVisibility.mjs';
 import { PropertyLocationModal } from './RealtimeLocationModal';
 
 interface PropertyDetailsProps {
@@ -40,6 +41,10 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
   const TypeIcon = TYPE_ICON[property.type] || Landmark;
   const propertyLabel = property.title?.trim() || property.name;
   const hasValidCoordinates = Number.isFinite(property.lat) && Number.isFinite(property.lng);
+  const mapProperties = properties.filter((item) => isBuyerVisibleStatus(item.status));
+  if (!isBuyerVisibleStatus(property.status) && !mapProperties.some((item) => item.id === property.id)) {
+    mapProperties.push(property);
+  }
 
   const lotSize = property.size ?? property.lotSize ?? 0;
   const pricePerSqm =
@@ -54,7 +59,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
       <PropertyLocationModal
         isOpen={isMapModalOpen}
         property={property}
-        properties={properties}
+        properties={mapProperties}
         onClose={() => setIsMapModalOpen(false)}
       />
       <div className="max-w-6xl mx-auto space-y-6">

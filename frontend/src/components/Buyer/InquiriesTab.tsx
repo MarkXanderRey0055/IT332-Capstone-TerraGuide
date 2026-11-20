@@ -39,6 +39,7 @@ interface InquiriesTabProps {
   error?: string;
   onRefresh: () => void;
   onSelectProperty: (property: Property) => void;
+  onViewPropertyById: (propertyId: string) => void;
   onBrowseProperties: () => void;
 }
 
@@ -64,6 +65,7 @@ export const InquiriesTab: React.FC<InquiriesTabProps> = ({
   error,
   onRefresh,
   onSelectProperty,
+  onViewPropertyById,
   onBrowseProperties,
 }) => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
@@ -366,10 +368,10 @@ export const InquiriesTab: React.FC<InquiriesTabProps> = ({
                     )}
 
                     {/* View Property button if available in portal */}
-                    {fullProperty && (
+                    {propId && (
                       <button
                         type="button"
-                        onClick={() => onSelectProperty(fullProperty)}
+                        onClick={() => fullProperty ? onSelectProperty(fullProperty) : onViewPropertyById(propId)}
                         className="inline-flex items-center gap-1 text-xs text-[#B0E4CC] hover:text-[#FFFFFF] transition-colors cursor-pointer font-medium hover:underline"
                       >
                         <span>View Property</span>

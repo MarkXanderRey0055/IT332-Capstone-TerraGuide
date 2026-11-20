@@ -7,6 +7,7 @@ import AppError from '../utils/errors.js';
 import { getStartOfManilaMonth, getManilaYearBounds } from '../utils/manilaTime.js';
 import { generatePortfolioNarrative, generateBuyerMarketNarrative } from './aiService.js';
 import { classifyAuditRisk } from '../utils/auditReadiness.js';
+import { BUYER_VISIBLE_PROPERTY_STATUS } from '../../../shared/propertyVisibility.mjs';
 
 const COMPLIANCE_READY_THRESHOLD = 70;
 async function getLatestAuditsByProperty() {
@@ -242,9 +243,9 @@ export async function getAttentionProperties() {
   return flagged;
 }
 
-export async function getPropertyRankings() {
+export async function getPropertyRankings({ availableOnly = false } = {}) {
   const [properties, latestAudits] = await Promise.all([
-    Property.find(),
+    Property.find(availableOnly ? { status: BUYER_VISIBLE_PROPERTY_STATUS } : {}),
     getLatestAuditsByProperty(),
   ]);
 
@@ -454,16 +455,85 @@ export async function getPortfolioSnapshot() {
 
 export async function generatePortfolioInsights() {
   const snapshot = await getPortfolioSnapshot();
-  const insights = await generatePortfolioNarrative(snapshot);
+  try {
+    const insights = await generatePortfolioNarrative(snapshot);
+    return createPortfolioInsightResult(snapshot, insights);
+  } catch (error) {
+    if (
+      error?.code === 'AI_CONFIGURATION_ERROR' ||
+      error?.aiCategory === 'configuration' ||
+      error?.statusCode === 401 ||
+      error?.statusCode === 403 ||
+      error?.providerStatus === 401 ||
+      error?.providerStatus === 403
+    ) {
+      throw error;
+    }
 
-  return { snapshot, insights };
+    return createPortfolioFallbackResult(snapshot, error);
+  }
+}
+
+export function createPortfolioInsightResult(snapshot, insights) {
+  return { snapshot, insights, narrativeOrigin: 'AI_GENERATED', fallbackReason: null };
+}
+
+export function createPortfolioFallbackResult(snapshot, error) {
+  return {
+    snapshot,
+    insights: createDeterministicPortfolioInsights(snapshot),
+    narrativeOrigin: 'SYSTEM_FALLBACK',
+    fallbackReason: getPortfolioFallbackReason(error),
+  };
+}
+
+const PORTFOLIO_INSIGHT_FIELDS = [
+  'portfolioHealth',
+  'marketTrends',
+  'buyerBehavior',
+  'topPerformingCategories',
+  'risks',
+  'recommendations',
+];
+
+function count(value) {
+  return Number.isFinite(value) ? value : 0;
+}
+
+function peso(value) {
+  return `₱${count(value).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
+}
+
+export function createDeterministicPortfolioInsights(snapshot) {
+  const { summary, riskCounts, buyerIntelligence, salesPerformance } = snapshot;
+  const insights = {
+    portfolioHealth: `The portfolio contains ${count(summary.totalProperties)} properties: ${count(summary.availableProperties)} available, ${count(summary.reservedProperties)} reserved, and ${count(summary.soldProperties)} sold. Its estimated recorded value is ${peso(summary.estimatedPortfolioValue)}, alongside ${count(summary.totalBuyers)} registered buyers. The recorded average compliance score is ${count(summary.averageComplianceScore)}% across ${count(summary.auditedPropertiesCount)} audited properties.`,
+    marketTrends: `Recorded transaction revenue is ${peso(salesPerformance.totalRevenue)}, with a reported monthly average of ${peso(salesPerformance.monthlyAverage)} and a snapshot projection of ${peso(salesPerformance.forecastNextMonth)} for the next month. ${salesPerformance.note || 'These figures reflect the sales data available in this portfolio snapshot.'}`,
+    buyerBehavior: `The snapshot records ${count(buyerIntelligence.totalBuyersWithPreferences)} buyers with preferences${buyerIntelligence.topPreferredType ? `; the most recorded property type preference is ${buyerIntelligence.topPreferredType}` : '; no top property type preference is recorded'}. ${buyerIntelligence.topPreferredLocation ? `The most recorded location preference is ${buyerIntelligence.topPreferredLocation}.` : 'No top location preference is recorded.'} Average stated budget is ${peso(buyerIntelligence.averageBudget)}.`,
+    topPerformingCategories: `This snapshot does not include category-level performance comparisons, so it cannot identify a top-performing property type. Across audited properties, the recorded average compliance score is ${count(summary.averageComplianceScore)}%, based on ${count(summary.auditedPropertiesCount)} audits.`,
+    risks: `The recorded risk breakdown is ${count(riskCounts.High)} high, ${count(riskCounts.Medium)} medium, and ${count(riskCounts.Low)} low-risk properties, with ${count(riskCounts.NotAudited)} properties not yet audited. These counts identify the current groups represented in the portfolio snapshot.`,
+    recommendations: `Review the ${count(riskCounts.NotAudited)} properties not yet audited and prioritize administrative follow-up for the ${count(riskCounts.High)} listings classified as high risk. Use the recorded buyer preferences${buyerIntelligence.topPreferredType ? `, including ${buyerIntelligence.topPreferredType}` : ''}${buyerIntelligence.topPreferredLocation ? ` and ${buyerIntelligence.topPreferredLocation}` : ''} as context when reviewing portfolio activity.`,
+  };
+  return Object.fromEntries(PORTFOLIO_INSIGHT_FIELDS.map((field) => [field, insights[field]]));
+}
+
+export function getPortfolioFallbackReason(error) {
+  if (error?.code === 'AI_TIMEOUT' || error?.aiCategory === 'timeout') return 'AI_TIMEOUT';
+  if (
+    error?.code === 'AI_INVALID_RESPONSE' ||
+    error?.code === 'AI_CONTRADICTORY_RESPONSE' ||
+    error?.aiCategory === 'json' ||
+    error?.aiCategory === 'validation' ||
+    error instanceof SyntaxError
+  ) return 'AI_INVALID_RESPONSE';
+  return 'AI_UNAVAILABLE';
 }
 
 
 export async function getBuyerMarketTrends(limit = 5) {
   const [buyerIntelligence, rankingsResult] = await Promise.all([
     getBuyerIntelligence(),
-    getPropertyRankings(),
+    getPropertyRankings({ availableOnly: true }),
   ]);
 
   const totalPreferenceVotes = buyerIntelligence.preferredTypes.reduce(

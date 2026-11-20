@@ -102,7 +102,7 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
     try {
       const [transactionsData, propertiesData] = await Promise.all([
         getTransactions(),
-        getProperties(),
+        getProperties({ includeAuth: true }),
       ]);
       setTransactions(transactionsData);
       setProperties(propertiesData);

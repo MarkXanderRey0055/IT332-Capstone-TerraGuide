@@ -1234,16 +1234,23 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               <span className="w-1 h-3.5 bg-[var(--color-brand)] rounded-full inline-block" />
               Listing Status
             </label>
-            <select
-              id="property-status"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as typeof status)}
-              className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
-            >
-              <option value="Available">Available</option>
-              <option value="Reserved">Reserved</option>
-              <option value="Sold">Sold</option>
-            </select>
+            {status === 'Available' ? (
+              <select
+                id="property-status"
+                value="Available"
+                onChange={(e) => setStatus(e.target.value as typeof status)}
+                className="admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
+              >
+                <option value="Available">Available</option>
+              </select>
+            ) : (
+              <div id="property-status" className="py-2 text-sm font-semibold text-neutral-700">
+                <span>{status}</span>
+                <p className="mt-1 text-xs font-normal text-neutral-500">
+                  Managed by transactions. Cancel or complete the transaction to change this.
+                </p>
+              </div>
+            )}
           </div>
             </div>
           </div>

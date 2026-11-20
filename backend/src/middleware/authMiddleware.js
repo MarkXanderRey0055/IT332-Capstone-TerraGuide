@@ -36,6 +36,27 @@ export const protect = asyncHandler(async (req, res, next) => {
   next();
 });
 
+/** Authenticate when a valid bearer token is supplied, without requiring one. */
+export const optionalProtect = asyncHandler(async (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization?.startsWith('Bearer ')) return next();
+
+  let decoded;
+  try {
+    const token = authorization.split(' ')[1];
+    const jwtSecret = process.env.JWT_SECRET || 'your_jwt_secret_key_change_in_production';
+    decoded = jwt.verify(token, jwtSecret);
+  } catch {
+    // Public discovery remains available to anonymous clients, including stale sessions.
+    return next();
+  }
+
+  const currentUser = await User.findById(decoded.id).select('-password');
+  if (currentUser) req.user = currentUser;
+
+  return next();
+});
+
 /**
  * Middleware to restrict route access by role.
  * @param {...string} roles Allowed roles ('admin', 'buyer')

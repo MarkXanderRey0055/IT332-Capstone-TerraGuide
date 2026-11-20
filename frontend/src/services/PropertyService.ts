@@ -1,5 +1,6 @@
 import type { Property } from '../types/types';
 import { apiRequest } from '../utils/api';
+import { isBuyerVisibleStatus } from '../../../shared/propertyVisibility.mjs';
 
 // This is the same idea as AuthService and buyerPrefs — instead of the
 // old mockProperties array + propertyStorage.ts localStorage combo, we're
@@ -111,13 +112,16 @@ export function mapToProperty(raw: PropertyApiRecord): Property {
  * the existing PropertyExplorer/search/sort logic keeps working exactly
  * like it did against the old mock array, no rewrite needed there.
  */
-export async function getProperties(): Promise<Property[]> {
+export async function getProperties(options: { includeAuth?: boolean } = {}): Promise<Property[]> {
   const response = (await apiRequest(
     '/properties?limit=1000',
-    { omitAuth: true }
+    { omitAuth: !options.includeAuth }
   )) as PropertyListResponse;
 
-  return response.data.properties.map(mapToProperty);
+  const properties = response.data.properties.map(mapToProperty);
+  return options.includeAuth
+    ? properties
+    : properties.filter((property) => isBuyerVisibleStatus(property.status));
 }
 
 // Backend-driven search — forwards filters/sort/pagination straight to

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Compass, Eye, MapPin, Maximize, X } from 'lucide-react';
+import { MapPin, Maximize } from 'lucide-react';
 import type { Property } from '../../types/types';
+import { isBuyerVisibleStatus } from '../../../../shared/propertyVisibility.mjs';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -22,7 +23,6 @@ interface PropertyMapProps {
   initialMapStyle?: 'standard' | 'satellite';
   mapTitle?: string;
   mapSubtitle?: string;
-  recenterLabel?: string;
   focusZoom?: number;
   scrollWheelZoom?: boolean;
 }
@@ -96,7 +96,6 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
   initialMapStyle = 'standard',
   mapTitle = 'Property Map View',
   mapSubtitle = 'Click markers to inspect nearby listings',
-  recenterLabel = 'Re-center map',
   focusZoom = 15,
   scrollWheelZoom = false,
 }) => {
@@ -119,13 +118,6 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
     }
   }, [focusProperty]);
 
-  const resetToPrimary = () => {
-    const target = focusProperty ?? properties.find((p) => hasValidCoords(p.lat, p.lng));
-    if (target) {
-      setSelectedMapProperty(target);
-    }
-  };
-
   return (
     <div className="relative w-full h-full min-h-[500px] bg-[#F5F7F6] overflow-hidden flex flex-col font-sans">
 
@@ -138,15 +130,6 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
             <p className="text-[9px] text-neutral-500 truncate">{mapSubtitle}</p>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={resetToPrimary}
-          className="bg-white hover:bg-neutral-50 text-[#1C3A27] text-[11px] font-extrabold px-3.5 py-2 rounded-xl shadow-xl flex items-center gap-1.5 border border-neutral-100 transition-all cursor-pointer pointer-events-auto active:translate-y-0.5 whitespace-nowrap"
-        >
-          <Compass className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          {recenterLabel}
-        </button>
 
         <div className="bg-white/95 backdrop-blur-md px-2 py-2 rounded-xl shadow-xl border border-neutral-100 pointer-events-auto flex items-center gap-1">
           <button
@@ -191,7 +174,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
           )}
 
           {/* Only render markers for properties with valid coordinates. */}
-          {properties.filter((p) => hasValidCoords(p.lat, p.lng)).map((property) => {
+          {properties.filter((p) => (isBuyerVisibleStatus(p.status) || p.id === focusProperty?.id) && hasValidCoords(p.lat, p.lng)).map((property) => {
             const isFocused = selectedMapProperty?.id === property.id;
             return (
               <Marker
@@ -226,50 +209,31 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
 
       {/* Property detail bar — shown when a marker is selected */}
       {selectedMapProperty && (
-        <div className="relative z-[1000] bg-[#1C3A27]/95 backdrop-blur-md border-t border-white/10 shadow-2xl px-4 py-3 text-white flex flex-col sm:flex-row items-start sm:items-center gap-3 pointer-events-auto">
+        <div className="relative z-[1000] bg-white border-t border-[var(--color-neutral-border)] shadow-2xl px-4 py-3 text-[var(--color-neutral-dark)] flex flex-col sm:flex-row items-start sm:items-center gap-3 pointer-events-auto">
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-1.5 mb-1">
-              <span className="text-[8px] font-extrabold px-1.5 py-0.5 bg-white/10 text-slate-200 rounded uppercase tracking-wider">
+              <span className="text-[8px] font-extrabold px-1.5 py-0.5 bg-[var(--color-neutral-bg)] text-[var(--color-neutral)] border border-[var(--color-neutral-border)] rounded uppercase tracking-wider">
                 {selectedMapProperty.type ?? 'Property'}
               </span>
-              <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+              <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider border ${selectedMapProperty.status === 'Available' ? 'bg-[var(--color-success-bg)] text-[var(--color-success)] border-[var(--color-success-border)]' : 'bg-[var(--color-neutral-bg)] text-[var(--color-neutral)] border-[var(--color-neutral-border)]'}`}>
                 {selectedMapProperty.status ?? 'Available'}
               </span>
             </div>
-            <h4 className="font-serif text-sm font-bold text-white leading-tight truncate">
+            <h4 className="font-serif text-sm font-bold text-[var(--color-neutral-dark)] leading-tight truncate">
               {getPropertyLabel(selectedMapProperty)}
             </h4>
-            <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5 truncate">
+            <p className="text-[10px] text-[var(--color-neutral)] flex items-center gap-1 mt-0.5 truncate">
               <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
               {selectedMapProperty.location}
             </p>
             <div className="flex items-center gap-3 text-[11px] text-slate-300 mt-1.5">
-              <span className="flex items-center gap-1 font-semibold">
-                <Maximize className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              <span className="flex items-center gap-1 font-semibold text-[var(--color-neutral)]">
+                <Maximize className="w-3.5 h-3.5 text-[var(--color-neutral)] shrink-0" />
                 {getLotSize(selectedMapProperty).toLocaleString()} sqm
               </span>
-              <span className="text-slate-700">|</span>
-              <span className="font-bold text-emerald-400">{formatPrice(selectedMapProperty.price)}</span>
+              <span className="text-[var(--color-neutral-border)]">|</span>
+              <span className="font-bold text-[var(--color-neutral-dark)]">{formatPrice(selectedMapProperty.price)}</span>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-            <button
-              type="button"
-              onClick={() => setSelectedMapProperty(null)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer border-none bg-transparent"
-              aria-label="Dismiss"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onSelectProperty?.(selectedMapProperty)}
-              className="px-4 py-2 text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-lg transition-all flex items-center gap-1 cursor-pointer active:translate-y-0.5 border-none whitespace-nowrap"
-            >
-              <Eye className="w-3.5 h-3.5 shrink-0" />
-              Inspect Listing
-            </button>
           </div>
         </div>
       )}

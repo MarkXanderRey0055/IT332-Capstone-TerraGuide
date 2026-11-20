@@ -115,6 +115,8 @@ export interface PortfolioInsights {
 export interface PortfolioInsightsResult {
   snapshot: PortfolioSnapshot;
   insights: PortfolioInsights;
+  narrativeOrigin: 'AI_GENERATED' | 'SYSTEM_FALLBACK';
+  fallbackReason: 'AI_UNAVAILABLE' | 'AI_INVALID_RESPONSE' | 'AI_TIMEOUT' | null;
 }
 
 interface ApiEnvelope<T> {

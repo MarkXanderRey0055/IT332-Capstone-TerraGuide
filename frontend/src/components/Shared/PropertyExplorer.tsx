@@ -7,6 +7,7 @@ import {
 } from 'react-leaflet';
 import L from 'leaflet';
 import type { Property } from '../../types/types';
+import { isBuyerVisibleStatus } from '../../../../shared/propertyVisibility.mjs';
 import {
   MapPin,
   Eye,
@@ -121,14 +122,14 @@ export const PropertyExplorer: React.FC<PropertyExplorerProps> = ({ properties, 
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(16);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Available' | 'Reserved' | 'Sold'>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Available'>('All');
 
   const filteredProperties = properties.filter((p) => {
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.type.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
+    const matchesStatus = isBuyerVisibleStatus(p.status) && (statusFilter === 'All' || p.status === statusFilter);
     return matchesSearch && matchesStatus;
   });
 
@@ -192,7 +193,7 @@ export const PropertyExplorer: React.FC<PropertyExplorerProps> = ({ properties, 
           </div>
 
           <div className="flex gap-1 mt-2">
-            {(['All', 'Available', 'Reserved', 'Sold'] as const).map((status) => (
+            {(['All', 'Available'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
@@ -290,7 +291,7 @@ export const PropertyExplorer: React.FC<PropertyExplorerProps> = ({ properties, 
           />
 
           {/* Only properties with valid coordinates get a marker — kept from the earlier fix. */}
-          {properties.filter((p) => hasValidCoords(p.lat, p.lng)).map((property) => {
+          {filteredProperties.filter((p) => hasValidCoords(p.lat, p.lng)).map((property) => {
             const isFocused = selectedMapProperty?.id === property.id;
             return (
               <Marker
