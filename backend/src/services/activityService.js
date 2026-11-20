@@ -15,6 +15,8 @@ function classifyTransactionEvent(transaction) {
       title: 'Transaction completed',
       description: `${transaction.reference} for ${propertyName} was completed — property marked Sold.`,
       timestamp: transaction.completedAt,
+      relatedId: transaction._id,
+      relatedModel: 'Transaction',
     };
   }
 
@@ -27,6 +29,8 @@ function classifyTransactionEvent(transaction) {
       title: 'Transaction status updated',
       description: `${transaction.reference} for ${propertyName} changed to ${transaction.status}.`,
       timestamp: transaction.updatedAt,
+      relatedId: transaction._id,
+      relatedModel: 'Transaction',
     };
   }
 
@@ -35,6 +39,39 @@ function classifyTransactionEvent(transaction) {
     title: 'New transaction created',
     description: `${transaction.reference} was created for ${propertyName}.`,
     timestamp: transaction.createdAt,
+    relatedId: transaction._id,
+    relatedModel: 'Transaction',
+  };
+}
+
+function classifyRequestEvent(record, { kind, buyerName, propertyName }) {
+  const updatedMs = new Date(record.updatedAt).getTime();
+  const createdMs = new Date(record.createdAt).getTime();
+  if (Number.isFinite(updatedMs) && Number.isFinite(createdMs) && updatedMs - createdMs > STATUS_CHANGE_GRACE_MS) {
+    const isInquiry = kind === 'inquiry';
+    return {
+      type: isInquiry ? (record.status === 'Responded' ? 'inquiry_responded' : 'inquiry_status_changed') : 'site_visit_status_changed',
+      title: isInquiry ? (record.status === 'Responded' ? 'Inquiry response updated' : 'Inquiry status updated') : 'Site visit status updated',
+      description: isInquiry
+        ? (record.status === 'Responded'
+          ? `${buyerName} received a response about ${propertyName}.`
+          : `The inquiry from ${buyerName} about ${propertyName} changed to ${record.status}.`)
+        : `${buyerName}'s site visit request for ${propertyName} changed to ${record.status}.`,
+      timestamp: record.updatedAt,
+      relatedId: record._id,
+      relatedModel: kind === 'inquiry' ? 'Inquiry' : 'SiteVisit',
+    };
+  }
+  const isInquiry = kind === 'inquiry';
+  return {
+    type: isInquiry ? 'inquiry_created' : 'site_visit_created',
+    title: isInquiry ? 'New property inquiry' : 'New site visit request',
+    description: isInquiry
+      ? `${buyerName} sent an inquiry about ${propertyName}.`
+      : `${buyerName} requested a site visit for ${propertyName}.`,
+    timestamp: record.createdAt,
+    relatedId: record._id,
+    relatedModel: kind === 'inquiry' ? 'Inquiry' : 'SiteVisit',
   };
 }
 
@@ -48,17 +85,17 @@ export async function getRecentActivity(limit = 8) {
       .populate('propertyId', 'name')
       .select('status createdAt updatedAt completedAt propertyId'),
     Inquiry.find()
-      .sort({ createdAt: -1 })
+      .sort({ updatedAt: -1 })
       .limit(limit)
       .populate('buyerId', 'fullName username')
       .populate('propertyId', 'name')
-      .select('buyerId propertyId createdAt'),
+      .select('buyerId propertyId status adminResponse createdAt updatedAt'),
     SiteVisit.find()
-      .sort({ createdAt: -1 })
+      .sort({ updatedAt: -1 })
       .limit(limit)
       .populate('buyerId', 'fullName username')
       .populate('propertyId', 'name')
-      .select('buyerId propertyId createdAt'),
+      .select('buyerId propertyId status createdAt updatedAt'),
   ]);
 
   const events = [
@@ -67,33 +104,27 @@ export async function getRecentActivity(limit = 8) {
       title: 'New property added',
       description: `${p.name} was added to the property listings.`,
       timestamp: p.createdAt,
+      relatedId: p._id,
+      relatedModel: 'Property',
     })),
     ...recentBuyers.map((b) => ({
       type: 'buyer_registered',
       title: 'New buyer registered',
       description: `${b.username} registered through the Buyer Portal.`,
       timestamp: b.createdAt,
+      relatedId: b._id,
+      relatedModel: 'User',
     })),
     ...recentTransactions.map(classifyTransactionEvent),
     ...recentInquiries.map((inq) => {
       const buyerName = inq.buyerId?.fullName || inq.buyerId?.username || 'A buyer';
       const propertyName = inq.propertyId?.name || 'a property';
-      return {
-        type: 'inquiry_created',
-        title: 'New property inquiry',
-        description: `${buyerName} sent an inquiry about ${propertyName}.`,
-        timestamp: inq.createdAt,
-      };
+      return classifyRequestEvent(inq, { kind: 'inquiry', buyerName, propertyName });
     }),
     ...recentSiteVisits.map((visit) => {
       const buyerName = visit.buyerId?.fullName || visit.buyerId?.username || 'A buyer';
       const propertyName = visit.propertyId?.name || 'a property';
-      return {
-        type: 'site_visit_created',
-        title: 'New site visit request',
-        description: `${buyerName} requested a site visit for ${propertyName}.`,
-        timestamp: visit.createdAt,
-      };
+      return classifyRequestEvent(visit, { kind: 'site_visit', buyerName, propertyName });
     }),
   ];
 

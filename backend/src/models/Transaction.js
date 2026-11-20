@@ -31,6 +31,11 @@ const transactionSchema = new mongoose.Schema(
       ref: 'Property',
       required: [true, 'A property is required'],
     },
+    convertedInquiryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Inquiry',
+      default: null,
+    },
 
     amount: {
       type: Number,
@@ -64,6 +69,14 @@ const transactionSchema = new mongoose.Schema(
     },
   },
   { timestamps: true }
+);
+
+transactionSchema.index(
+  { convertedInquiryId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { convertedInquiryId: { $type: 'objectId' } },
+  }
 );
 
 

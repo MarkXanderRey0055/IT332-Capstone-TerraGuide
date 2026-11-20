@@ -42,7 +42,8 @@ interface InquiriesTabProps {
   onBrowseProperties: () => void;
 }
 
-type StatusFilter = 'All' | 'Pending' | 'Responded';
+type StatusFilter = 'All' | 'Pending' | 'Responded' | 'Converted' | 'Closed';
+const CLOSING_STATUSES: Inquiry['status'][] = ['Not interested', 'Property unavailable', 'Duplicate'];
 
 // Helper to extract topic prefix if present
 function parseInquiryMessage(rawMessage: string): { topic: string | null; body: string } {
@@ -86,12 +87,21 @@ export const InquiriesTab: React.FC<InquiriesTabProps> = ({
     () => inquiries.filter((i) => i.status === 'Responded').length,
     [inquiries]
   );
+  const closedCount = useMemo(
+    () => inquiries.filter((i) => CLOSING_STATUSES.includes(i.status)).length,
+    [inquiries]
+  );
+  const convertedCount = useMemo(
+    () => inquiries.filter((i) => i.status === 'Converted').length,
+    [inquiries]
+  );
 
   // Filtered inquiries
   const filteredInquiries = useMemo(() => {
     return inquiries.filter((inquiry) => {
       // Status filter
-      if (statusFilter !== 'All' && inquiry.status !== statusFilter) {
+      if (statusFilter === 'Closed' && !CLOSING_STATUSES.includes(inquiry.status)) return false;
+      if (statusFilter !== 'All' && statusFilter !== 'Closed' && inquiry.status !== statusFilter) {
         return false;
       }
       // Search query filter
@@ -101,11 +111,13 @@ export const InquiriesTab: React.FC<InquiriesTabProps> = ({
         const propLoc = inquiry.propertyId?.location?.toLowerCase() ?? '';
         const msg = inquiry.message?.toLowerCase() ?? '';
         const adminResp = inquiry.adminResponse?.toLowerCase() ?? '';
+        const closeReason = inquiry.closeReason?.toLowerCase() ?? '';
         if (
           !propName.includes(query) &&
           !propLoc.includes(query) &&
           !msg.includes(query) &&
-          !adminResp.includes(query)
+          !adminResp.includes(query) &&
+          !closeReason.includes(query)
         ) {
           return false;
         }
@@ -171,6 +183,8 @@ export const InquiriesTab: React.FC<InquiriesTabProps> = ({
                 { id: 'All', label: 'All', count: inquiries.length },
                 { id: 'Pending', label: 'Pending', count: pendingCount },
                 { id: 'Responded', label: 'Responded', count: respondedCount },
+                { id: 'Converted', label: 'Converted', count: convertedCount },
+                { id: 'Closed', label: 'Closed', count: closedCount },
               ] as const
             ).map((tab) => {
               const isActive = statusFilter === tab.id;
@@ -320,15 +334,29 @@ export const InquiriesTab: React.FC<InquiriesTabProps> = ({
                       <p className="text-[11px] text-[#6A9F8A] mt-1">
                         Submitted: {formatActivityTimestamp(inquiry.createdAt)}
                       </p>
+                      {inquiry.updatedAt && (
+                        <p className="text-[11px] text-[#6A9F8A] mt-1">
+                          Updated {formatActivityTimestamp(inquiry.updatedAt)}
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   {/* Status Badge & Actions */}
                   <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 pt-2 sm:pt-0">
-                    {inquiry.status === 'Responded' ? (
+                    {inquiry.status === 'Converted' ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold bg-teal-950/70 text-teal-200 border border-teal-500/40">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-teal-300" />
+                        Converted
+                      </span>
+                    ) : inquiry.status === 'Responded' ? (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                         Responded
+                      </span>
+                    ) : CLOSING_STATUSES.includes(inquiry.status) ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold bg-neutral-800 text-neutral-200 border border-neutral-600">
+                        {inquiry.status}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-950/70 text-amber-300 border border-amber-500/40">
@@ -350,6 +378,14 @@ export const InquiriesTab: React.FC<InquiriesTabProps> = ({
                     )}
                   </div>
                 </div>
+
+                {CLOSING_STATUSES.includes(inquiry.status) && (
+                  <div className="mt-3 rounded-xl border border-neutral-700 bg-neutral-900/70 p-3.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-300">Inquiry outcome: {inquiry.status}</p>
+                    {inquiry.closeReason && <p className="mt-1.5 text-sm text-neutral-100 whitespace-pre-wrap">{inquiry.closeReason}</p>}
+                    {inquiry.closedAt && <p className="mt-1.5 text-[11px] text-neutral-400">Closed: {formatActivityTimestamp(inquiry.closedAt)}</p>}
+                  </div>
+                )}
 
                 {/* Inquiry Message Section */}
                 <div className="mt-4">
