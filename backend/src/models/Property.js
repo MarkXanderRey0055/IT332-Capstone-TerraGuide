@@ -18,8 +18,8 @@ const propertySchema = new mongoose.Schema(
     },
     owner: {
       type: String,
+      required: [true, 'Owner name is required'],
       trim: true,
-      default: '',
     },
     location: {
       type: String,
@@ -53,7 +53,7 @@ const propertySchema = new mongoose.Schema(
     price: {
       type: Number,
       required: [true, 'Price is required'],
-      min: [0, 'Price must be greater than or equal to 0'],
+      min: [Number.MIN_VALUE, 'Price must be greater than zero'],
     },
     size: {
       type: Number,
@@ -82,7 +82,8 @@ const propertySchema = new mongoose.Schema(
     },
     lotSize: {
       type: Number,
-      default: 0,
+      required: [true, 'Lot size is required'],
+      min: [Number.MIN_VALUE, 'Lot size must be greater than zero'],
     },
     documents: {
       deed: {

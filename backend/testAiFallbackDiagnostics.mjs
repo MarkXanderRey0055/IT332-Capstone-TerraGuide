@@ -12,7 +12,7 @@ const originalKey = process.env.NVIDIA_API_KEY;
 
 const facts = {
   readinessClassification: 'HOLD_FOR_REVIEW',
-  readinessCriticalIssues: [{ code: 'REQUIRED_DOCUMENT_MISSING', message: 'Deed of Sale is missing.' }],
+  readinessCriticalIssues: [{ code: 'REQUIRED_DOCUMENT_MISSING', message: 'Title Deed is missing.' }],
   readinessPendingItems: [],
   readinessNonCriticalIssues: [],
 };

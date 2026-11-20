@@ -61,6 +61,9 @@ for (const path of [
   assert.ok(Audit.schema.path(path), `Audit schema is missing ${path}`);
 }
 
+assert.ok(Audit.schema.path('readinessSourceSnapshot.ownerPresent'));
+assert.ok(Audit.schema.path('readinessSourceSnapshot.imagesPresent'));
+
 const audit = new Audit({
   propertyId: '507f1f77bcf86cd799439011',
   complianceScore: 85,

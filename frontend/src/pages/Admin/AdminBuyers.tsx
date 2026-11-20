@@ -159,14 +159,16 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
                   <th className="p-4">Intent</th>
                   <th className="p-4">Max Budget</th>
                   <th className="p-4">Preferred Sector / Location</th>
-                  <th className="p-4">System Notes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#ded2c0]">
                 {filteredBuyers.map((buyer) => (
                   <tr key={buyer.userId} className="transition-colors">
                     <td className="p-4">
-                      <div className="font-bold text-[#2f2417] text-sm">{buyer.fullName}</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-[#2f2417] text-sm">{buyer.fullName}</span>
+                        {!buyer.preferences && <span className="status-neutral inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold">No preferences</span>}
+                      </div>
                       <div className="text-[10px] text-[#7c6a57] mt-0.5">
                         @{buyer.username} · Registered {formatDate(buyer.registeredAt)}
                       </div>
@@ -188,9 +190,6 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
                     </td>
                     <td className="p-4 text-[#5d503f]">
                       {buyer.preferences?.location || 'Not provided'}
-                    </td>
-                    <td className="p-4 text-[#7c6a57]">
-                      {buyer.preferences ? 'Registered via Buyer Portal' : 'No preferences submitted yet'}
                     </td>
                   </tr>
                 ))}

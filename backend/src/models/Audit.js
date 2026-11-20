@@ -45,6 +45,8 @@ const auditSchema = new mongoose.Schema({
     price: { type: Number, default: null },
     size: { type: Number, default: null },
     lotSize: { type: Number, default: null },
+    ownerPresent: { type: Boolean },
+    imagesPresent: { type: Boolean },
     description: { type: String, default: null },
     suitableFor: { type: [String], default: [] },
     status: { type: String, default: null },

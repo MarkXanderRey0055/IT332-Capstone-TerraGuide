@@ -9,7 +9,7 @@ const baseFacts = {
   suitableFor: ['Primary Residence'],
   documentStatuses: { deed: 'verified', tax: 'pending', survey: 'unknown' },
   documentStatusCounts: { verified: 1, pending: 1, missing: 0, unknown: 1 },
-  verifiedList: ['Deed of Sale'],
+  verifiedList: ['Title Deed'],
   pendingItems: ['Tax Declaration'],
   missingItems: [],
   unknownStatuses: [{ document: 'survey', receivedStatus: null }],

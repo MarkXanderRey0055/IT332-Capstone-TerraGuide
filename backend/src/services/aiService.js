@@ -544,7 +544,7 @@ PROPERTY FACTS:
 - Unknown or absent statuses treated conservatively: ${unknownStatusStr}
 - Document status mapping: ${statusMapStr}
 - Document status counts: ${statusCountsStr}
-- Document completeness (authoritative backend reference): ${facts.documentCompleteness ?? 'Not supplied'}%
+- Document Readiness Score (authoritative backend reference): ${facts.documentCompleteness ?? 'Not supplied'}%
 - Estimated listing success rate (authoritative backend reference): ${facts.estimatedSuccessRate ?? 'Not supplied'}%
 - Risk Level: ${facts.riskLevel || 'High'}
 - Critical findings: ${formatFindings(facts.readinessCriticalIssues)}
@@ -566,7 +566,7 @@ INSTRUCTIONS:
    - Never claim all documents are verified when any document is pending, missing, or unknown.
    - Mention relevant critical findings and distinguish critical from noncritical findings.
    - Do not invent numerical metrics, success percentages, market benchmarks, or predicted improvements.
-   - Treat document completeness, estimated listing success rate, and risk assessment from the backend as authoritative; do not recalculate or alter them.
+   - Treat the Document Readiness Score, estimated listing success rate, and risk assessment from the backend as authoritative; do not recalculate or alter them.
    - Do not make legal, ownership, title-validity, or transaction-success guarantees.
 
 Respond EXACTLY with this JSON structure and nothing else:

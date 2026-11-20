@@ -113,7 +113,6 @@ for (const overrides of [
   [{ size: undefined }, 'MISSING_PROPERTY_SIZE'],
   [{ size: 0 }, 'MISSING_PROPERTY_SIZE'],
   [{ lotSize: undefined }, 'MISSING_PROPERTY_LOT_SIZE'],
-  [{ lotSize: 0 }, 'MISSING_PROPERTY_LOT_SIZE'],
   [{ description: '' }, 'MISSING_PROPERTY_DESCRIPTION'],
   [{ suitableFor: undefined }, 'MISSING_SUITABLE_FOR'],
   [{ suitableFor: [] }, 'MISSING_SUITABLE_FOR'],
@@ -128,7 +127,6 @@ for (const overrides of [
 
 for (const overrides of [
   { size: 0 },
-  { lotSize: 0 },
   { description: '' },
   { suitableFor: [] },
   { owner: '' },
@@ -138,6 +136,18 @@ for (const overrides of [
     assessPropertyReadiness(validProperty(statuses('verified', 'verified', 'verified'), overrides)).nonCriticalIssues.length,
     1
   );
+}
+
+for (const lotSize of [0, -500]) {
+  const result = assessPropertyReadiness(
+    validProperty(statuses('verified', 'verified', 'verified'), { lotSize })
+  );
+  assert.equal(result.classification, READINESS_CLASSIFICATIONS.HOLD_FOR_REVIEW);
+  assert.equal(
+    result.criticalIssues.filter((item) => item.code === 'INVALID_PROPERTY_LOT_SIZE').length,
+    1
+  );
+  assert.equal(result.nonCriticalIssues.some((item) => item.code === 'MISSING_PROPERTY_LOT_SIZE'), false);
 }
 
 const mixed = validProperty(statuses('verified', 'pending', 'missing'));

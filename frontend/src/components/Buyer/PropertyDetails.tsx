@@ -18,7 +18,6 @@ const TYPE_ICON: Record<string, React.ElementType> = {
   'House & Lot': Home,
   Residential: Home,
 };
-const getTypeIcon = (type: string) => TYPE_ICON[type] || Landmark;
 
 const formatPrice = (price: number) =>
   `₱${price.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
@@ -38,8 +37,9 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
   }
 
   const imageUrl = property.images?.[0];
-  const TypeIcon = getTypeIcon(property.type);
+  const TypeIcon = TYPE_ICON[property.type] || Landmark;
   const propertyLabel = property.title?.trim() || property.name;
+  const hasValidCoordinates = Number.isFinite(property.lat) && Number.isFinite(property.lng);
 
   const lotSize = property.size ?? property.lotSize ?? 0;
   const pricePerSqm =
@@ -201,7 +201,9 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                   <MapPin className="w-4 h-4 text-emerald-600" />
                   <div>
                     <div className="font-semibold">{property.location}</div>
-                    <div className="text-neutral-500">Latitude {property.lat.toFixed(4)}, Longitude {property.lng.toFixed(4)}</div>
+                    {hasValidCoordinates && (
+                      <div className="text-neutral-500">Latitude {property.lat.toFixed(4)}, Longitude {property.lng.toFixed(4)}</div>
+                    )}
                   </div>
                 </div>
 

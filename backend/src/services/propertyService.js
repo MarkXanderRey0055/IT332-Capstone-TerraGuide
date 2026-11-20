@@ -1,5 +1,5 @@
 import Property from '../models/Property.js';
-import Transaction, { ACTIVE_TRANSACTION_STATUSES } from '../models/Transaction.js';
+import Transaction from '../models/Transaction.js';
 import AppError from '../utils/errors.js';
 import { cleanupCloudinaryAssets, uploadPropertyImagesToCloudinary } from './imageStorageService.js';
 import mongoose from 'mongoose';
@@ -103,7 +103,24 @@ export const getPropertyById = async (id) => {
   return property;
 };
 
+const validateRequiredPositivePropertyValues = (values) => {
+  const errors = {};
+  if (typeof values.owner !== 'string' || !values.owner.trim()) {
+    errors.owner = 'Owner name is required.';
+  }
+  if (typeof values.price !== 'number' || !Number.isFinite(values.price) || values.price <= 0) {
+    errors.price = 'Please enter a valid price greater than 0.';
+  }
+  if (typeof values.lotSize !== 'number' || !Number.isFinite(values.lotSize) || values.lotSize <= 0) {
+    errors.lotSize = 'Please enter a valid lot size greater than 0.';
+  }
+  if (Object.keys(errors).length > 0) {
+    throw new AppError('One or more property fields are invalid.', 400, errors);
+  }
+};
+
 export const createProperty = async (data) => {
+  validateRequiredPositivePropertyValues(data);
   return await Property.create(data);
 };
 
@@ -140,6 +157,12 @@ export const appendPropertyImages = async (id, files) => {
 export const updateProperty = async (id, data, updatedByUserId) => {
   const existing = await Property.findById(id);
   if (!existing) throw new AppError('Property listing not found', 404);
+
+  validateRequiredPositivePropertyValues({
+    owner: data.owner !== undefined ? data.owner : existing.owner,
+    price: data.price !== undefined ? data.price : existing.price,
+    lotSize: data.lotSize !== undefined ? data.lotSize : existing.lotSize,
+  });
 
   const documentKeys = ['deed', 'tax', 'survey'];
   const nextDocuments = data.documents || {};
@@ -178,22 +201,23 @@ export const updateProperty = async (id, data, updatedByUserId) => {
 };
 
 export const deleteProperty = async (id) => {
-  const activeTx = await Transaction.findOne({
-    propertyId: id,
-    status: { $in: ACTIVE_TRANSACTION_STATUSES },
-  });
-  if (activeTx) {
-    throw new AppError(
-      `Cannot delete property because it has an active transaction (${activeTx.reference || activeTx.status}). Please complete or cancel the transaction first.`,
-      409
-    );
+  const session = await mongoose.startSession();
+  let deletedProperty;
+  try {
+    await session.withTransaction(async () => {
+      const transaction = await Transaction.findOne({ propertyId: id }).session(session);
+      if (transaction) {
+        throw new AppError('This property has transaction records and can’t be deleted. Archive it instead.', 409);
+      }
+
+      deletedProperty = await Property.findByIdAndDelete(id).session(session);
+      if (!deletedProperty) {
+        throw new AppError('Property listing not found', 404);
+      }
+    });
+  } finally {
+    await session.endSession();
   }
 
-  const property = await Property.findByIdAndDelete(id);
-
-  if (!property) {
-    throw new AppError('Property listing not found', 404);
-  }
-
-  return property;
+  return deletedProperty;
 };

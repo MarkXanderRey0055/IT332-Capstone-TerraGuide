@@ -37,7 +37,7 @@ const formatDate = (iso: string) =>
   });
 
 const AUDIT_DOCUMENTS = [
-  ['deed', 'Deed of Sale'],
+  ['deed', 'Title Deed'],
   ['tax', 'Tax Declaration'],
   ['survey', 'Survey Plan'],
 ] as const;
@@ -87,6 +87,7 @@ const FINDING_CODE_LABELS: Record<string, string> = {
   INVALID_LISTING_STATUS: 'Invalid listing status',
   MISSING_PROPERTY_SIZE: 'Missing property size',
   MISSING_PROPERTY_LOT_SIZE: 'Missing property lot size',
+  INVALID_PROPERTY_LOT_SIZE: 'Invalid property lot size',
   MISSING_SUITABLE_FOR: 'Missing suitable-use information',
   MISSING_PROPERTY_OWNER: 'Missing property owner information',
   MISSING_PROPERTY_IMAGES: 'Missing property images',
@@ -161,7 +162,7 @@ const renderHighlightedText = (text: string) => {
   if (!text) return null;
 
   const parts = text.split(
-    /(\b\d+%\b|\b\d+ of \d+\b|High|Medium|Low|Tax Declaration|Deed of Sale|Survey Plan)/g
+    /(\b\d+%\b|\b\d+ of \d+\b|High|Medium|Low|Tax Declaration|Title Deed|Survey Plan)/g
   );
 
   return parts.map((part, index) => {
@@ -186,7 +187,7 @@ const renderHighlightedText = (text: string) => {
     }
 
     // Highlight Missing Document Terms
-    if (['Tax Declaration', 'Deed of Sale', 'Survey Plan'].includes(part)) {
+    if (['Tax Declaration', 'Title Deed', 'Survey Plan'].includes(part)) {
       return (
         <span
           key={index}
@@ -425,7 +426,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
                   {/* Compliance Score */}
                   <div className={`p-4 rounded-xl border ${getScoreBg(complianceScore)}`}>
                     <span className="text-xs text-[#7c6a57] font-medium">
-                      {latestAudit.methodologyVersion ? 'Document Completeness' : 'Legacy Compliance Score'}
+                      {latestAudit.methodologyVersion ? 'Document Readiness Score' : 'Legacy Compliance Score'}
                     </span>
                     <div className="mt-1.5">
                       <span className={`text-3xl font-black ${getScoreColor(complianceScore)}`}>
@@ -447,7 +448,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
                     </div>
                     {latestAudit.methodologyVersion && (
                       <p className="mt-2 text-[10px] leading-snug text-[#7c6a57]">
-                        Derived from document completeness — not a market or sale probability estimate.
+                        Derived from the Document Readiness Score — not a market or sale probability estimate.
                       </p>
                     )}
                   </div>
@@ -475,7 +476,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
                     <p className="font-semibold mb-2">Weighted document-readiness basis</p>
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        ['deed', 'Deed of Sale', '40%'],
+                        ['deed', 'Title Deed', '40%'],
                         ['tax', 'Tax Declaration', '30%'],
                         ['survey', 'Survey Plan', '30%'],
                       ].map(([key, label, weight]) => (
@@ -534,7 +535,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
                 <div className="flex items-center justify-around text-center">
                   <div className="flex-1">
                     <span className="text-[10px] text-[#7c6a57] block uppercase font-medium">
-                      Document Completeness
+                      Document Readiness Score
                     </span>
                     <div className="flex items-center justify-center gap-2 mt-1">
                       <span className="text-sm font-bold text-[#7c6a57]">
