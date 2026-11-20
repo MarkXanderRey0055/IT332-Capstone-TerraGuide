@@ -1,18 +1,13 @@
 import AppError from '../utils/errors.js';
 
 export const validatePropertyInput = (req, res, next) => {
-  const { name, location, type, price, lat, lng, status, documents } = req.body;
+  const { name, location, type, lat, lng, status, documents } = req.body;
 
   // validate fields
   if (req.method === 'POST') {
-    if (!name || !location || !type || price === undefined || lat === undefined || lng === undefined) {
-      return next(new AppError('Missing required fields: name, location, type, price, lat, and lng are required.', 400));
+    if (!name || !location || !type || lat === undefined || lng === undefined) {
+      return next(new AppError('Missing required fields: name, location, type, lat, and lng are required.', 400));
     }
-  }
-
-  // property price
-  if (price !== undefined && (typeof price !== 'number' || price < 0)) {
-    return next(new AppError('Price must be a positive number', 400));
   }
 
   // coordinates

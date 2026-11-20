@@ -11,13 +11,13 @@ const baseProperty = {
   location: 'Nasugbu',
   price: 5000000,
   size: 120,
-  lotSize: 300,
+  lotSize: 1200,
   description: 'A property description.',
   suitableFor: ['Vacation Home', 'Investment'],
   status: 'Available',
   documents: { deed: 'verified', tax: 'pending', survey: 'verified' },
   verificationRemarks: 'Reviewed by admin',
-  owner: 'Excluded owner value',
+  owner: 'Owner name',
   images: ['image-a'],
   cabinetId: 'excluded-cabinet',
 };
@@ -31,6 +31,8 @@ const reorderedSnapshot = {
   documents: { survey: 'verified', deed: 'verified', tax: 'pending' },
   status: snapshot.status,
   suitableFor: ['Investment', 'Vacation Home'],
+  ownerPresent: snapshot.ownerPresent,
+  imagesPresent: snapshot.imagesPresent,
   description: snapshot.description,
   lotSize: snapshot.lotSize,
   size: snapshot.size,
@@ -79,6 +81,45 @@ for (const [field, value, expectedField] of [
   assert.deepEqual(result.staleReasons.map((reason) => reason.field), [expectedField]);
 }
 
+for (const lotSize of [0, -500, undefined]) {
+  const result = compareReadinessFreshness(
+    { readinessSourceSnapshot: snapshot, readinessFingerprint: fingerprint },
+    { ...baseProperty, lotSize }
+  );
+  assert.equal(result.freshnessStatus, 'STALE', `lot size ${String(lotSize)} must make the audit stale`);
+  assert.deepEqual(result.staleReasons.map((reason) => reason.field), ['lotSize']);
+}
+
+assert.equal(
+  compareReadinessFreshness(
+    { readinessSourceSnapshot: snapshot, readinessFingerprint: fingerprint },
+    { ...baseProperty, lotSize: 1200 }
+  ).freshnessStatus,
+  'CURRENT',
+  'unchanged positive lot size must remain current'
+);
+
+const ownerRemoved = compareReadinessFreshness(
+  { readinessSourceSnapshot: snapshot, readinessFingerprint: fingerprint },
+  { ...baseProperty, owner: '' }
+);
+assert.equal(ownerRemoved.freshnessStatus, 'STALE');
+assert.deepEqual(ownerRemoved.staleReasons, [], 'owner change remains unlisted in stale-reason details');
+
+const zeroPrice = compareReadinessFreshness(
+  { readinessSourceSnapshot: snapshot, readinessFingerprint: fingerprint },
+  { ...baseProperty, price: 0 }
+);
+assert.equal(zeroPrice.freshnessStatus, 'STALE');
+assert.deepEqual(zeroPrice.staleReasons.map((reason) => reason.field), ['price']);
+
+const imagesRemoved = compareReadinessFreshness(
+  { readinessSourceSnapshot: snapshot, readinessFingerprint: fingerprint },
+  { ...baseProperty, images: [] }
+);
+assert.equal(imagesRemoved.freshnessStatus, 'STALE');
+assert.deepEqual(imagesRemoved.staleReasons, [], 'image presence remains unlisted in stale-reason details');
+
 for (const [field, value, expectedField] of [
   ['documents', { deed: 'verified', tax: 'verified', survey: 'verified' }, 'documents.tax'],
   ['suitableFor', ['Investment'], 'suitableFor'],
@@ -113,6 +154,17 @@ assert.equal(
 assert.equal(
   compareReadinessFreshness({ readinessSourceSnapshot: { version: 1 }, readinessFingerprint: 'bad' }, baseProperty).freshnessStatus,
   'UNKNOWN'
+);
+const priorVersionSnapshot = { ...snapshot, version: 1 };
+delete priorVersionSnapshot.ownerPresent;
+delete priorVersionSnapshot.imagesPresent;
+assert.equal(
+  compareReadinessFreshness(
+    { readinessSourceSnapshot: priorVersionSnapshot, readinessFingerprint: fingerprint },
+    baseProperty
+  ).freshnessStatus,
+  'UNKNOWN',
+  'snapshots from before owner/image-presence tracking must not be called CURRENT or STALE'
 );
 assert.equal(
   compareReadinessFreshness(null, null).freshnessStatus,

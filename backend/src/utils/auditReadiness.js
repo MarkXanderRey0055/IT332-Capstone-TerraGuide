@@ -6,7 +6,7 @@ export const AUDIT_METHODOLOGY_VERSION = 'weighted-readiness-v1';
 export const DOCUMENT_WEIGHTS = Object.freeze({ deed: 0.4, tax: 0.3, survey: 0.3 });
 export const STATUS_MULTIPLIERS = Object.freeze({ verified: 1, pending: 0.5, missing: 0 });
 export const DOCUMENT_LABELS = Object.freeze({
-  deed: 'Deed of Sale',
+  deed: 'Title Deed',
   tax: 'Tax Declaration',
   survey: 'Survey Plan',
 });
@@ -20,6 +20,8 @@ export const READINESS_FINGERPRINT_FIELDS = Object.freeze([
   'price',
   'size',
   'lotSize',
+  'ownerPresent',
+  'imagesPresent',
   'description',
   'suitableFor',
   'status',
@@ -29,8 +31,11 @@ export const READINESS_FINGERPRINT_FIELDS = Object.freeze([
   'verificationRemarks',
 ]);
 
-const SNAPSHOT_VERSION = 1;
+const SNAPSHOT_VERSION = 2;
 const SNAPSHOT_DOCUMENT_KEYS = ['deed', 'tax', 'survey'];
+const STALE_REASON_FIELDS = READINESS_FINGERPRINT_FIELDS.filter(
+  (field) => field !== 'ownerPresent' && field !== 'imagesPresent'
+);
 const STALE_FIELD_LABELS = Object.freeze({
   name: 'Property Name',
   type: 'Property Type',
@@ -41,7 +46,7 @@ const STALE_FIELD_LABELS = Object.freeze({
   description: 'Property Description',
   suitableFor: 'Suitable Uses',
   status: 'Listing Status',
-  'documents.deed': 'Deed of Sale Status',
+  'documents.deed': 'Title Deed Status',
   'documents.tax': 'Tax Declaration Status',
   'documents.survey': 'Survey Plan Status',
   verificationRemarks: 'Verification Remarks',
@@ -69,6 +74,8 @@ export function createReadinessSourceSnapshot(property = {}) {
     price: normalizeNumber(property.price),
     size: normalizeNumber(property.size),
     lotSize: normalizeNumber(property.lotSize),
+    ownerPresent: typeof property.owner === 'string' && property.owner.trim().length > 0,
+    imagesPresent: hasNonEmptyArray(property.images),
     description: normalizeText(property.description),
     suitableFor: normalizeArray(property.suitableFor),
     status: normalizeText(property.status),
@@ -91,6 +98,8 @@ function isValidReadinessSourceSnapshot(snapshot) {
     Object.prototype.hasOwnProperty.call(snapshot, 'price') &&
     Object.prototype.hasOwnProperty.call(snapshot, 'size') &&
     Object.prototype.hasOwnProperty.call(snapshot, 'lotSize') &&
+    Object.prototype.hasOwnProperty.call(snapshot, 'ownerPresent') &&
+    Object.prototype.hasOwnProperty.call(snapshot, 'imagesPresent') &&
     Object.prototype.hasOwnProperty.call(snapshot, 'description') &&
     Object.prototype.hasOwnProperty.call(snapshot, 'suitableFor') &&
     Object.prototype.hasOwnProperty.call(snapshot, 'status') &&
@@ -114,6 +123,8 @@ export function createReadinessFingerprint(snapshot) {
     price: snapshot.price,
     size: snapshot.size,
     lotSize: snapshot.lotSize,
+    ownerPresent: snapshot.ownerPresent,
+    imagesPresent: snapshot.imagesPresent,
     description: snapshot.description,
     suitableFor: [...snapshot.suitableFor].sort(),
     status: snapshot.status,
@@ -168,7 +179,7 @@ export function compareReadinessFreshness(audit, property) {
     };
   }
 
-  const staleReasons = READINESS_FINGERPRINT_FIELDS
+  const staleReasons = STALE_REASON_FIELDS
     .filter((field) => JSON.stringify(getSnapshotValue(storedSnapshot, field)) !== JSON.stringify(getSnapshotValue(currentSnapshot, field)))
     .map((field) => ({
       field,
@@ -293,8 +304,21 @@ export function assessPropertyReadiness(property = {}, { hasAudit = true } = {})
   if (property?.size === null || property?.size === undefined || property.size === 0) {
     addNonCritical('size', 'MISSING_PROPERTY_SIZE', 'Property size is missing.');
   }
-  if (property?.lotSize === null || property?.lotSize === undefined || property.lotSize === 0) {
+  if (property?.lotSize === null || property?.lotSize === undefined) {
     addNonCritical('lotSize', 'MISSING_PROPERTY_LOT_SIZE', 'Property lot size is missing.');
+  } else if (
+    typeof property.lotSize !== 'number' ||
+    Number.isNaN(property.lotSize) ||
+    !Number.isFinite(property.lotSize) ||
+    property.lotSize <= 0
+  ) {
+    criticalIssues.push(issue(
+      'property_information',
+      'lotSize',
+      'critical',
+      'INVALID_PROPERTY_LOT_SIZE',
+      'Lot size must be a finite number greater than zero.'
+    ));
   }
   if (!hasText(property?.description)) {
     addNonCritical('description', 'MISSING_PROPERTY_DESCRIPTION', 'Property description is missing.');

@@ -44,7 +44,7 @@ for (const [classification, narrative] of Object.entries(validNarratives)) {
       ...baseFacts,
       readinessClassification: classification,
       readinessCriticalIssues: classification === 'HOLD_FOR_REVIEW'
-        ? [{ code: 'REQUIRED_DOCUMENT_MISSING', message: 'Deed of Sale is missing.' }]
+        ? [{ code: 'REQUIRED_DOCUMENT_MISSING', message: 'Title Deed is missing.' }]
         : baseFacts.readinessCriticalIssues,
       pendingItems: classification === 'ATTENTION_REQUIRED' ? baseFacts.pendingItems : [],
       readinessPendingItems: classification === 'ATTENTION_REQUIRED' ? baseFacts.readinessPendingItems : [],

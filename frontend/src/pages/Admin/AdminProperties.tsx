@@ -1,15 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Plus,
   Search,
   Edit2,
   Trash2,
   Sparkles,
-  Eye,
-  FolderMinus,
   Archive,
-  MoreHorizontal,
 } from 'lucide-react';
 import type { Property } from '../../types/types';
 import { PropertyFormModal } from '../../components/Admin/PropertyFormModal';
@@ -18,6 +14,7 @@ import { CabinetFormModal } from '../../components/Admin/CabinetFormModal';
 import { AddPropertiesToCabinetModal } from '../../components/Admin/AddPropertiesToCabinetModal';
 import { ViewPropertyModal } from '../../components/Admin/ViewPropertyModal';
 import { FilingCabinetPanel } from '../../components/Admin/FilingCabinetPanel';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 import { getLotSize } from '../../services/buyerPrefs';
 import { filterAndSortProperties, getPropertyFilterOptions } from '../../utils/propertyFilters';
 import {
@@ -33,7 +30,6 @@ import {
   updateCabinet,
   deleteCabinet,
   assignPropertiesToCabinet,
-  removePropertyFromCabinet,
 } from '../../services/CabinetService';
 
 interface AdminPropertiesProps {
@@ -98,13 +94,11 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleteError, setDeleteError] = useState('');
   const [auditProperty, setAuditProperty] = useState<Property | null>(null);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [isViewPropertyModalOpen, setIsViewPropertyModalOpen] = useState(false);
-  const [moreMenuPropertyId, setMoreMenuPropertyId] = useState<string | null>(null);
-  const [moreMenuPosition, setMoreMenuPosition] = useState({ top: 0, left: 0 });
-  const moreMenuAnchorRef = useRef<HTMLButtonElement | null>(null);
-  const moreMenuRef = useRef<HTMLDivElement | null>(null);
 
   // ---- Filing Cabinet state ----
   const [cabinets, setCabinets] = useState<Cabinet[]>([]);
@@ -175,78 +169,6 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     setIsViewPropertyModalOpen(true);
   };
 
-  const openMoreMenu = (property: Property, anchor: HTMLButtonElement) => {
-    moreMenuAnchorRef.current = anchor;
-    const rect = anchor.getBoundingClientRect();
-    setMoreMenuPosition({ top: rect.bottom + 4, left: Math.max(8, rect.right - 224) });
-    setMoreMenuPropertyId(property.id);
-  };
-
-  const handleMoreMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const items = Array.from(moreMenuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []);
-    if (!items.length) return;
-    const index = items.indexOf(document.activeElement as HTMLButtonElement);
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault();
-      items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
-    } else if (event.key === 'Home') {
-      event.preventDefault();
-      items[0].focus();
-    } else if (event.key === 'End') {
-      event.preventDefault();
-      items[items.length - 1].focus();
-    }
-  };
-
-  useEffect(() => {
-    if (!moreMenuPropertyId || !moreMenuAnchorRef.current || !moreMenuRef.current) return;
-
-    const updatePosition = () => {
-      const anchorRect = moreMenuAnchorRef.current?.getBoundingClientRect();
-      const menu = moreMenuRef.current;
-      if (!anchorRect || !menu) return;
-      const margin = 8;
-      const width = menu.offsetWidth;
-      const height = menu.offsetHeight;
-      const left = Math.max(margin, Math.min(anchorRect.right - width, window.innerWidth - width - margin));
-      const below = window.innerHeight - anchorRect.bottom - margin;
-      const top = below >= height || anchorRect.top < height
-        ? Math.min(anchorRect.bottom + 4, window.innerHeight - height - margin)
-        : anchorRect.top - height - 4;
-      setMoreMenuPosition({ top: Math.max(margin, top), left });
-    };
-
-    updatePosition();
-    const focusTimer = window.setTimeout(() => {
-      moreMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
-    }, 0);
-    const handleOutsidePointer = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (!moreMenuRef.current?.contains(target) && !moreMenuAnchorRef.current?.contains(target)) {
-        setMoreMenuPropertyId(null);
-      }
-    };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setMoreMenuPropertyId(null);
-        moreMenuAnchorRef.current?.focus();
-      }
-    };
-
-    document.addEventListener('mousedown', handleOutsidePointer);
-    document.addEventListener('keydown', handleEscape);
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
-    return () => {
-      window.clearTimeout(focusTimer);
-      document.removeEventListener('mousedown', handleOutsidePointer);
-      document.removeEventListener('keydown', handleEscape);
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
-    };
-  }, [moreMenuPropertyId]);
-
   const refreshProperties = async () => {
     try {
       const fresh = await getProperties();
@@ -263,23 +185,31 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     }
   };
 
-  const handleDeleteProperty = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete listing "${name}"?`)) {
-      return;
-    }
+  const closeDeleteDialog = () => {
+    if (pendingDelete && deletingId === pendingDelete.id) return;
+    setPendingDelete(null);
+    setDeleteError('');
+  };
+  const deleteDialogRef = useModalAccessibility({
+    isOpen: pendingDelete !== null,
+    onClose: closeDeleteDialog,
+  });
 
+  const handleDeleteProperty = async () => {
+    if (!pendingDelete || deletingId) return;
+    const { id, name } = pendingDelete;
     setDeletingId(id);
+    setDeleteError('');
     try {
       await deleteProperty(id);
+      setPendingDelete(null);
       showToast(`Deleted property listing "${name}"`);
       await refreshProperties();
       await refreshCabinets();
       onDataChanged?.();
     } catch (error) {
-      showToast(
-        error instanceof Error
-          ? error.message
-          : `Could not delete "${name}". Please try again.`
+      setDeleteError(
+        error instanceof Error ? error.message : `Could not delete "${name}". Please try again.`
       );
     } finally {
       setDeletingId(null);
@@ -367,26 +297,6 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     showToast(`Filed property into "${cabinet.name}"`);
     await refreshCabinets();
     await refreshProperties();
-  };
-
-  const handleRemoveFromCabinet = async (property: Property) => {
-    const cabinetName = cabinets.find((c) => c.id === property.cabinetId)?.name || 'its cabinet';
-    if (
-      !confirm(
-        `Remove "${property.name}" from "${cabinetName}"?\n\nThis will NOT delete the property — it will just become Unassigned.`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      await removePropertyFromCabinet(property.id);
-      showToast(`Removed "${property.name}" from ${cabinetName}. It's now Unassigned.`);
-      await refreshCabinets();
-      await refreshProperties();
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : `Could not remove "${property.name}" from its cabinet.`);
-    }
   };
 
   // ---- Filtering ----
@@ -582,9 +492,14 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
                   return (
                     <tr key={p.id} className="transition-colors">
                       <td className="px-4">
-                        <div className="font-bold text-[#223127] text-sm leading-snug whitespace-normal break-words">
+                        <button
+                          type="button"
+                          onClick={() => handleViewPropertyClick(p)}
+                          className="block cursor-pointer text-left font-bold text-[#223127] text-sm leading-snug whitespace-normal break-words hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand)]"
+                          aria-label={`View details for ${p.name}`}
+                        >
                           {p.name}
-                        </div>
+                        </button>
                         <div className="text-[11px] text-[#4d5e4d] mt-1 leading-snug break-words">
                           {p.location || 'Location not provided'} · {getLotSize(p).toLocaleString()} sqm
                         </div>
@@ -604,16 +519,10 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
                         <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                           <button
                             type="button"
-                            onClick={() => handleViewPropertyClick(p)}
-                            className="admin-icon-btn rounded-lg cursor-pointer"
-                            title="View Property"
-                            aria-label={`View ${p.name}`}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleEditPropertyClick(p)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleEditPropertyClick(p);
+                            }}
                             className="admin-icon-btn rounded-lg cursor-pointer"
                             title="Edit Property"
                             aria-label={`Edit ${p.name}`}
@@ -624,17 +533,27 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              if (moreMenuPropertyId === p.id) setMoreMenuPropertyId(null);
-                              else openMoreMenu(p, event.currentTarget);
+                              handleAuditPropertyClick(p);
                             }}
                             className="admin-icon-btn rounded-lg cursor-pointer"
-                            title="More actions"
-                            aria-label={`More actions for ${p.name}`}
-                            aria-haspopup="menu"
-                            aria-expanded={moreMenuPropertyId === p.id}
-                            aria-controls={moreMenuPropertyId === p.id ? 'property-row-actions-menu' : undefined}
+                            title="AI Compliance Audit"
+                            aria-label={`Open AI Compliance Audit for ${p.name}`}
                           >
-                            <MoreHorizontal className="w-4 h-4" aria-hidden="true" />
+                            <Sparkles className="w-4 h-4" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setDeleteError('');
+                              setPendingDelete({ id: p.id, name: p.name });
+                            }}
+                            disabled={deletingId === p.id}
+                            className="admin-icon-btn admin-icon-btn--danger rounded-lg cursor-pointer border-[var(--color-danger-border)] hover:border-[var(--color-danger)]"
+                            title={`Delete ${p.name}`}
+                            aria-label={`Delete ${p.name}`}
+                          >
+                            <Trash2 className="w-4 h-4" aria-hidden="true" />
                           </button>
                         </div>
                       </td>
@@ -646,64 +565,6 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
           </div>
         )}
       </div>
-
-      {moreMenuPropertyId && createPortal((() => {
-        const menuProperty = properties.find((property) => property.id === moreMenuPropertyId);
-        if (!menuProperty) return null;
-        const menuItemClass = 'flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs font-semibold text-[#3d4a3d] transition-colors hover:bg-[#f1f5f9] focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[var(--color-brand)]';
-        return (
-          <div
-            ref={moreMenuRef}
-            id="property-row-actions-menu"
-            role="menu"
-            aria-label={`Actions for ${menuProperty.name}`}
-            onKeyDown={handleMoreMenuKeyDown}
-            className="fixed z-[10001] w-56 rounded-xl border border-[#d6c7b2] bg-white p-1.5 shadow-xl"
-            style={{ top: moreMenuPosition.top, left: moreMenuPosition.left }}
-          >
-            <button
-              type="button"
-              role="menuitem"
-              className={menuItemClass}
-              onClick={(event) => {
-                event.stopPropagation();
-                setMoreMenuPropertyId(null);
-                handleAuditPropertyClick(menuProperty);
-              }}
-            >
-              <Sparkles className="h-4 w-4 text-neutral" aria-hidden="true" /> AI Compliance Audit
-            </button>
-            {menuProperty.cabinetId && (
-              <button
-                type="button"
-                role="menuitem"
-                className={menuItemClass}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setMoreMenuPropertyId(null);
-                  void handleRemoveFromCabinet(menuProperty);
-                }}
-              >
-                <FolderMinus className="h-4 w-4 text-neutral" aria-hidden="true" /> Remove from Filing Cabinet
-              </button>
-            )}
-            <div className="my-1 border-t border-[#e8dfd3]" role="separator" />
-            <button
-              type="button"
-              role="menuitem"
-              disabled={deletingId === menuProperty.id}
-              className={`${menuItemClass} text-danger hover:bg-[var(--color-danger-bg)] disabled:cursor-not-allowed disabled:opacity-50`}
-              onClick={(event) => {
-                event.stopPropagation();
-                setMoreMenuPropertyId(null);
-                void handleDeleteProperty(menuProperty.id, menuProperty.name);
-              }}
-            >
-              <Trash2 className="h-4 w-4 text-danger" aria-hidden="true" /> Delete Property
-            </button>
-          </div>
-        );
-      })(), document.body)}
 
       <PropertyFormModal
         isOpen={isPropertyModalOpen}
@@ -751,6 +612,58 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
         }}
         onSave={handleAssignProperties}
       />
+
+      {pendingDelete && (
+        <div className="fixed inset-0 z-[700] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Cancel property deletion"
+            className="absolute inset-0 border-none bg-black/60 cursor-pointer disabled:cursor-default"
+            onClick={closeDeleteDialog}
+            disabled={deletingId === pendingDelete.id}
+          />
+          <div
+            ref={deleteDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-property-title"
+            aria-describedby="delete-property-description"
+            tabIndex={-1}
+            className="admin-panel relative w-full max-w-sm rounded-2xl p-6"
+            style={{ boxShadow: '0 8px 24px rgba(15, 23, 42, 0.16)' }}
+          >
+            <h2 id="delete-property-title" className="text-[#2f2417] font-serif text-lg font-bold">
+              Delete this listing?
+            </h2>
+            <p id="delete-property-description" className="text-[#6f604d] text-sm mt-2">
+              {pendingDelete.name} will be permanently removed. This can’t be undone.
+            </p>
+            {deleteError && (
+              <p role="alert" className="mt-4 rounded-lg border border-neutral-300 bg-neutral-50 p-3 text-sm text-neutral-800 break-words">
+                {deleteError}
+              </p>
+            )}
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={closeDeleteDialog}
+                disabled={deletingId === pendingDelete.id}
+                className="admin-button-secondary px-4 py-2 rounded-lg text-sm font-medium text-[#5d503f] border-none cursor-pointer transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDeleteProperty()}
+                disabled={deletingId === pendingDelete.id}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[var(--color-danger)] hover:brightness-95 border-none cursor-pointer transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {deletingId === pendingDelete.id ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
