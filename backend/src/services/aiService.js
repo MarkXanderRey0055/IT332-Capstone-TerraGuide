@@ -6,7 +6,7 @@
  * to support Phase 6 AI Compliance Audits and the BI Analytics Dashboard.
  */
 
-import { reserveAiUsage } from './aiUsageService.js';
+import { releaseAiUsage, reserveAiUsage } from './aiUsageService.js';
 
 /**
  * Generates compliance findings and predictive recommendations for a single property listing.
@@ -56,18 +56,34 @@ export async function generatePortfolioNarrative(snapshot) {
     );
   }
 
-  await reserveAiUsage('portfolio');
-
-  const prompt = buildPortfolioPrompt(snapshot);
-  const rawText = await callNvidiaModel(apiKey, prompt);
-
-  let parsed;
+  let reservation;
   try {
-    parsed = parseJsonResponse(rawText);
-  } catch (err) {
-    throw new Error('Failed to parse AI Portfolio Narrative as JSON.');
-  }
+    reservation = await reserveAiUsage('portfolio');
+    const prompt = buildPortfolioPrompt(snapshot);
+    const rawText = await callNvidiaModel(apiKey, prompt, { timeoutMs: 30_000 });
 
+    let parsed;
+    try {
+      parsed = parseJsonResponse(rawText);
+    } catch (error) {
+      throw createNarrativeValidationError('AI Portfolio response was not valid JSON.', 'PORTFOLIO_JSON_OBJECT', 'AI_INVALID_RESPONSE', 'json');
+    }
+
+    validatePortfolioNarrative(parsed);
+    return parsed;
+  } catch (error) {
+    if (reservation) {
+      try {
+        await releaseAiUsage(reservation);
+      } catch (releaseError) {
+        console.warn('[AI Portfolio] Could not release failed request usage reservation.');
+      }
+    }
+    throw error;
+  }
+}
+
+export function validatePortfolioNarrative(parsed) {
   const requiredFields = [
     'portfolioHealth',
     'marketTrends',
@@ -76,12 +92,18 @@ export async function generatePortfolioNarrative(snapshot) {
     'risks',
     'recommendations',
   ];
-
-  const missingField = requiredFields.find((field) => !parsed[field]);
-  if (missingField) {
-    throw new Error(`AI response was missing the "${missingField}" field.`);
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+    throw createNarrativeValidationError('AI Portfolio response must be a JSON object.', 'PORTFOLIO_RESPONSE_OBJECT');
   }
 
+  for (const field of requiredFields) {
+    if (typeof parsed[field] !== 'string' || !parsed[field].trim()) {
+      throw createNarrativeValidationError(
+        `AI Portfolio response must contain a non-empty "${field}" string.`,
+        `PORTFOLIO_${field.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase()}`
+      );
+    }
+  }
   return parsed;
 }
 
@@ -128,7 +150,7 @@ export async function generateBuyerMarketNarrative(snapshot) {
 /**
  * Helper function to call NVIDIA NIM API and extract clean JSON
  */
-export async function callNvidiaModel(apiKey, prompt) {
+export async function callNvidiaModel(apiKey, prompt, { timeoutMs } = {}) {
   const url = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
   const payload = {
@@ -160,6 +182,7 @@ export async function callNvidiaModel(apiKey, prompt) {
         Accept: 'application/json',
       },
       body: JSON.stringify(payload),
+      ...(Number.isFinite(timeoutMs) ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
     });
   } catch (error) {
     const isTimeout = error?.name === 'AbortError' || error?.name === 'TimeoutError' || /timeout/i.test(error?.message || '');

@@ -154,6 +154,10 @@ try {
   const standalone = await createTransaction(request({ convertedInquiryId: undefined }));
   assert.equal(standalone.status, 'Reserved');
   assert.equal(standalone.convertedInquiryId, undefined);
+  assert.equal(property.status, 'Reserved', 'transaction creation reserves the property through its internal update path');
+  const completedStandalone = await updateTransaction(standalone._id.toString(), { status: 'Completed' });
+  assert.equal(completedStandalone.status, 'Completed');
+  assert.equal(property.status, 'Sold', 'transaction completion marks the property Sold through its internal update path');
   assert.equal(notifications.length, 1, 'Standalone transactions do not emit inquiry-conversion notifications');
 
   // A failed inquiry update aborts the Mongo transaction (including the created transaction).

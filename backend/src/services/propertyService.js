@@ -3,8 +3,9 @@ import Transaction from '../models/Transaction.js';
 import AppError from '../utils/errors.js';
 import { cleanupCloudinaryAssets, uploadPropertyImagesToCloudinary } from './imageStorageService.js';
 import mongoose from 'mongoose';
+import { BUYER_VISIBLE_PROPERTY_STATUS } from '../../../shared/propertyVisibility.mjs';
 
-export const getAllProperties = async (queryParams = {}) => {
+export const getAllProperties = async (queryParams = {}, user = null) => {
   const {
     search,
     location,
@@ -20,6 +21,14 @@ export const getAllProperties = async (queryParams = {}) => {
 
   // Build MongoDB query filter dynamically
   const filter = {};
+
+  // Discovery is always Available-only for buyers and anonymous visitors.
+  // Only a verified admin may use an explicit status filter or see all statuses.
+  if (user?.role === 'admin') {
+    if (status) filter.status = status;
+  } else {
+    filter.status = BUYER_VISIBLE_PROPERTY_STATUS;
+  }
 
   // 1. Search filter (matches name, owner, or location)
   if (search) {
@@ -38,11 +47,6 @@ export const getAllProperties = async (queryParams = {}) => {
   // 3. Exact Property Type filter
   if (type) {
     filter.type = type;
-  }
-
-  // 4. Exact Status filter
-  if (status) {
-    filter.status = status;
   }
 
   // 5. Price Range filter
@@ -154,9 +158,18 @@ export const appendPropertyImages = async (id, files) => {
   return { property: existing, uploadedImages: uploaded };
 };
 
-export const updateProperty = async (id, data, updatedByUserId) => {
+export const updateProperty = async (id, data, updatedByUserId, { allowTransactionStatus = false } = {}) => {
   const existing = await Property.findById(id);
   if (!existing) throw new AppError('Property listing not found', 404);
+
+  if (
+    !allowTransactionStatus &&
+    data.status !== undefined &&
+    data.status !== existing.status &&
+    ['Reserved', 'Sold'].includes(data.status)
+  ) {
+    throw new AppError('Reserved and Sold are set by transactions.', 400);
+  }
 
   validateRequiredPositivePropertyValues({
     owner: data.owner !== undefined ? data.owner : existing.owner,

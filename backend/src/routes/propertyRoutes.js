@@ -7,14 +7,14 @@ import {
   deleteProperty,
   uploadPropertyImages,
 } from '../controllers/propertyController.js';
-import { protect, authorize } from '../middleware/authMiddleware.js';
+import { protect, optionalProtect, authorize } from '../middleware/authMiddleware.js';
 import { validatePropertyInput } from '../middleware/propertyValidation.js';
 import { uploadPropertyImages as parsePropertyImages } from '../middleware/propertyImageUpload.js';
 
 const router = express.Router();
 
 // buyer routes
-router.get('/', getProperties);
+router.get('/', optionalProtect, getProperties);
 router.get('/:id', getPropertyById); //search
 
 // admin routes

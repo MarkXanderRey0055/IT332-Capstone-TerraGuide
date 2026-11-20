@@ -122,7 +122,7 @@ export const createTransaction = async ({ buyerId, propertyId, amount, notes, cr
   });
 
   // New transaction reserves the property, per the approved workflow.
-  await updatePropertyRecord(propertyId, { status: 'Reserved' });
+  await updatePropertyRecord(propertyId, { status: 'Reserved' }, undefined, { allowTransactionStatus: true });
 
   return getTransactionById(transaction._id);
 };
@@ -306,9 +306,9 @@ export const updateTransaction = async (transactionId, { amount, notes, status, 
     if (ACTIVE_TRANSACTION_STATUSES.includes(transaction.status)) {
       const oldProperty = await Property.findById(oldPropertyId);
       if (oldProperty && oldProperty.status === 'Reserved') {
-        await updatePropertyRecord(oldPropertyId, { status: 'Available' });
+        await updatePropertyRecord(oldPropertyId, { status: 'Available' }, undefined, { allowTransactionStatus: true });
       }
-      await updatePropertyRecord(propertyId, { status: 'Reserved' });
+      await updatePropertyRecord(propertyId, { status: 'Reserved' }, undefined, { allowTransactionStatus: true });
     }
   }
 
@@ -316,13 +316,13 @@ export const updateTransaction = async (transactionId, { amount, notes, status, 
   if (status !== undefined && status !== transaction.status) {
     if (status === 'Completed') {
       transaction.completedAt = new Date();
-      await updatePropertyRecord(transaction.propertyId, { status: 'Sold' });
+      await updatePropertyRecord(transaction.propertyId, { status: 'Sold' }, undefined, { allowTransactionStatus: true });
     }
 
     if (status === 'Cancelled') {
       const property = await Property.findById(transaction.propertyId);
       if (property && property.status === 'Reserved') {
-        await updatePropertyRecord(transaction.propertyId, { status: 'Available' });
+        await updatePropertyRecord(transaction.propertyId, { status: 'Available' }, undefined, { allowTransactionStatus: true });
       }
     }
 

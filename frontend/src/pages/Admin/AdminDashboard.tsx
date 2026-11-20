@@ -184,7 +184,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     const fetchProperties = async () => {
       setIsLoadingProperties(true);
       try {
-        const fetched = await getProperties();
+        const fetched = await getProperties({ includeAuth: true });
         if (isCancelled) return;
         setProperties(fetched);
       } catch (error) {

@@ -352,6 +352,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
   const handleGenerateInsights = async () => {
     setIsGeneratingInsights(true);
     setInsightsError('');
+    setInsightsResult(null);
     try {
       const result = await generatePortfolioInsights();
       setInsightsResult(result);
@@ -984,7 +985,9 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
                 <div className="flex items-center justify-between pb-4 border-b border-[#d6c7b2]">
                   <div className="flex items-center gap-2 text-xs text-[#7c6a57]">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-                    Generated from live portfolio data just now
+                    {insightsResult.narrativeOrigin === 'AI_GENERATED'
+                      ? 'AI-generated'
+                      : 'System-generated (AI unavailable)'}
                   </div>
                   <button
                     type="button"
@@ -994,6 +997,16 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
                     Regenerate
                   </button>
                 </div>
+
+                {insightsResult.fallbackReason && (
+                  <p className="text-xs text-[#7c6a57]" role="note">
+                    {insightsResult.fallbackReason === 'AI_TIMEOUT'
+                      ? 'The AI service timed out; this summary is based on current portfolio data.'
+                      : insightsResult.fallbackReason === 'AI_INVALID_RESPONSE'
+                        ? 'The AI response was incomplete or invalid; this summary is based on current portfolio data.'
+                        : 'The AI service was unavailable; this summary is based on current portfolio data.'}
+                  </p>
+                )}
 
                 {(
                   [

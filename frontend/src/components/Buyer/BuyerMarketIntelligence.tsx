@@ -197,7 +197,6 @@ export const BuyerMarketIntelligence: React.FC<BuyerMarketIntelligenceProps> = (
     });
 
     // Numeric listing counts — blue
-    if (s.totalProperties > 0) h.push({ value: String(s.totalProperties), variant: 'blue' });
     if (s.availableProperties > 0) h.push({ value: String(s.availableProperties), variant: 'blue' });
     if (s.totalBuyersWithPreferences > 0) h.push({ value: String(s.totalBuyersWithPreferences), variant: 'blue' });
 
@@ -231,6 +230,11 @@ export const BuyerMarketIntelligence: React.FC<BuyerMarketIntelligenceProps> = (
           </p>
         </div>
       </div>
+      {insightResult && (
+        <p className="mb-4 text-sm font-semibold text-[#285A48]">
+          Available listings: {insightResult.snapshot.availableProperties}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* 1. Trending Property Types */}

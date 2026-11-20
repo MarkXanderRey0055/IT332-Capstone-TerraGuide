@@ -28,7 +28,8 @@ import {
   removeBuyerPreferences,
   saveBuyerPreferences,
 } from '../../services/buyerPrefs';
-import { getProperties } from '../../services/PropertyService';
+import { getProperties, getPropertyById } from '../../services/PropertyService';
+import { isBuyerVisibleStatus } from '../../../../shared/propertyVisibility.mjs';
 import { getCurrentUser } from '../../services/AuthService';
 import { submitInquiry, getMyInquiries } from '../../services/InquiryService';
 import type { Inquiry } from '../../services/InquiryService';
@@ -501,6 +502,20 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     setSelectedProperty(null);
   };
 
+  const handleViewHistoricalProperty = async (propertyId: string) => {
+    const alreadyLoaded = properties.find((property) => property.id === propertyId);
+    if (alreadyLoaded) {
+      handleSelectProperty(alreadyLoaded);
+      return;
+    }
+    try {
+      const property = await getPropertyById(propertyId);
+      handleSelectProperty(property);
+    } catch {
+      setActionFeedback('This property’s details could not be loaded.');
+    }
+  };
+
   const handleRequestVisit = () => {
     if (visitSubmittingRef.current) return;
     if (!selectedProperty) return;
@@ -727,7 +742,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
 
     try {
       const fetched = await getProperties();
-      setProperties(fetched);
+      setProperties(fetched.filter((property) => isBuyerVisibleStatus(property.status)));
       setPropertyLoadError('');
     } catch (error) {
       setPropertyLoadError(
@@ -926,6 +941,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             error={activityErrors.inquiries}
             onRefresh={syncBuyerActivity}
             onSelectProperty={handleSelectProperty}
+            onViewPropertyById={handleViewHistoricalProperty}
             onBrowseProperties={() => setActiveTab('Search')}
           />
         );

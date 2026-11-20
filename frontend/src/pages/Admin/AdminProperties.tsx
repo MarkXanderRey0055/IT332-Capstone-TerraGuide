@@ -171,7 +171,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
 
   const refreshProperties = async () => {
     try {
-      const fresh = await getProperties();
+      const fresh = await getProperties({ includeAuth: true });
       setProperties(fresh);
     } catch (error) {
       // The mutation itself already succeeded by the time we get here —
