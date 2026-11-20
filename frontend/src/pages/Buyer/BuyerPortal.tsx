@@ -39,6 +39,7 @@ import { SiteVisitModal, getSiteVisitDateError } from '../../components/Buyer/Si
 import { InquiriesTab } from '../../components/Buyer/InquiriesTab';
 import { COLORS } from '../../styles/buyerTheme';
 import { useModalAccessibility } from '../../hooks/useModalAccessibility';
+import { NotificationBell } from '../../components/NotificationBell';
 
 export { COLORS };
 
@@ -968,12 +969,23 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                         <p className="text-xs text-[#6A9F8A] mt-1">
                           Submitted: {formatActivityTimestamp(visit.createdAt)}
                         </p>
+                        {visit.updatedAt && (
+                          <p className="text-xs text-[#6A9F8A] mt-1">Updated {formatActivityTimestamp(visit.updatedAt)}</p>
+                        )}
                       </div>
                       <span className="text-[10px] font-semibold px-3 py-1 rounded-full bg-[#285A48] text-[#FFFFFF]">
                         {visit.status}
                       </span>
                     </div>
                     <div className="mt-3 text-sm text-[#E8F5EF] space-y-1">
+                      {visit.confirmedDate && visit.confirmedTime && (
+                        <div className="rounded-lg border border-[rgba(176,228,204,0.35)] bg-[rgba(40,90,72,0.45)] p-3 mb-3">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-[#B0E4CC]">Confirmed visit</p>
+                          <p className="mt-1 font-semibold text-white">
+                            {new Date(visit.confirmedDate).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })} · {visit.confirmedTime}
+                          </p>
+                        </div>
+                      )}
                       <p>
                         <span className="font-semibold text-[#FFFFFF]">Preferred date:</span>{' '}
                         {new Date(visit.preferredDate).toLocaleDateString('en-PH', {
@@ -1262,6 +1274,13 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
           </nav>
 
           <div className="flex items-center gap-3 sm:gap-4">
+            {isAuthenticated && (
+              <NotificationBell
+                enabled={isAuthenticated}
+                variant="buyer"
+                onNavigate={(notification) => setActiveTab(notification.type.startsWith('site_visit_') ? 'Site Visits' : 'Inquiries')}
+              />
+            )}
             <button
               type="button"
               onClick={() => onGoToAdminLogin?.()}

@@ -14,6 +14,8 @@ import { exportDataset } from '../../services/ExportService';
 interface AdminTransactionsProps {
   onToast?: (message: string) => void;
   onDataChanged?: () => void;
+  targetTransactionId?: string | null;
+  onTargetTransactionHandled?: () => void;
 }
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
@@ -44,7 +46,7 @@ const getPropertyDisplay = (t: Transaction, propertyList: Property[]) => {
     (typeof t.propertyId === 'string' ? t.propertyId : '');
 
   const match = propId
-    ? propertyList.find((p) => p.id === propId || (p as any)._id === propId)
+    ? propertyList.find((property) => property.id === propId)
     : null;
 
   const name =
@@ -65,7 +67,7 @@ const getBuyerDisplay = (t: Transaction) => {
   return { fullName, email };
 };
 
-export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, onDataChanged }) => {
+export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, onDataChanged, targetTransactionId = null, onTargetTransactionHandled }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -136,6 +138,13 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
     setSelectedTransaction(transaction);
     setIsDetailModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!targetTransactionId || isLoading || error) return;
+    const target = transactions.find((transaction) => transaction.id === targetTransactionId);
+    if (target) handleOpenDetail(target);
+    onTargetTransactionHandled?.();
+  }, [targetTransactionId, isLoading, error, transactions, onTargetTransactionHandled]);
 
   const handleOpenEdit = (transaction: Transaction) => {
     setSelectedTransaction(transaction);

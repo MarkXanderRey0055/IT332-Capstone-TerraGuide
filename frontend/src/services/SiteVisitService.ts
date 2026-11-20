@@ -21,6 +21,8 @@ export interface SiteVisit {
   propertyId: SiteVisitProperty;
   preferredDate: string;
   preferredTime: string;
+  confirmedDate?: string | null;
+  confirmedTime?: string;
   notes: string;
   adminResponse: string;
   status: 'Pending' | 'Scheduled' | 'Completed';
@@ -60,11 +62,12 @@ export async function getAllSiteVisits(): Promise<SiteVisit[]> {
 export async function updateSiteVisitStatus(
   id: string,
   status: 'Pending' | 'Scheduled' | 'Completed',
-  adminResponse: string
+  adminResponse: string,
+  schedule: { confirmedDate?: string; confirmedTime?: string } = {}
 ): Promise<SiteVisit> {
   const res = await apiRequest(`/site-visits/admin/${id}`, {
     method: 'PUT',
-    body: JSON.stringify({ status, adminResponse }),
+    body: JSON.stringify({ status, adminResponse, ...schedule }),
   });
   return { ...(res.data as SiteVisit), adminResponse: res.data.adminResponse ?? '' };
 }

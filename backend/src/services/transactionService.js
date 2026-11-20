@@ -1,9 +1,11 @@
 import mongoose from 'mongoose';
 import Transaction, { ACTIVE_TRANSACTION_STATUSES, TRANSACTION_STATUSES } from '../models/Transaction.js';
+import Inquiry from '../models/Inquiry.js';
 import User from '../models/User.js';
 import Property from '../models/Property.js';
 import AppError from '../utils/errors.js';
 import { updateProperty as updatePropertyRecord } from './propertyService.js';
+import { notifyBuyerOfInquiryConverted } from './notificationService.js';
 
 const POPULATE_BUYER = 'fullName username email';
 const POPULATE_PROPERTY = 'name title location type status price owner lotSize size';
@@ -68,7 +70,7 @@ export const getTransactionById = async (transactionId) => {
   return transaction;
 };
 
-export const createTransaction = async ({ buyerId, propertyId, amount, notes, createdByUserId }) => {
+export const createTransaction = async ({ buyerId, propertyId, amount, notes, createdByUserId, convertedInquiryId }) => {
   if (!buyerId || !mongoose.Types.ObjectId.isValid(buyerId)) {
     throw new AppError('A valid buyer is required.', 400);
   }
@@ -83,6 +85,10 @@ export const createTransaction = async ({ buyerId, propertyId, amount, notes, cr
   const buyer = await User.findOne({ _id: buyerId, role: 'buyer' });
   if (!buyer) {
     throw new AppError('Buyer not found or is not a registered buyer account.', 400);
+  }
+
+  if (convertedInquiryId !== undefined && convertedInquiryId !== null && convertedInquiryId !== '') {
+    return createTransactionFromInquiry({ buyerId, propertyId, amountNum, notes, createdByUserId, convertedInquiryId });
   }
 
   const property = await Property.findById(propertyId);
@@ -120,6 +126,89 @@ export const createTransaction = async ({ buyerId, propertyId, amount, notes, cr
 
   return getTransactionById(transaction._id);
 };
+
+async function createTransactionFromInquiry({ buyerId, propertyId, amountNum, notes, createdByUserId, convertedInquiryId }) {
+  if (!mongoose.Types.ObjectId.isValid(convertedInquiryId)) {
+    throw new AppError('A valid inquiry is required for conversion.', 400);
+  }
+
+  let convertedInquiry;
+  let transactionCreated = false;
+  let createdTransactionId;
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const inquiry = await Inquiry.findById(convertedInquiryId).session(session);
+      if (!inquiry) throw new AppError('Inquiry not found.', 400);
+      if (!['Pending', 'Responded'].includes(inquiry.status)) {
+        throw new AppError('Only Pending or Responded inquiries can be converted.', 400);
+      }
+      if (inquiry.buyerId.toString() !== buyerId.toString() || inquiry.propertyId.toString() !== propertyId.toString()) {
+        throw new AppError('The selected buyer and property must match the inquiry.', 400);
+      }
+
+      const alreadyLinked = await Transaction.findOne({ convertedInquiryId }).session(session);
+      if (alreadyLinked) throw new AppError('This inquiry already has a linked transaction.', 400);
+
+      const property = await Property.findById(propertyId).session(session);
+      if (!property) throw new AppError('Property not found.', 400);
+      if (property.status === 'Sold') {
+        throw new AppError('This property is already marked Sold and cannot have a new transaction created against it.', 409);
+      }
+      const existingActive = await Transaction.findOne({
+        propertyId,
+        status: { $in: ACTIVE_TRANSACTION_STATUSES },
+      }).session(session);
+      if (existingActive) {
+        throw new AppError(
+          `This property already has an active transaction (${existingActive.status}). Complete or cancel it before creating a new one.`,
+          409
+        );
+      }
+
+      const [created] = await Transaction.create([{
+        buyerId,
+        propertyId,
+        convertedInquiryId,
+        amount: amountNum,
+        listingPriceAtCreation: Number(property.price),
+        notes: notes ? notes.trim() : '',
+        createdBy: createdByUserId,
+        status: 'Reserved',
+      }], { session });
+      transactionCreated = true;
+      createdTransactionId = created._id;
+
+      property.status = 'Reserved';
+      await property.save({ session });
+      inquiry.status = 'Converted';
+      inquiry.closedAt = new Date();
+      await inquiry.save({ session });
+      convertedInquiry = inquiry;
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      throw new AppError('This inquiry already has a linked transaction.', 400);
+    }
+    if (transactionCreated) {
+      try {
+        console.error('[transactionService] Inquiry conversion transaction aborted', {
+          inquiryId: String(convertedInquiryId),
+          errorName: error?.name || 'Error',
+          errorMessage: typeof error?.message === 'string' ? error.message.slice(0, 300) : 'Unknown conversion error',
+        });
+      } catch {
+        // Diagnostics must not hide the conversion failure.
+      }
+    }
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+
+  if (convertedInquiry) await notifyBuyerOfInquiryConverted(convertedInquiry);
+  return getTransactionById(createdTransactionId);
+}
 
 export const updateTransaction = async (transactionId, { amount, notes, status, buyerId, propertyId } = {}) => {
   if (!mongoose.Types.ObjectId.isValid(transactionId)) {

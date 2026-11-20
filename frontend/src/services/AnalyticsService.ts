@@ -177,13 +177,18 @@ export type RecentActivityType =
   | 'transaction_status_changed'
   | 'transaction_completed'
   | 'inquiry_created'
-  | 'site_visit_created';
+  | 'inquiry_responded'
+  | 'inquiry_status_changed'
+  | 'site_visit_created'
+  | 'site_visit_status_changed';
 
 export interface RecentActivityItem {
   type: RecentActivityType;
   title: string;
   description: string;
   timestamp: string;
+  relatedId: string;
+  relatedModel: 'Inquiry' | 'SiteVisit' | 'Transaction' | 'Property' | 'User';
 }
 
 export async function getRecentActivity(): Promise<RecentActivityItem[]> {

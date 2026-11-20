@@ -4,14 +4,28 @@ import type { Property } from '../../types/types';
 import type { AdminBuyerProfile } from '../../services/AdminBuyerService';
 import { getBuyers } from '../../services/AdminBuyerService';
 import { createTransaction } from '../../services/TransactionService';
+import type { Transaction } from '../../services/TransactionService';
 import { CurrencyInput } from './CurrencyInput';
 import { useModalAccessibility } from '../../hooks/useModalAccessibility';
+
+export interface InquiryConversionContext {
+  inquiryId: string;
+  buyerId: string;
+  propertyId: string;
+  buyerName: string;
+  buyerEmail: string;
+  propertyName: string;
+  submittedAt: string;
+}
 
 interface TransactionFormModalProps {
   isOpen: boolean;
   properties: Property[];
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (transaction?: Transaction) => void;
+  initialAmount?: number;
+  conversionContext?: InquiryConversionContext | null;
+  isLoadingConversionProperty?: boolean;
 }
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
@@ -21,6 +35,9 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   properties,
   onClose,
   onCreated,
+  initialAmount,
+  conversionContext = null,
+  isLoadingConversionProperty = false,
 }) => {
   const modalRef = useModalAccessibility({ isOpen, onClose });
   const [buyers, setBuyers] = useState<AdminBuyerProfile[]>([]);
@@ -40,10 +57,11 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
     if (!isOpen) return;
     setBuyerSearch('');
     setPropertySearch('');
-    setSelectedBuyerId('');
-    setSelectedPropertyId('');
-    setAmount('');
-    setAmountManuallyEdited(false);
+    setSelectedBuyerId(conversionContext?.buyerId ?? '');
+    setSelectedPropertyId(conversionContext?.propertyId ?? '');
+    const selectedInitialProperty = properties.find((property) => property.id === conversionContext?.propertyId);
+    setAmount(initialAmount ?? (selectedInitialProperty?.price ?? ''));
+    setAmountManuallyEdited(initialAmount !== undefined);
     setNotes('');
     setErrorMsg('');
 
@@ -52,7 +70,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       .then(setBuyers)
       .catch(() => setBuyers([]))
       .finally(() => setIsLoadingBuyers(false));
-  }, [isOpen]);
+  }, [isOpen, conversionContext, initialAmount, properties]);
 
   const filteredBuyers = useMemo(() => {
     const q = buyerSearch.trim().toLowerCase();
@@ -71,6 +89,40 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       .filter((p) => p.status !== 'Sold')
       .filter((p) => !q || p.name.toLowerCase().includes(q) || p.location.toLowerCase().includes(q));
   }, [properties, propertySearch]);
+
+  const conversionBuyer = conversionContext
+    ? buyers.find((buyer) => buyer.userId === conversionContext.buyerId)
+    : undefined;
+  const conversionProperty = conversionContext
+    ? properties.find((property) => property.id === conversionContext.propertyId)
+    : undefined;
+  const missingConversionIds = [
+    !conversionContext?.inquiryId && 'inquiry ID',
+    !conversionContext?.buyerId && 'buyer ID',
+    !conversionContext?.propertyId && 'property ID',
+  ].filter(Boolean) as string[];
+  const canConvert = Boolean(
+    conversionContext
+    && conversionContext.inquiryId
+    && missingConversionIds.length === 0
+    && !isLoadingBuyers
+    && !isLoadingConversionProperty
+    && conversionBuyer
+    && conversionProperty
+    && Number.isFinite(conversionProperty.price)
+    && conversionProperty.price > 0
+    && conversionProperty.status !== 'Sold'
+  );
+  const conversionIssue = !conversionContext ? ''
+    : missingConversionIds.length > 0
+      ? `Missing ${missingConversionIds.join(' and ')} for this inquiry. Close this form and refresh the inquiry list.`
+      : isLoadingBuyers || isLoadingConversionProperty ? 'Loading the inquiry buyer and property…'
+        : !conversionBuyer ? 'The buyer linked to this inquiry could not be loaded. Close this form and refresh the inquiry list.'
+          : !conversionProperty ? 'The property linked to this inquiry could not be loaded. Close this form and refresh the inquiry list.'
+            : !Number.isFinite(conversionProperty.price) || conversionProperty.price <= 0
+              ? 'The property listing price could not be loaded. Close this form and refresh the inquiry list.'
+              : conversionProperty.status === 'Sold' ? 'This property is already sold and cannot be used for a new transaction.'
+                : '';
 
   if (!isOpen) return null;
 
@@ -94,6 +146,12 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       setErrorMsg('Select a property for this transaction.');
       return;
     }
+    if (conversionContext && (!canConvert
+      || selectedBuyerId !== conversionContext.buyerId
+      || selectedPropertyId !== conversionContext.propertyId)) {
+      setErrorMsg('The inquiry buyer and property must both be available and remain selected to convert this inquiry.');
+      return;
+    }
     if (amount === '' || amount <= 0) {
       setErrorMsg('Enter a transaction amount greater than zero.');
       return;
@@ -101,13 +159,14 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
 
     setIsSaving(true);
     try {
-      await createTransaction({
+      const created = await createTransaction({
         buyerId: selectedBuyerId,
         propertyId: selectedPropertyId,
         amount,
         notes: notes.trim(),
+        ...(conversionContext ? { convertedInquiryId: conversionContext.inquiryId } : {}),
       });
-      onCreated();
+      onCreated(created);
       onClose();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Could not create this transaction. Please try again.');
@@ -130,7 +189,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#d6c7b2]">
           <h3 id="transaction-form-modal-title" className="text-[#2f2417] font-serif text-lg font-bold flex items-center gap-2">
             <Handshake className="w-4 h-4 text-emerald-700" />
-            New Transaction
+            {conversionContext ? 'Convert inquiry to transaction' : 'New Transaction'}
           </h3>
           <button
             type="button"
@@ -143,11 +202,22 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          {conversionContext && (
+            <div className="rounded-xl border border-[#d6c7b2] bg-white px-3 py-2.5 text-xs text-[#4d5e4d]">
+              <p>From inquiry by <strong>{conversionContext.buyerName || 'Unknown buyer'}</strong>, submitted {Number.isNaN(new Date(conversionContext.submittedAt).getTime()) ? 'on an unknown date' : new Date(conversionContext.submittedAt).toLocaleDateString('en-PH')}. The inquiry will be marked Converted.</p>
+            </div>
+          )}
           {/* Buyer picker */}
           <div>
             <label className="text-[10px] uppercase tracking-wider font-bold text-[#7c6a57] block mb-1">
               Buyer <span className="text-red-500">*</span>
             </label>
+            {conversionContext ? (
+              <div className="rounded-lg border border-[#d6c7b2] bg-white px-3 py-2 text-xs text-[#2f2417]">
+                <span className="font-bold">{conversionBuyer?.fullName || conversionContext.buyerName || 'Buyer unavailable'}</span>
+                <span className="ml-2 text-[#5d503f]">{conversionBuyer?.email || conversionContext.buyerEmail}</span>
+              </div>
+            ) : <>
             <div className="relative mb-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
               <input
@@ -184,6 +254,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
                 ))
               )}
             </div>
+            </>}
           </div>
 
           {/* Property picker */}
@@ -191,6 +262,11 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
             <label className="text-[10px] uppercase tracking-wider font-bold text-[#7c6a57] block mb-1">
               Property <span className="text-red-500">*</span>
             </label>
+            {conversionContext ? (
+              <div className="rounded-lg border border-[#d6c7b2] bg-white px-3 py-2 text-xs font-bold text-[#2f2417]">
+                {conversionProperty?.name || conversionContext.propertyName || 'Property unavailable'}
+              </div>
+            ) : <>
             <div className="relative mb-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
               <input
@@ -228,7 +304,14 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
                 ))
               )}
             </div>
+            </>}
           </div>
+
+          {conversionIssue && (
+            <p role={canConvert ? undefined : 'status'} className={`text-xs ${conversionIssue.startsWith('Loading') ? 'text-[#5d503f]' : 'text-red-700'}`}>
+              {conversionIssue}
+            </p>
+          )}
 
           <div>
             <label className="text-[10px] uppercase tracking-wider font-bold text-[#7c6a57] block mb-1">
@@ -273,7 +356,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={isSaving || Boolean(conversionContext && !canConvert)}
               className="admin-button px-4 py-2 rounded-xl text-xs font-bold text-white transition-all cursor-pointer border-none hover:brightness-105 disabled:opacity-60"
             >
               {isSaving ? 'Creating...' : 'Create Transaction'}

@@ -39,6 +39,22 @@ const siteVisitSchema = new mongoose.Schema(
         message: 'Preferred time must be in HH:MM 24-hour format.',
       },
     },
+    confirmedDate: {
+      type: Date,
+      default: null,
+    },
+    confirmedTime: {
+      type: String,
+      trim: true,
+      default: '',
+      validate: {
+        validator: function (value) {
+          if (!value) return true;
+          return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+        },
+        message: 'Confirmed time must be in HH:MM 24-hour format.',
+      },
+    },
     notes: {
       type: String,
       trim: true,

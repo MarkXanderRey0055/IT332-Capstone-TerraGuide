@@ -41,6 +41,8 @@ import { AdminAnalytics } from './AdminAnalytics';
 import { AdminSettings } from './AdminSettings';
 import { AdminActivities } from './AdminActivities';
 import type { Property } from '../../types/types';
+import { NotificationBell } from '../../components/NotificationBell';
+import type { AppNotification } from '../../services/NotificationService';
 
 type NavItem = {
   id: string;
@@ -95,6 +97,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [attentionRefreshToken, setAttentionRefreshToken] = useState(0);
   const [openingAuditPropertyId, setOpeningAuditPropertyId] = useState<string | null>(null);
   const [pendingEditPropertyId, setPendingEditPropertyId] = useState<string | null>(null);
+  const [activitiesNotificationTab, setActivitiesNotificationTab] = useState<'inquiries' | 'sitevisits'>('inquiries');
+  const [activitiesNotificationKey, setActivitiesNotificationKey] = useState(0);
+  const [activitiesTargetRecordId, setActivitiesTargetRecordId] = useState<string | null>(null);
+  const [activitiesTargetTransactionId, setActivitiesTargetTransactionId] = useState<string | null>(null);
   const [auditProperty, setAuditProperty] = useState<Property | null>(null);
   const [isAttentionAuditOpen, setIsAttentionAuditOpen] = useState(false);
   const [isLoadingDashboardData, setIsLoadingDashboardData] = useState(true);
@@ -118,7 +124,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     if (type === 'buyer_registered') return 'admin-panel-muted border-amber-700/20 bg-amber-100/40';
     if (type === 'property_added') return 'admin-panel-muted border-sky-700/20 bg-sky-100/35';
     if (type === 'inquiry_created') return 'admin-panel-muted border-violet-700/20 bg-violet-100/35';
+    if (type === 'inquiry_responded' || type === 'inquiry_status_changed') return 'admin-panel-muted border-violet-700/20 bg-violet-100/35';
     if (type === 'site_visit_created') return 'admin-panel-muted border-rose-700/20 bg-rose-100/35';
+    if (type === 'site_visit_status_changed') return 'admin-panel-muted border-rose-700/20 bg-rose-100/35';
     return 'admin-panel-muted border-emerald-700/20 bg-emerald-100/35';
   };
 
@@ -126,7 +134,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     if (type === 'buyer_registered') return 'Buyer';
     if (type === 'property_added') return 'Property';
     if (type === 'inquiry_created') return 'Inquiry';
+    if (type === 'inquiry_responded') return 'Inquiry response';
+    if (type === 'inquiry_status_changed') return 'Inquiry status';
     if (type === 'site_visit_created') return 'Site Visit';
+    if (type === 'site_visit_status_changed') return 'Site Visit update';
     return 'Transaction';
   };
 
@@ -360,11 +371,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const handleNavClick = (id: string) => {
+  const handleNavClick = (id: string, tab?: 'inquiries' | 'sitevisits', recordId?: string) => {
     if (id === 'logout') {
       setLogoutConfirmOpen(true);
       return;
     }
+    if (id === 'activities') {
+      setActivitiesNotificationTab(tab ?? 'inquiries');
+      setActivitiesTargetRecordId(recordId ?? null);
+      setActivitiesNotificationKey((key) => key + 1);
+    } else {
+      setActivitiesTargetRecordId(null);
+    }
+    setActivitiesTargetTransactionId(null);
     setActiveNav(id);
     setSidebarOpen(false);
   };
@@ -372,6 +391,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const handleConfirmLogout = () => {
     setLogoutConfirmOpen(false);
     onLogout?.();
+  };
+
+  const handleNotificationNavigate = (notification: AppNotification) => {
+    handleNavClick(
+      'activities',
+      notification.type.startsWith('site_visit_') ? 'sitevisits' : 'inquiries',
+      notification.relatedId
+    );
+  };
+
+  const handleActivityClick = (activity: RecentActivityItem) => {
+    if (activity.relatedModel === 'Inquiry') handleNavClick('activities', 'inquiries', activity.relatedId);
+    else if (activity.relatedModel === 'SiteVisit') handleNavClick('activities', 'sitevisits', activity.relatedId);
+    else if (activity.relatedModel === 'Transaction') handleNavClick('transactions');
+    else if (activity.relatedModel === 'Property') handleNavClick('properties');
+    else if (activity.relatedModel === 'User') handleNavClick('buyers');
   };
 
   const handleCancelLogout = () => {
@@ -498,6 +533,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           : 'Manage listings, buyers, and transactions from one place.'}
             </p>
           </div>
+          <NotificationBell
+            enabled={!logoutConfirmOpen}
+            variant="admin"
+            onNavigate={handleNotificationNavigate}
+          />
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}
@@ -766,9 +806,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         className="admin-scrollable-panel space-y-3 max-h-[320px] overflow-y-auto pr-1"
                       >
                         {recentActivity.map((activity, index) => (
-                          <div
+                          <button
+                            type="button"
                             key={`${activity.type}-${activity.timestamp}-${index}`}
-                            className={`p-4 rounded-xl border flex items-start gap-3 ${activityStyle(activity.type)}`}
+                            onClick={() => handleActivityClick(activity)}
+                            aria-label={`${activityLabel(activity.type)}: ${activity.title}. ${activity.description} Open related ${activity.relatedModel}.`}
+                            className={`w-full text-left cursor-pointer transition-colors hover:brightness-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand)] p-4 rounded-xl border flex items-start gap-3 ${activityStyle(activity.type)}`}
                           >
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-3">
@@ -789,7 +832,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                               </div>
                               <p className="text-[#6f604d] text-xs mt-1">{activity.description}</p>
                             </div>
-                          </div>
+                          </button>
                         ))}
                       </div>
 
@@ -832,9 +875,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
             {activeNav === 'analytics' && <AdminAnalytics onToast={setToast} />}
 
-            {activeNav === 'transactions' && <AdminTransactions onToast={setToast} onDataChanged={refreshDashboardCards} />}
+            {activeNav === 'transactions' && <AdminTransactions onToast={setToast} onDataChanged={refreshDashboardCards} targetTransactionId={activitiesTargetTransactionId} onTargetTransactionHandled={() => setActivitiesTargetTransactionId(null)} />}
 
-            {activeNav === 'activities' && <AdminActivities onToast={setToast} />}
+            {activeNav === 'activities' && (
+              <AdminActivities
+                key={activitiesNotificationKey}
+                onToast={setToast}
+                initialTab={activitiesNotificationTab}
+                targetRecordId={activitiesTargetRecordId}
+                onOpenTransaction={(transactionId) => {
+                  setActivitiesTargetTransactionId(transactionId);
+                  setActiveNav('transactions');
+                }}
+              />
+            )}
 
             {activeNav === 'settings' && <AdminSettings onToast={setToast} />}
 

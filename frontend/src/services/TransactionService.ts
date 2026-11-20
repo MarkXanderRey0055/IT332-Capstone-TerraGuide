@@ -42,6 +42,7 @@ export interface Transaction {
   reference: string;
   buyerId: TransactionBuyer | null;
   propertyId: TransactionProperty | null;
+  convertedInquiryId?: string | null;
   amount: number;
   listingPriceAtCreation?: number | null;
   status: TransactionStatus;
@@ -67,6 +68,7 @@ export interface CreateTransactionPayload {
   propertyId: string;
   amount: number;
   notes?: string;
+  convertedInquiryId?: string;
 }
 
 export interface UpdateTransactionPayload {

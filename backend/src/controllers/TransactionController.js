@@ -22,12 +22,13 @@ export const getTransaction = asyncHandler(async (req, res) => {
 
 
 export const createTransaction = asyncHandler(async (req, res) => {
-  const { buyerId, propertyId, amount, notes } = req.body;
+  const { buyerId, propertyId, amount, notes, convertedInquiryId } = req.body;
   const transaction = await transactionService.createTransaction({
     buyerId,
     propertyId,
     amount,
     notes,
+    convertedInquiryId,
     createdByUserId: req.user._id,
   });
   return sendSuccess(res, 201, 'Transaction created successfully', transaction);
