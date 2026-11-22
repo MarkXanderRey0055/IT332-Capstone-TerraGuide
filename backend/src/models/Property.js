@@ -49,6 +49,7 @@ const propertySchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: '',
+      maxlength: 500,
     },
     price: {
       type: Number,

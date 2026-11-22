@@ -39,6 +39,7 @@ export interface PropertyApiRecord {
   cabinetId?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  auditState?: Property['auditState'];
 }
 
 interface PropertyListResponse {
@@ -98,6 +99,7 @@ export function mapToProperty(raw: PropertyApiRecord): Property {
     cabinetId: raw.cabinetId ?? null,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
+    auditState: raw.auditState,
   };
 }
 

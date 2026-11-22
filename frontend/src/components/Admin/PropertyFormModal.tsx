@@ -218,6 +218,8 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const [location, setLocation] = useState('');
   const [type, setType] = useState<Property['type'] | ''>('');
   const [suitableFor, setSuitableFor] = useState<NonNullable<Property['suitableFor']>>([]);
+  const [description, setDescription] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
   const [image, setImage] = useState('');
   const [imageMode, setImageMode] = useState<ImageMode>('url');
   const [existingImages, setExistingImages] = useState<string[]>([]);
@@ -253,6 +255,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const lotSizeInputRef = useRef<HTMLInputElement | null>(null);
   const typeInputRef = useRef<HTMLSelectElement | null>(null);
   const locationInputRef = useRef<HTMLInputElement | null>(null);
+  const descriptionInputRef = useRef<HTMLTextAreaElement | null>(null);
   const latitudeInputRef = useRef<HTMLInputElement | null>(null);
   const longitudeInputRef = useRef<HTMLInputElement | null>(null);
   const locationRecenterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -279,6 +282,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       setLocation(property.location);
       setType(property.type);
       setSuitableFor(property.suitableFor ?? []);
+      setDescription(property.description ?? '');
       setImage(property.images?.[0] || '');
       setExistingImages(property.images ?? []);
       setRemovedExistingImages(new Set());
@@ -298,6 +302,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       setLocation('');
       setType('');
       setSuitableFor([]);
+      setDescription('');
       setImage('');
       setExistingImages([]);
       setRemovedExistingImages(new Set());
@@ -326,6 +331,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       setMapZoom(PHILIPPINES_VIEW_ZOOM);
     }
     setRequiredFieldErrors({});
+    setDescriptionError('');
     setSuppressRequiredSummary(false);
     setHasSubmitted(false);
     setImageError('');
@@ -542,6 +548,10 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     setHasSubmitted(true);
     const validationErrors = validateRequiredFields(requiredValues);
     setRequiredFieldErrors(validationErrors);
+    const nextDescriptionError = description.trim().length > 500
+      ? 'Description must be 500 characters or fewer.'
+      : '';
+    setDescriptionError(nextDescriptionError);
     const firstInvalidField = (['name', 'owner', 'price', 'lotSize', 'type', 'location'] as const)
       .find((field) => validationErrors[field]);
     const focusRequiredField = (field: RequiredField) => {
@@ -557,6 +567,10 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     };
     if (firstInvalidField) {
       focusRequiredField(firstInvalidField);
+      return;
+    }
+    if (nextDescriptionError) {
+      descriptionInputRef.current?.focus();
       return;
     }
     const parsedPrice = parseFloat(price.replace(/,/g, ''));
@@ -604,6 +618,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
         location: location.trim(),
         type,
         suitableFor,
+        description: description.trim(),
         status,
         pricePerSqm: Math.round(parsedPrice / size),
         // When files are pending, preserve saved images until the upload
@@ -625,6 +640,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             await onSave({
               name: name.trim(), owner: owner.trim(), price: parsedPrice, size, lotSize: size,
               location: location.trim(), type, suitableFor, status,
+              description: description.trim(),
               pricePerSqm: Math.round(parsedPrice / size),
               images: (uploadedProperty.images ?? []).filter((url) => !removedExistingImages.has(url)),
               documents: { tax: docTax, deed: docDeed, survey: docSurvey },
@@ -642,6 +658,11 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     } catch (error) {
       if (error instanceof ApiError && error.status === 400 && error.details) {
         const { fieldErrors, unmappedMessages } = mapServerFieldErrors(error.details);
+        const serverDescriptionError = typeof error.details.description === 'string'
+          ? error.details.description
+          : '';
+        setDescriptionError(serverDescriptionError);
+        if (serverDescriptionError) unmappedMessages.splice(unmappedMessages.indexOf(serverDescriptionError), 1);
         const firstServerError = (['name', 'owner', 'price', 'lotSize', 'type', 'location'] as const)
           .find((field) => fieldErrors[field]);
         if (firstServerError) {
@@ -649,6 +670,10 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
           setSuppressRequiredSummary(true);
           setErrorMsg(unmappedMessages.join(' '));
           focusRequiredField(firstServerError);
+        } else if (serverDescriptionError) {
+          setSuppressRequiredSummary(true);
+          setErrorMsg(unmappedMessages.join(' '));
+          descriptionInputRef.current?.focus();
         } else {
           setErrorMsg(unmappedMessages.join(' ') || error.message);
         }
@@ -887,6 +912,39 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                 );
               })}
             </div>
+          </div>
+          <div>
+            <label htmlFor="property-description" className={labelCls}>Description (optional)</label>
+            <textarea
+              id="property-description"
+              ref={descriptionInputRef}
+              value={description}
+              onChange={(event) => {
+                const value = event.target.value;
+                setDescription(value);
+                setDescriptionError(value.trim().length > 500 ? 'Description must be 500 characters or fewer.' : '');
+              }}
+              aria-invalid={Boolean(descriptionError)}
+              aria-describedby={descriptionError
+                ? 'property-description-help property-description-count property-description-error'
+                : 'property-description-help property-description-count'}
+              className={`admin-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/30 ${descriptionError ? 'border-[var(--color-danger)] focus:border-[var(--color-danger)]' : ''}`}
+              style={descriptionError ? { borderColor: 'var(--color-danger)' } : undefined}
+              rows={3}
+            />
+            <p id="property-description-help" className="mt-1 text-xs text-[#5d503f]">
+              A short summary buyers will see on the property details page.
+            </p>
+            <div className="mt-1 flex justify-end">
+              <span id="property-description-count" className="text-xs text-[#5d503f]">
+                {description.trim().length}/500
+              </span>
+            </div>
+            {descriptionError && (
+              <p id="property-description-error" className="mt-1 text-xs font-medium text-[var(--color-danger)]">
+                {descriptionError}
+              </p>
+            )}
           </div>
           </section>
 

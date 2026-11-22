@@ -43,7 +43,7 @@ export interface AttentionProperty {
   location: string;
   status: string;
   complianceScore: number | null;
-  riskLevel: 'Low' | 'Medium' | 'High';
+  riskLevel: 'Low' | 'Medium' | 'High' | null;
   reasons: string[];
 }
 
