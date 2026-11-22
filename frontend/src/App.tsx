@@ -19,6 +19,9 @@ export default function App() {
   const [sessionVerificationError, setSessionVerificationError] = useState('');
   const [sessionRetryToken, setSessionRetryToken] = useState(0);
   const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // True when the buyer portal is opened right after a successful login,
+  // so it can play a fade-in entrance animation.
+  const [playPortalEntrance, setPlayPortalEntrance] = useState(false);
 
   // Auto-login: if a token is already stored (from a previous visit),
   // verify it against the backend (/auth/me) and restore the session.
@@ -93,11 +96,14 @@ export default function App() {
 
   const handleBrowse = () => {
     setIsAuthenticated(false);
+    setPlayPortalEntrance(false);
     setView('buyerPortal');
   };
 
   const handleAuthSuccess = () => {
     setIsAuthenticated(true);
+    // Fade the buyer portal in only when arriving from a successful login.
+    setPlayPortalEntrance(true);
     setView('buyerPortal');
   };
 
@@ -140,6 +146,7 @@ export default function App() {
         onGoToAdminLogin={handleGoToAdminLogin}
         onSignOut={handleSignOut}
         isAuthenticated={isAuthenticated}
+        playEntranceAnimation={playPortalEntrance}
       />
     );
   }
