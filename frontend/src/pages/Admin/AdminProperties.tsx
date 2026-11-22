@@ -17,6 +17,8 @@ import { FilingCabinetPanel } from '../../components/Admin/FilingCabinetPanel';
 import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 import { getLotSize } from '../../services/buyerPrefs';
 import { filterAndSortProperties, getPropertyFilterOptions } from '../../utils/propertyFilters';
+import { filterPropertiesByAuditState } from '../../utils/propertyAuditFilters.mjs';
+import type { PropertyAuditQuickFilter } from '../../utils/propertyAuditFilters.mjs';
 import {
   createProperty,
   updateProperty,
@@ -43,6 +45,8 @@ interface AdminPropertiesProps {
 }
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
+const formatAuditDate = (value: string) =>
+  new Date(value).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
 
 const getStatusBadge = (status: Property['status']) => {
   const badgeClass =
@@ -91,6 +95,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
   const [documentStatusFilter, setDocumentStatusFilter] = useState('');
   const [listingStatusFilter, setListingStatusFilter] = useState<Property['status'] | ''>('');
   const [propertySort, setPropertySort] = useState<'latest' | 'priceAsc' | 'priceDesc'>('latest');
+  const [auditStatusFilter, setAuditStatusFilter] = useState<PropertyAuditQuickFilter>(null);
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -308,7 +313,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
   }, [properties, selectedFilter]);
 
   const filterOptions = getPropertyFilterOptions(properties);
-  const filteredProperties = filterAndSortProperties(cabinetFilteredProperties, {
+  const propertyFilteredProperties = filterAndSortProperties(cabinetFilteredProperties, {
     search: searchQuery,
     type: typeFilter,
     location: locationFilter,
@@ -316,6 +321,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     status: listingStatusFilter,
     sort: propertySort,
   });
+  const filteredProperties = filterPropertiesByAuditState(propertyFilteredProperties, auditStatusFilter);
   const clearPropertyFilters = () => {
     setSearchQuery('');
     setTypeFilter('');
@@ -324,6 +330,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     setListingStatusFilter('');
     setPropertySort('latest');
     setSelectedFilter('all');
+    setAuditStatusFilter(null);
   };
 
   const toggleUnassignedQuickFilter = () => {
@@ -336,6 +343,10 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
 
   const toggleReservedQuickFilter = () => {
     setListingStatusFilter((currentStatus) => currentStatus === 'Reserved' ? '' : 'Reserved');
+  };
+
+  const toggleAuditQuickFilter = (filter: Exclude<PropertyAuditQuickFilter, null>) => {
+    setAuditStatusFilter((currentFilter) => currentFilter === filter ? null : filter);
   };
 
   const selectedCabinetName =
@@ -429,6 +440,12 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
           <button type="button" onClick={toggleDocumentQuickFilter} aria-pressed={documentStatusFilter === 'Missing'} className={`admin-properties-quick-chip ${documentStatusFilter === 'Missing' ? 'admin-properties-quick-chip-active' : ''}`}>
             Missing documents
           </button>
+          <button type="button" onClick={() => toggleAuditQuickFilter('NOT_AUDITED')} aria-pressed={auditStatusFilter === 'NOT_AUDITED'} className={`admin-properties-quick-chip ${auditStatusFilter === 'NOT_AUDITED' ? 'admin-properties-quick-chip-active' : ''}`}>
+            Not audited
+          </button>
+          <button type="button" onClick={() => toggleAuditQuickFilter('STALE')} aria-pressed={auditStatusFilter === 'STALE'} className={`admin-properties-quick-chip ${auditStatusFilter === 'STALE' ? 'admin-properties-quick-chip-active' : ''}`}>
+            Stale
+          </button>
           <button type="button" onClick={toggleReservedQuickFilter} aria-pressed={listingStatusFilter === 'Reserved'} className={`admin-properties-quick-chip ${listingStatusFilter === 'Reserved' ? 'admin-properties-quick-chip-active' : ''}`}>
             Reserved
           </button>
@@ -502,6 +519,22 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
                         </button>
                         <div className="text-[11px] text-[#4d5e4d] mt-1 leading-snug break-words">
                           {p.location || 'Location not provided'} · {getLotSize(p).toLocaleString()} sqm
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          {p.auditState?.status === 'AUDITED' ? (
+                            <span className="status-success inline-flex items-center px-2 py-0.5 text-[10px] font-bold rounded-md border">Audited</span>
+                          ) : p.auditState?.status === 'STALE' ? (
+                            <span className="status-warning inline-flex items-center px-2 py-0.5 text-[10px] font-bold rounded-md border">Stale</span>
+                          ) : p.auditState?.status === 'NOT_AUDITED' ? (
+                            <span className="status-neutral inline-flex items-center px-2 py-0.5 text-[10px] font-bold rounded-md border">Not audited</span>
+                          ) : (
+                            <span className="status-neutral inline-flex items-center px-2 py-0.5 text-[10px] font-bold rounded-md border">Freshness unknown</span>
+                          )}
+                          {p.auditState?.auditedAt && (
+                            <span className="text-[10px] text-[#7c6a57]">
+                              Audited {formatAuditDate(p.auditState.auditedAt)}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-4">

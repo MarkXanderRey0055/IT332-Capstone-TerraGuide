@@ -1,9 +1,38 @@
 import Property from '../models/Property.js';
+import Audit from '../models/Audit.js';
 import Transaction from '../models/Transaction.js';
 import AppError from '../utils/errors.js';
 import { cleanupCloudinaryAssets, uploadPropertyImagesToCloudinary } from './imageStorageService.js';
 import mongoose from 'mongoose';
 import { BUYER_VISIBLE_PROPERTY_STATUS } from '../../../shared/propertyVisibility.mjs';
+import { compareReadinessFreshness } from '../utils/auditReadiness.js';
+
+async function getLatestAuditStates(properties) {
+  if (properties.length === 0) return new Map();
+
+  const latestAudits = await Audit.aggregate([
+    { $match: { propertyId: { $in: properties.map((property) => property._id) } } },
+    { $sort: { generatedAt: -1 } },
+    { $group: { _id: '$propertyId', audit: { $first: '$$ROOT' } } },
+  ]);
+  const auditByPropertyId = new Map(
+    latestAudits.map(({ _id, audit }) => [String(_id), audit])
+  );
+
+  return new Map(properties.map((property) => {
+    const propertyId = String(property._id);
+    const audit = auditByPropertyId.get(propertyId);
+    if (!audit) return [propertyId, { status: 'NOT_AUDITED', auditedAt: null }];
+
+    const { freshnessStatus } = compareReadinessFreshness(audit, property);
+    const status = freshnessStatus === 'CURRENT'
+      ? 'AUDITED'
+      : freshnessStatus === 'STALE'
+        ? 'STALE'
+        : 'UNKNOWN';
+    return [propertyId, { status, auditedAt: audit.generatedAt ?? null }];
+  }));
+}
 
 export const getAllProperties = async (queryParams = {}, user = null) => {
   const {
@@ -88,8 +117,19 @@ export const getAllProperties = async (queryParams = {}, user = null) => {
     .skip(skip)
     .limit(limitNum);
 
+  let responseProperties = properties;
+  if (user?.role === 'admin') {
+    const auditStates = await getLatestAuditStates(properties);
+    responseProperties = properties.map((property) => ({
+      ...(typeof property.toObject === 'function'
+        ? property.toObject({ virtuals: true })
+        : { ...property, id: property.id ?? String(property._id) }),
+      auditState: auditStates.get(String(property._id)),
+    }));
+  }
+
   return {
-    properties,
+    properties: responseProperties,
     pagination: {
       total,
       page: pageNum,

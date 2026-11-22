@@ -17,6 +17,7 @@ const existing = {
   lotSize: 200,
   location: 'Balayan',
   type: 'Residential',
+  description: 'Original description',
   lat: 13.9,
   lng: 120.7,
   save: async function save() {
@@ -115,6 +116,37 @@ try {
   assert.equal(validCreate.status, 201);
   assert.equal(validCreate.body.success, true);
   assert.equal(createCalls, createCallsBeforeRejections + 1);
+
+  const maxDescriptionCreate = await request('POST', '/properties', {
+    ...validPayload,
+    description: 'x'.repeat(500),
+  });
+  assert.equal(maxDescriptionCreate.status, 201, 'a 500-character description is accepted');
+  assert.equal(maxDescriptionCreate.body.data.description.length, 500);
+
+  const beforeTooLongDescription = snapshotRecords();
+  const tooLongDescription = await request('POST', '/properties', {
+    ...validPayload,
+    description: 'x'.repeat(501),
+  });
+  assert.equal(tooLongDescription.status, 400);
+  assert.deepEqual(tooLongDescription.body.errors, { description: 'Description must be 500 characters or fewer.' });
+  assert.deepEqual(snapshotRecords(), beforeTooLongDescription, 'rejected description must not write a record');
+
+  const trimmedDescription = await request('POST', '/properties', {
+    ...validPayload,
+    description: '  Short property summary  ',
+  });
+  assert.equal(trimmedDescription.status, 201);
+  assert.equal(trimmedDescription.body.data.description, 'Short property summary');
+
+  const clearDescription = await request('PUT', `/properties/${existingId}`, { description: '' });
+  assert.equal(clearDescription.status, 200);
+  assert.equal(records.get(existingId).description, '', 'blank PUT explicitly clears the stored description');
+
+  const trimmedUpdate = await request('PUT', `/properties/${existingId}`, { description: '  Updated summary  ' });
+  assert.equal(trimmedUpdate.status, 200);
+  assert.equal(records.get(existingId).description, 'Updated summary');
   console.log('Property required-value API tests passed: invalid POST/PUT requests return per-field 400 errors without writes; valid partial PUT and POST succeed.');
 } finally {
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));

@@ -1,6 +1,31 @@
 import AppError from '../utils/errors.js';
+import Property from '../models/Property.js';
 
-export const validatePropertyInput = (req, res, next) => {
+export const validatePropertyInput = async (req, res, next) => {
+  try {
+    let resultingDescription = req.body.description;
+    if (req.method === 'PUT') {
+      const existingProperty = await Property.findById(req.params.id);
+      if (existingProperty && resultingDescription === undefined) {
+        resultingDescription = existingProperty.description;
+      }
+    }
+
+    if (typeof resultingDescription === 'string') {
+      const trimmedDescription = resultingDescription.trim();
+      if (trimmedDescription.length > 500) {
+        return next(new AppError(
+          'Description must be 500 characters or fewer.',
+          400,
+          { description: 'Description must be 500 characters or fewer.' }
+        ));
+      }
+      if (req.body.description !== undefined) req.body.description = trimmedDescription;
+    }
+  } catch (error) {
+    return next(error);
+  }
+
   const { name, location, type, lat, lng, status, documents } = req.body;
 
   // validate fields

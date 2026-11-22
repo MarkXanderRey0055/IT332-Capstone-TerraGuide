@@ -47,6 +47,7 @@ const anonymousList = await getAllProperties({ limit: 100 });
 assert.deepEqual(anonymousList.properties.map((item) => item.status), [BUYER_VISIBLE_PROPERTY_STATUS]);
 assert.deepEqual(seenPropertyFilters.at(-1), { status: BUYER_VISIBLE_PROPERTY_STATUS });
 
+Audit.aggregate = async () => [];
 const adminList = await getAllProperties({ limit: 100 }, { role: 'admin' });
 assert.deepEqual(adminList.properties.map((item) => item.status), ['Available', 'Reserved', 'Sold']);
 assert.deepEqual(seenPropertyFilters.at(-1), {}, 'admin list remains unrestricted by default');

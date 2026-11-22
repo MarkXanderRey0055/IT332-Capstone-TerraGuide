@@ -37,6 +37,10 @@ export interface Property {
   cabinetId?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  auditState?: {
+    status: 'AUDITED' | 'STALE' | 'NOT_AUDITED' | 'UNKNOWN';
+    auditedAt: string | null;
+  };
 }
 
 export interface BuyerPreferences {

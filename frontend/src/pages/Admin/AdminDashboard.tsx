@@ -635,9 +635,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-[#2f2417] text-sm font-medium">{item.name}</p>
-                              <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${riskStyles[item.riskLevel]}`}>
-                                {item.riskLevel} risk
-                              </span>
+                              {item.riskLevel ? (
+                                <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${riskStyles[item.riskLevel]}`}>
+                                  {item.riskLevel} risk
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-[var(--color-neutral-bg)] text-[var(--color-neutral)] border border-[var(--color-neutral-border)]">
+                                  Not assessed
+                                </span>
+                              )}
                             </div>
                             <p className="text-[#5d503f] text-xs mt-1">
                               Compliance score: {item.complianceScore === null ? 'Not available' : `${item.complianceScore}%`}

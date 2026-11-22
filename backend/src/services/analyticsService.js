@@ -7,7 +7,7 @@ import AppError from '../utils/errors.js';
 import { getStartOfManilaMonth, getManilaYearBounds } from '../utils/manilaTime.js';
 import { generatePortfolioNarrative, generateBuyerMarketNarrative } from './aiService.js';
 import { classifyAuditRisk } from '../utils/auditReadiness.js';
-import { BUYER_VISIBLE_PROPERTY_STATUS } from '../../../shared/propertyVisibility.mjs';
+import { BUYER_VISIBLE_PROPERTY_STATUS, isBuyerVisibleStatus } from '../../../shared/propertyVisibility.mjs';
 
 const COMPLIANCE_READY_THRESHOLD = 70;
 async function getLatestAuditsByProperty() {
@@ -24,7 +24,7 @@ async function getLatestAuditsByProperty() {
 }
 
 function computeRiskLevel(audit) {
-  if (!audit) return 'High';
+  if (!audit) return null;
   return classifyAuditRisk(audit.documentCompleteness ?? audit.complianceScore);
 }
 
@@ -209,7 +209,7 @@ export async function getAttentionProperties() {
 
   const flagged = [];
 
-  for (const property of allProperties) {
+  for (const property of allProperties.filter((entry) => isBuyerVisibleStatus(entry.status))) {
     const audit = latestAudits.get(property._id.toString());
     const reasons = [];
 
