@@ -122,15 +122,13 @@ export const PropertyExplorer: React.FC<PropertyExplorerProps> = ({ properties, 
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(16);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Available'>('All');
 
   const filteredProperties = properties.filter((p) => {
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.type.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = isBuyerVisibleStatus(p.status) && (statusFilter === 'All' || p.status === statusFilter);
-    return matchesSearch && matchesStatus;
+    return matchesSearch && isBuyerVisibleStatus(p.status);
   });
 
   // Selecting from the list focuses the map — the list itself never disappears.
@@ -173,7 +171,9 @@ export const PropertyExplorer: React.FC<PropertyExplorerProps> = ({ properties, 
         <div className="p-4 border-b border-neutral-100 shrink-0">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-serif font-black text-xs text-neutral-800 uppercase tracking-wider">Properties</h3>
-            <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded-full">{filteredProperties.length}</span>
+            <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded-full">
+              {filteredProperties.length} shown
+            </span>
           </div>
 
           <div className="relative">
@@ -192,23 +192,23 @@ export const PropertyExplorer: React.FC<PropertyExplorerProps> = ({ properties, 
             )}
           </div>
 
-          <div className="flex gap-1 mt-2">
-            {(['All', 'Available'] as const).map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`flex-1 py-1 rounded-lg text-[9px] font-extrabold tracking-wider uppercase transition-all cursor-pointer border-none ${statusFilter === status ? 'bg-[#1C3A27] text-white shadow-sm' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-600 border border-neutral-150'}`}
-              >
-                {status}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin">
           {filteredProperties.length === 0 ? (
             <div className="py-10 text-center">
-              <p className="text-xs text-neutral-400 font-medium">No properties match your filters</p>
+              <p className="text-xs text-neutral-500 font-medium">
+                {searchQuery ? 'No available properties match your search.' : 'No available properties to show.'}
+              </p>
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="mt-3 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+                >
+                  Show all
+                </button>
+              )}
             </div>
           ) : (
             filteredProperties.map((property) => {

@@ -435,6 +435,8 @@ interface BuyerPortalProps {
   onGoToAdminLogin?: () => void;
   onSignOut?: () => void;
   isAuthenticated?: boolean;
+  /** Fade the portal (header and page content) in, e.g. right after login. */
+  playEntranceAnimation?: boolean;
 }
 
 export const BuyerPortal: React.FC<BuyerPortalProps> = ({
@@ -442,7 +444,9 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   onGoToAdminLogin,
   onSignOut,
   isAuthenticated = false,
+  playEntranceAnimation = false,
 }) => {
+  const entranceClass = playEntranceAnimation ? 'buyer-portal-entrance' : '';
   const [activeTab, setActiveTab] = useState('Home');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [restrictedFeatureName, setRestrictedFeatureName] = useState('');
@@ -1237,7 +1241,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
         onSavePreferences={persistPreferences}
       />
 
-<div className="min-h-screen bg-[#F6F7F9] text-[#1A2D24] font-sans antialiased selection:bg-[#285A48] selection:text-[#FFFFFF]">        {/* Header */}
+<div className={`min-h-screen bg-[#F6F7F9] text-[#1A2D24] font-sans antialiased selection:bg-[#285A48] selection:text-[#FFFFFF] ${entranceClass}`}>        {/* Header */}
         <header className="sticky top-0 z-50 bg-[#0D1F1A]/95 backdrop-blur-sm border-b border-[rgba(40,90,72,0.15)] px-4 sm:px-8 py-3 flex items-center justify-between shadow-md">
           <div className="flex items-center gap-2">
             <div className="bg-[#B0E4CC] text-[#091413] w-8 h-8 rounded-lg flex items-center justify-center font-serif text-lg font-bold shadow-md">
@@ -1352,6 +1356,18 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
           </div>
         )}
 
+        {/* Keyed by load state so the fade replays when listings finish loading
+            (otherwise the content would pop in after the initial fade ended). */}
+        <div
+          key={
+            isLoadingProperties && properties.length === 0
+              ? 'loading'
+              : propertyLoadError && properties.length === 0
+                ? 'error'
+                : 'ready'
+          }
+          className={entranceClass}
+        >
         {isLoadingProperties && properties.length === 0 ? (
           <div className="px-6 py-16 text-center text-sm text-[#5C7A6E]">
             Loading property listings...
@@ -1389,6 +1405,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             {renderTabContent()}
           </>
         )}
+        </div>
       </div>
     </>
   );
