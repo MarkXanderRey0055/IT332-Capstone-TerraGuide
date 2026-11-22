@@ -2,6 +2,7 @@ import BuyerPreference from '../models/BuyerPreference.js';
 import Property from '../models/Property.js';
 import AppError from '../utils/errors.js';
 
+const MINIMUM_ONLY_BUDGET_RANGE = 500_000;
 
 const scoreBudgetMatch = (price, budgetMin, budgetMax) => {
   const hasMin = budgetMin !== undefined && budgetMin !== null && !isNaN(budgetMin);
@@ -11,7 +12,12 @@ const scoreBudgetMatch = (price, budgetMin, budgetMax) => {
   if (!hasMin && !hasMax) return 1;
 
   const min = hasMin ? Number(budgetMin) : 0;
-  const max = hasMax ? Number(budgetMax) : Infinity;
+  const isMinimumOnly = hasMin && !hasMax;
+  const max = hasMax
+    ? Number(budgetMax)
+    : isMinimumOnly
+      ? min + MINIMUM_ONLY_BUDGET_RANGE
+      : Infinity;
 
   if (price >= min && price <= max) return 1;
 
@@ -19,7 +25,9 @@ const scoreBudgetMatch = (price, budgetMin, budgetMax) => {
   // use the range size itself as the "how far is too far" yardstick, with
   // a sane floor so a razor-thin budget range doesn't make everything
   // score near zero
-  const range = Math.max(max - min, min || 500000);
+  const range = isMinimumOnly
+    ? MINIMUM_ONLY_BUDGET_RANGE
+    : Math.max(max - min, min || 500000);
   const overshoot = distance / range;
 
   return Math.max(0, 1 - overshoot);
@@ -81,7 +89,14 @@ export const getBuyerRecommendations = async (userId) => {
 
   const candidates = await Property.find(hardFilter);
 
-  const scored = candidates.map((property) => {
+  const validCandidates = candidates.filter((property) =>
+    typeof property.price === 'number' &&
+    Number.isFinite(property.price) &&
+    typeof property.location === 'string' &&
+    property.location.trim().length > 0
+  );
+
+  const scored = validCandidates.map((property) => {
     const budgetScore = scoreBudgetMatch(
       property.price,
       preferences.budgetMin,
@@ -100,10 +115,14 @@ export const getBuyerRecommendations = async (userId) => {
     return { property, totalScore };
   });
 
-  // Best matches first; ties broken by newest listing, same as before.
+  // Best matches first; ties are broken by newest listing, then stable property ID.
   scored.sort((a, b) => {
     if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
-    return new Date(b.property.createdAt) - new Date(a.property.createdAt);
+    const newestFirst = new Date(b.property.createdAt) - new Date(a.property.createdAt);
+    if (Number.isFinite(newestFirst) && newestFirst !== 0) return newestFirst;
+    const idA = String(a.property._id);
+    const idB = String(b.property._id);
+    return idA < idB ? -1 : idA > idB ? 1 : 0;
   });
 
   const recommendedProperties = scored.map((entry) => entry.property);
