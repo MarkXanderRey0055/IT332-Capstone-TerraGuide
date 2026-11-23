@@ -105,6 +105,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [auditProperty, setAuditProperty] = useState<Property | null>(null);
   const [isAttentionAuditOpen, setIsAttentionAuditOpen] = useState(false);
   const [isLoadingDashboardData, setIsLoadingDashboardData] = useState(true);
+  const [isAttentionCardHovered, setIsAttentionCardHovered] = useState(false);
+  const [isActivityCardHovered, setIsActivityCardHovered] = useState(false);
   const [dashboardRefreshToken, setDashboardRefreshToken] = useState(0);
   const activityListRef = useRef<HTMLDivElement | null>(null);
   const attentionListRef = useRef<HTMLUListElement | null>(null);
@@ -548,7 +550,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   ))}
                 </div>
 
-                <section className="admin-panel rounded-2xl p-6" aria-labelledby="attention-properties-heading">
+                <section
+                  className="admin-panel rounded-2xl p-6"
+                  aria-labelledby="attention-properties-heading"
+                  onMouseEnter={() => setIsAttentionCardHovered(true)}
+                  onMouseLeave={() => setIsAttentionCardHovered(false)}
+                >
                   <div className="flex items-center justify-between gap-3 border-b border-[#d6c7b2] pb-4 mb-4">
                     <div className="flex items-center gap-2">
                       <span className="p-1.5 rounded-lg bg-rose-50" aria-hidden="true">
@@ -643,7 +650,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           </li>
                         ))}
                       </ul>
-                      <ScrollCue scrollableRef={attentionListRef} />
+                      <ScrollCue scrollableRef={attentionListRef} visible={isAttentionCardHovered} />
                     </div>
                   )}
                 </section>
@@ -751,7 +758,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   ) : null}
                 </div>
 
-                <div className="admin-panel rounded-2xl p-6">
+                <div
+                  className="admin-panel rounded-2xl p-6"
+                  onMouseEnter={() => setIsActivityCardHovered(true)}
+                  onMouseLeave={() => setIsActivityCardHovered(false)}
+                >
                   <div className="flex items-center justify-between gap-4 border-b border-[#d6c7b2] pb-4">
                     <div className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-amber-700" />
@@ -803,7 +814,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         ))}
                       </div>
 
-                      <ScrollCue scrollableRef={activityListRef} />
+                      <ScrollCue scrollableRef={activityListRef} visible={isActivityCardHovered} />
                     </div>
                   )}
                 </div>
