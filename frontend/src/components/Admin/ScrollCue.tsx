@@ -2,9 +2,10 @@ import { useEffect, useState, type RefObject } from 'react';
 
 type ScrollCueProps<T extends HTMLElement> = {
   scrollableRef: RefObject<T | null>;
+  visible: boolean;
 };
 
-export function ScrollCue<T extends HTMLElement>({ scrollableRef }: ScrollCueProps<T>) {
+export function ScrollCue<T extends HTMLElement>({ scrollableRef, visible }: ScrollCueProps<T>) {
   const [direction, setDirection] = useState<'down' | 'up' | null>(null);
 
   useEffect(() => {
@@ -47,7 +48,10 @@ export function ScrollCue<T extends HTMLElement>({ scrollableRef }: ScrollCuePro
   if (!direction) return null;
 
   return (
-    <div className="admin-scroll-cue pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2" aria-hidden="true">
+    <div
+      className={`admin-scroll-cue pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 transition-opacity duration-150 ease-out motion-reduce:transition-none ${direction && visible ? 'opacity-100' : 'opacity-0'}`}
+      aria-hidden="true"
+    >
       <span className={`admin-scroll-cue__mouse ${direction === 'up' ? 'admin-scroll-cue__mouse--up' : ''}`}>
         <span className="admin-scroll-cue__dot" />
       </span>
