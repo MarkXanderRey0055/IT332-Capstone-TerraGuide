@@ -621,6 +621,17 @@
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .admin-scroll-cue,
+  .admin-scroll-cue__label {
+    transition: none;
+  }
+
+  .admin-scroll-cue__dot {
+    animation: none;
+  }
+}
+
 @keyframes admin-scroll-cue {
   0% {
     opacity: 0;

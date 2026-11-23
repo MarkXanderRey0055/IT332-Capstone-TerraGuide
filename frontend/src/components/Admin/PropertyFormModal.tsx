@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { X, Image as ImageIcon, Compass, MapPin, Home, UploadCloud } from 'lucide-react';
+import { X, Image as ImageIcon, MapPin, Home, UploadCloud } from 'lucide-react';
 import L from 'leaflet';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -25,20 +25,16 @@ const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png']);
 const PHILIPPINES_CENTER: [number, number] = [12.8797, 121.774];
 const PHILIPPINES_VIEW_ZOOM = 5;
 const BATANGAS_TOWN_VIEW_ZOOM = 12;
-const BATANGAS_PRESETS = [
-  { label: 'Balayan Capstone', lat: '13.948324', lng: '120.722989' },
-  { label: 'WalterMart', lat: '13.943187', lng: '120.720345' },
-  { label: 'Balayan East Central', lat: '13.931890', lng: '120.718300' },
-];
+const BALAYAN_TOWN_CENTER: [number, number] = [13.948324, 120.722989];
 // Other coordinates are approximate town centers for map framing only; verify on the map.
-// Balayan intentionally reuses the existing Balayan Capstone preset coordinates.
+// Balayan keeps the former Balayan Capstone preset coordinates for centering.
 const BATANGAS_TOWN_CENTERS: Array<{ name: string; aliases?: string[]; center: [number, number] }> = [
   { name: 'Batangas City', center: [13.7561, 121.0577] },
   { name: 'Lipa City', aliases: ['Lipa'], center: [13.9414, 121.1642] },
   { name: 'Tanauan', aliases: ['Tanauan City'], center: [14.0853, 121.1528] },
   { name: 'Calaca', center: [13.9304, 120.8128] },
   { name: 'Nasugbu', center: [14.0734, 120.6322] },
-  { name: 'Balayan', center: [Number(BATANGAS_PRESETS[0].lat), Number(BATANGAS_PRESETS[0].lng)] },
+  { name: 'Balayan', center: BALAYAN_TOWN_CENTER },
   { name: 'Lemery', center: [13.8837, 120.9132] },
   { name: 'Taal', center: [13.8803, 120.9238] },
   { name: 'Bauan', center: [13.7925, 121.0076] },
@@ -487,10 +483,6 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     }
     setMapLinkError('');
     updateCoordinatePair(coordinates[0], coordinates[1]);
-  };
-
-  const applyBatangasPreset = (preset: (typeof BATANGAS_PRESETS)[number]) => {
-    updateCoordinatePair(Number(preset.lat), Number(preset.lng));
   };
 
   const requiredValues: RequiredFieldValues = { name, owner, price, lotSize, type, location };
@@ -1092,36 +1084,6 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               </div>
             </div>
 
-            {/* Batangas preset quick-fills */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-[#d6c7b2] bg-[#eef3ea] text-xs">
-              <span className="text-[#5d503f] font-semibold flex items-center gap-1 text-[11px]">
-                <Compass className="w-3.5 h-3.5 text-neutral" />
-                Batangas Presets:
-              </span>
-              <div className="flex gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => applyBatangasPreset(BATANGAS_PRESETS[0])}
-                  className="admin-button-secondary px-2 py-1 rounded-lg cursor-pointer transition-all text-[#5d503f] font-semibold text-[10px]"
-                >
-                  Balayan Capstone
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyBatangasPreset(BATANGAS_PRESETS[1])}
-                  className="admin-button-secondary px-2 py-1 rounded-lg cursor-pointer transition-all text-[#5d503f] font-semibold text-[10px]"
-                >
-                  WalterMart
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyBatangasPreset(BATANGAS_PRESETS[2])}
-                  className="admin-button-secondary px-2 py-1 rounded-lg cursor-pointer transition-all text-[#5d503f] font-semibold text-[10px]"
-                >
-                  Balayan East Central
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* ── Section: Property Images ── */}

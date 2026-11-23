@@ -22,8 +22,6 @@ const formatPrice = (num: number) => '₱' + num.toLocaleString();
 
 const getLabel = (property: Property) => property.title?.trim() || property.name;
 
-const getLotSize = (property: Property) => property.size ?? property.lotSize ?? 0;
-
 export const PropertyCard: React.FC<PropertyCardProps> = ({
   property,
   isSuggested = false,
@@ -90,7 +88,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </span>
           <span className="flex items-center gap-1 text-xs text-neutral-500">
             <Square className="w-3 h-3 text-neutral-400" />
-            {getLotSize(property).toLocaleString()} sqm
+            {typeof property.lotSize === 'number' && Number.isFinite(property.lotSize) && property.lotSize > 0
+              ? `${property.lotSize.toLocaleString()} sqm`
+              : 'Area not provided'}
           </span>
         </div>
       </div>

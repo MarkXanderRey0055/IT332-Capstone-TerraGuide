@@ -34,6 +34,7 @@ import {
   type RiskLevel,
 } from '../../services/AnalyticsService';
 import { AuditModal } from '../../components/Admin/AuditModal';
+import { ScrollCue } from '../../components/Admin/ScrollCue';
 import { AdminTransactions } from './AdminTransactions';
 import { AdminProperties } from './AdminProperties';
 import { AdminBuyers } from './AdminBuyers';
@@ -104,10 +105,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [auditProperty, setAuditProperty] = useState<Property | null>(null);
   const [isAttentionAuditOpen, setIsAttentionAuditOpen] = useState(false);
   const [isLoadingDashboardData, setIsLoadingDashboardData] = useState(true);
-  const [activityScrollCueDirection, setActivityScrollCueDirection] = useState<'down' | 'up' | null>(null);
-  const [isActivityCardHovered, setIsActivityCardHovered] = useState(false);
   const [dashboardRefreshToken, setDashboardRefreshToken] = useState(0);
   const activityListRef = useRef<HTMLDivElement | null>(null);
+  const attentionListRef = useRef<HTMLUListElement | null>(null);
   const aiUsageRefreshInFlightRef = useRef(false);
   const aiUsageRefreshQueuedRef = useRef(false);
   const clearPendingEditProperty = useCallback(() => setPendingEditPropertyId(null), []);
@@ -205,44 +205,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       isCancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    const activityList = activityListRef.current;
-    if (!activityList) {
-      setActivityScrollCueDirection(null);
-      return;
-    }
-
-    const updateScrollCue = () => {
-      const hasOverflow = activityList.scrollHeight > activityList.clientHeight + 8;
-      const isAtTop = activityList.scrollTop <= 8;
-      const isAtBottom =
-        activityList.scrollTop + activityList.clientHeight >= activityList.scrollHeight - 8;
-
-      if (!hasOverflow) {
-        setActivityScrollCueDirection(null);
-        return;
-      }
-
-      if (isAtBottom && !isAtTop) {
-        setActivityScrollCueDirection('up');
-        return;
-      }
-
-      setActivityScrollCueDirection('down');
-    };
-
-    updateScrollCue();
-    activityList.addEventListener('scroll', updateScrollCue, { passive: true });
-
-    const resizeObserver = new ResizeObserver(updateScrollCue);
-    resizeObserver.observe(activityList);
-
-    return () => {
-      activityList.removeEventListener('scroll', updateScrollCue);
-      resizeObserver.disconnect();
-    };
-  }, [recentActivity, isLoadingDashboardData]);
 
   const fetchAiUsage = useCallback(async () => {
     if (aiUsageRefreshInFlightRef.current) {
@@ -629,57 +591,60 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       <p className="text-[#7c6a57] text-sm">Nothing needs attention right now.</p>
                     </div>
                   ) : (
-                    <ul className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-                      {attentionProperties.map((item) => (
-                        <li key={item.propertyId} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl bg-white/50 p-3">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-[#2f2417] text-sm font-medium">{item.name}</p>
-                              {item.riskLevel ? (
-                                <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${riskStyles[item.riskLevel]}`}>
-                                  {item.riskLevel} risk
-                                </span>
-                              ) : (
-                                <span className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-[var(--color-neutral-bg)] text-[var(--color-neutral)] border border-[var(--color-neutral-border)]">
-                                  Not assessed
-                                </span>
+                    <div className="relative">
+                      <ul ref={attentionListRef} className="admin-scrollable-panel space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                        {attentionProperties.map((item) => (
+                          <li key={item.propertyId} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl bg-white/50 p-3">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-[#2f2417] text-sm font-medium">{item.name}</p>
+                                {item.riskLevel ? (
+                                  <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${riskStyles[item.riskLevel]}`}>
+                                    {item.riskLevel} risk
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-[var(--color-neutral-bg)] text-[var(--color-neutral)] border border-[var(--color-neutral-border)]">
+                                    Not assessed
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[#5d503f] text-xs mt-1">
+                                Compliance score: {item.complianceScore === null ? 'Not available' : `${item.complianceScore}%`}
+                              </p>
+                              {item.reasons.length > 0 && (
+                                <ul className="mt-1 text-xs text-[#7c6a57] list-disc list-inside">
+                                  {item.reasons.map((reason) => <li key={reason}>{reason}</li>)}
+                                </ul>
                               )}
                             </div>
-                            <p className="text-[#5d503f] text-xs mt-1">
-                              Compliance score: {item.complianceScore === null ? 'Not available' : `${item.complianceScore}%`}
-                            </p>
-                            {item.reasons.length > 0 && (
-                              <ul className="mt-1 text-xs text-[#7c6a57] list-disc list-inside">
-                                {item.reasons.map((reason) => <li key={reason}>{reason}</li>)}
-                              </ul>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => openAttentionPropertyForEdit(item.propertyId)}
-                              aria-label={`Edit property ${item.name}`}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#c9b89f] px-3 py-2 text-xs font-semibold text-[#45654d] hover:bg-[#f2f5ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#45654d]"
-                            >
-                              <Home className="w-3.5 h-3.5" />
-                              Edit Property
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void openAttentionAudit(item.propertyId)}
-                              disabled={openingAuditPropertyId === item.propertyId}
-                              aria-label={`Open AI Compliance Audit for ${item.name}`}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#c9b89f] px-3 py-2 text-xs font-semibold text-[#45654d] hover:bg-[#f2f5ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#45654d] disabled:opacity-50"
-                            >
-                              {openingAuditPropertyId === item.propertyId
-                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                : <Sparkles className="w-3.5 h-3.5" />}
-                              AI Compliance Audit
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                            <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => openAttentionPropertyForEdit(item.propertyId)}
+                                aria-label={`Edit property ${item.name}`}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#c9b89f] px-3 py-2 text-xs font-semibold text-[#45654d] hover:bg-[#f2f5ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#45654d]"
+                              >
+                                <Home className="w-3.5 h-3.5" />
+                                Edit Property
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void openAttentionAudit(item.propertyId)}
+                                disabled={openingAuditPropertyId === item.propertyId}
+                                aria-label={`Open AI Compliance Audit for ${item.name}`}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#c9b89f] px-3 py-2 text-xs font-semibold text-[#45654d] hover:bg-[#f2f5ef] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#45654d] disabled:opacity-50"
+                              >
+                                {openingAuditPropertyId === item.propertyId
+                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  : <Sparkles className="w-3.5 h-3.5" />}
+                                AI Compliance Audit
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                      <ScrollCue scrollableRef={attentionListRef} />
+                    </div>
                   )}
                 </section>
 
@@ -802,11 +767,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       transactions as they're added.
                     </p>
                   ) : (
-                    <div
-                      className="relative mt-4"
-                      onMouseEnter={() => setIsActivityCardHovered(true)}
-                      onMouseLeave={() => setIsActivityCardHovered(false)}
-                    >
+                    <div className="relative mt-4">
                       <div
                         ref={activityListRef}
                         className="admin-scrollable-panel space-y-3 max-h-[320px] overflow-y-auto pr-1"
@@ -842,23 +803,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                         ))}
                       </div>
 
-                      <div
-                        className={`admin-scroll-cue pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 transition-opacity duration-200 ${
-                          activityScrollCueDirection && isActivityCardHovered ? 'opacity-100' : 'opacity-0'
-                        }`}
-                        aria-hidden="true"
-                      >
-                        <span
-                          className={`admin-scroll-cue__mouse ${
-                            activityScrollCueDirection === 'up' ? 'admin-scroll-cue__mouse--up' : ''
-                          }`}
-                        >
-                          <span className="admin-scroll-cue__dot" />
-                        </span>
-                        <span className="admin-scroll-cue__label">
-                          {activityScrollCueDirection === 'up' ? 'Scroll Up' : 'Scroll Down'}
-                        </span>
-                      </div>
+                      <ScrollCue scrollableRef={activityListRef} />
                     </div>
                   )}
                 </div>
