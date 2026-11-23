@@ -219,12 +219,36 @@ export interface TopTrendingListing {
   location: string;
   status: string;
   marketScore: number;
+  priceComparison?: string | null;
 }
 
 export interface BuyerMarketTrends {
   trendingTypes: TrendingType[];
   topListings: TopTrendingListing[];
   totalBuyersWithPreferences: number;
+}
+
+export interface SearchMetricItem {
+  count: number;
+  type?: string;
+  location?: string;
+  range?: string;
+}
+
+export interface SearchMetricGroup {
+  eligibleSearches: number;
+  enoughSearches: boolean;
+  smallSample: boolean;
+  items: SearchMetricItem[];
+}
+
+export interface BuyerSearchMetrics {
+  totalSearches: number;
+  windowStart: string;
+  threshold: number;
+  propertyTypes: SearchMetricGroup;
+  popularLocations: SearchMetricGroup;
+  priceRanges: SearchMetricGroup;
 }
 
 export interface BuyerMarketInsight {
@@ -250,6 +274,11 @@ export async function getBuyerMarketTrends(limit = 5): Promise<BuyerMarketTrends
   const response = (await apiRequest(
     `/analytics/buyer/market-trends?limit=${limit}`
   )) as ApiEnvelope<BuyerMarketTrends>;
+  return response.data;
+}
+
+export async function getBuyerSearchMetrics(): Promise<BuyerSearchMetrics> {
+  const response = (await apiRequest('/analytics/buyer/search-metrics')) as ApiEnvelope<BuyerSearchMetrics>;
   return response.data;
 }
 

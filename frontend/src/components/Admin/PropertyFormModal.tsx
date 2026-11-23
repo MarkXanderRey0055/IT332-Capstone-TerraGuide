@@ -9,6 +9,7 @@ import { getLotSize } from '../../services/buyerPrefs';
 import { uploadPropertyImages } from '../../services/PropertyService';
 import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 import { ApiError } from '../../utils/api';
+import { findBatangasTown } from '../../../../shared/batangasTownCenters.mjs';
 
 interface PropertyFormModalProps {
   isOpen: boolean;
@@ -25,40 +26,6 @@ const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png']);
 const PHILIPPINES_CENTER: [number, number] = [12.8797, 121.774];
 const PHILIPPINES_VIEW_ZOOM = 5;
 const BATANGAS_TOWN_VIEW_ZOOM = 12;
-const BALAYAN_TOWN_CENTER: [number, number] = [13.948324, 120.722989];
-// Other coordinates are approximate town centers for map framing only; verify on the map.
-// Balayan keeps the former Balayan Capstone preset coordinates for centering.
-const BATANGAS_TOWN_CENTERS: Array<{ name: string; aliases?: string[]; center: [number, number] }> = [
-  { name: 'Batangas City', center: [13.7561, 121.0577] },
-  { name: 'Lipa City', aliases: ['Lipa'], center: [13.9414, 121.1642] },
-  { name: 'Tanauan', aliases: ['Tanauan City'], center: [14.0853, 121.1528] },
-  { name: 'Calaca', center: [13.9304, 120.8128] },
-  { name: 'Nasugbu', center: [14.0734, 120.6322] },
-  { name: 'Balayan', center: BALAYAN_TOWN_CENTER },
-  { name: 'Lemery', center: [13.8837, 120.9132] },
-  { name: 'Taal', center: [13.8803, 120.9238] },
-  { name: 'Bauan', center: [13.7925, 121.0076] },
-  { name: 'Mabini', center: [13.7476, 120.9412] },
-  { name: 'San Juan', center: [13.8246, 121.3962] },
-  { name: 'Rosario', center: [13.8442, 121.2035] },
-  { name: 'Ibaan', center: [13.8196, 121.1358] },
-  { name: 'Cuenca', center: [13.9015, 121.0492] },
-  { name: 'Lobo', center: [13.6473, 121.2100] },
-  { name: 'Malvar', center: [14.0542, 121.1548] },
-  { name: 'Padre Garcia', center: [13.8777, 121.2116] },
-  { name: 'Laurel', center: [14.0504, 120.9332] },
-  { name: 'Santa Teresita', center: [13.8698, 120.9769] },
-  { name: 'Talisay', center: [14.0944, 121.0219] },
-  { name: 'San Nicolas', center: [13.9302, 120.9521] },
-  { name: 'Agoncillo', center: [13.9348, 120.9285] },
-  { name: 'Alitagtag', center: [13.8653, 121.0046] },
-  { name: 'Mataasnakahoy', aliases: ['Mataas na Kahoy'], center: [13.9625, 121.1137] },
-  { name: 'Santo Tomas', aliases: ['Sto. Tomas', 'Sto Tomas'], center: [14.1068, 121.1616] },
-  { name: 'Taysan', center: [13.7968, 121.1885] },
-  { name: 'Tingloy', center: [13.6592, 120.8734] },
-  { name: 'Balete', center: [14.0168, 121.0998] },
-  { name: 'Lian', center: [14.0357, 120.6534] },
-];
 const DEFAULT_MARKER_ICON = L.icon({
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
@@ -77,18 +44,6 @@ type RequiredFieldValues = {
 };
 type RequiredFieldErrors = Partial<Record<RequiredField, string>>;
 type CoordinateErrors = Partial<Record<CoordinateField, string>>;
-
-function normalizeLocationWords(value: string) {
-  return value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-}
-
-function findBatangasTown(location: string) {
-  const normalizedLocation = ` ${normalizeLocationWords(location)} `;
-  return BATANGAS_TOWN_CENTERS
-    .flatMap((town) => [town.name, ...(town.aliases ?? [])].map((label) => ({ town, label })))
-    .filter(({ label }) => normalizedLocation.includes(` ${normalizeLocationWords(label)} `))
-    .sort((first, second) => normalizeLocationWords(second.label).length - normalizeLocationWords(first.label).length)[0]?.town;
-}
 
 function parseGoogleMapsLink(value: string): [number, number] | null {
   try {

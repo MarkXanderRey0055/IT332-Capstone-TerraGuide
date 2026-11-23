@@ -3,13 +3,25 @@ import User from '../models/User.js';
 import BuyerPreference from '../models/BuyerPreference.js';
 import Audit from '../models/Audit.js';
 import Transaction from '../models/Transaction.js';
+import SearchEvent from '../models/SearchEvent.js';
 import AppError from '../utils/errors.js';
 import { getStartOfManilaMonth, getManilaYearBounds } from '../utils/manilaTime.js';
 import { generatePortfolioNarrative, generateBuyerMarketNarrative } from './aiService.js';
 import { classifyAuditRisk } from '../utils/auditReadiness.js';
 import { BUYER_VISIBLE_PROPERTY_STATUS, isBuyerVisibleStatus } from '../../../shared/propertyVisibility.mjs';
+import { findBatangasTown } from '../../../shared/batangasTownCenters.mjs';
 
 const COMPLIANCE_READY_THRESHOLD = 70;
+export const SEARCH_METRIC_MIN_SAMPLE = 5;
+export const SEARCH_WINDOW_DAYS = 30;
+export const PROPERTY_TYPE_OPTIONS = ['Residential', 'House & Lot', 'Agricultural', 'Commercial', 'Condominium'];
+export const SEARCH_PRICE_BUCKETS = [
+  { label: 'Under ₱1M', min: -Infinity, max: 1000000 },
+  { label: '₱1M–₱2M', min: 1000000, max: 2000000 },
+  { label: '₱2M–₱4M', min: 2000000, max: 4000000 },
+  { label: '₱4M–₱6M', min: 4000000, max: 6000000 },
+  { label: 'Over ₱6M', min: 6000000, max: Infinity },
+];
 async function getLatestAuditsByProperty() {
   const latest = await Audit.aggregate([
     { $sort: { generatedAt: -1 } },
@@ -28,21 +40,21 @@ function computeRiskLevel(audit) {
   return classifyAuditRisk(audit.documentCompleteness ?? audit.complianceScore);
 }
 
-function computeMarketReadinessScore(property, audit) {
-  const comparisonAverage = audit.comparisonAverage || 0;
-
-  let priceCompetitivenessScore = 50; 
-  if (comparisonAverage > 0) {
-    const ratio = property.price / comparisonAverage;
-    if (ratio <= 1) {
-      priceCompetitivenessScore = 100;
-    } else {
-      const overshoot = ratio - 1;
-      priceCompetitivenessScore = Math.max(0, 100 - overshoot * 200);
-    }
+export function calculatePriceCompetitiveness(price, peerPrices) {
+  const peers = peerPrices.filter((value) => Number.isFinite(value) && value > 0);
+  if (!Number.isFinite(price) || price <= 0 || peers.length === 0) {
+    return { score: 50, neutral: true, peerAverage: null };
   }
+  const peerAverage = peers.reduce((sum, value) => sum + value, 0) / peers.length;
+  return {
+    score: Math.max(0, Math.min(100, Math.round((peerAverage / price) * 100))),
+    neutral: false,
+    peerAverage,
+  };
+}
 
-  return Math.round(audit.complianceScore * 0.6 + priceCompetitivenessScore * 0.4);
+export function calculateMarketReadinessScore(complianceScore, priceScore) {
+  return Math.round(complianceScore * 0.6 + priceScore * 0.4);
 }
 
 function computeSuccessRatePercentile(score, allScores) {
@@ -243,11 +255,25 @@ export async function getAttentionProperties() {
   return flagged;
 }
 
-export async function getPropertyRankings({ availableOnly = false } = {}) {
-  const [properties, latestAudits] = await Promise.all([
+export async function getPropertyRankings({ availableOnly = false, useComparablePricing = false } = {}) {
+  let availableListingsRequest = Promise.resolve([]);
+  if (useComparablePricing) {
+    const availableListingsQuery = Property.find({ status: BUYER_VISIBLE_PROPERTY_STATUS });
+    availableListingsRequest = typeof availableListingsQuery.select === 'function'
+      ? availableListingsQuery.select('type price')
+      : availableListingsQuery;
+  }
+  const [properties, latestAudits, availableListings] = await Promise.all([
     Property.find(availableOnly ? { status: BUYER_VISIBLE_PROPERTY_STATUS } : {}),
     getLatestAuditsByProperty(),
+    availableListingsRequest,
   ]);
+
+  const availableByType = new Map();
+  availableListings.forEach((listing) => {
+    if (!availableByType.has(listing.type)) availableByType.set(listing.type, []);
+    availableByType.get(listing.type).push(listing);
+  });
 
   const auditedEntries = properties
     .map((property) => {
@@ -259,17 +285,27 @@ export async function getPropertyRankings({ availableOnly = false } = {}) {
   const allScores = auditedEntries.map((entry) => entry.audit.complianceScore);
 
   const rankings = auditedEntries
-    .map(({ property, audit }) => ({
-      propertyId: property._id.toString(),
-      name: property.name,
-      type: property.type,
-      location: property.location,
-      status: property.status,
-      complianceScore: audit.complianceScore,
-      successRate: computeSuccessRatePercentile(audit.complianceScore, allScores),
-      marketReadinessScore: computeMarketReadinessScore(property, audit),
-      riskLevel: computeRiskLevel(audit),
-    }))
+    .map(({ property, audit }) => {
+      const peers = (availableByType.get(property.type) ?? [])
+        .filter((candidate) => candidate._id.toString() !== property._id.toString())
+        .map((candidate) => candidate.price);
+      const price = calculatePriceCompetitiveness(property.price, peers);
+      return {
+        propertyId: property._id.toString(),
+        name: property.name,
+        type: property.type,
+        location: property.location,
+        status: property.status,
+        complianceScore: audit.complianceScore,
+        successRate: computeSuccessRatePercentile(audit.complianceScore, allScores),
+        marketReadinessScore: useComparablePricing
+          ? calculateMarketReadinessScore(audit.complianceScore, price.score)
+          : Math.round(audit.complianceScore * 0.6 + 50 * 0.4),
+        priceCompetitivenessScore: useComparablePricing ? price.score : 50,
+        priceComparison: useComparablePricing && price.neutral ? 'neutral: no comparable listings' : null,
+        riskLevel: computeRiskLevel(audit),
+      };
+    })
     .sort((a, b) => b.marketReadinessScore - a.marketReadinessScore)
     .map((entry, index) => ({ rank: index + 1, ...entry }));
 
@@ -530,26 +566,32 @@ export function getPortfolioFallbackReason(error) {
 }
 
 
-export async function getBuyerMarketTrends(limit = 5) {
+export async function getBuyerMarketTrends(limit = 5, { includeAllTypes = false, useComparablePricing = false } = {}) {
   const [buyerIntelligence, rankingsResult] = await Promise.all([
     getBuyerIntelligence(),
-    getPropertyRankings({ availableOnly: true }),
+    getPropertyRankings({ availableOnly: true, useComparablePricing }),
   ]);
 
-  const totalPreferenceVotes = buyerIntelligence.preferredTypes.reduce(
+  const preferenceCounts = new Map(buyerIntelligence.preferredTypes.map((entry) => [entry.label, entry.count]));
+  const preferenceTypes = includeAllTypes
+    ? PROPERTY_TYPE_OPTIONS.map((label) => ({ label, count: preferenceCounts.get(label) ?? 0 }))
+    : buyerIntelligence.preferredTypes;
+  const totalPreferenceVotes = preferenceTypes.reduce(
     (sum, entry) => sum + entry.count,
     0
   );
 
   const trendingTypes =
     totalPreferenceVotes > 0
-      ? buyerIntelligence.preferredTypes
+      ? preferenceTypes
           .map((entry) => ({
             type: entry.label,
             percentage: Math.round((entry.count / totalPreferenceVotes) * 100),
           }))
           .sort((a, b) => b.percentage - a.percentage)
-      : [];
+      : includeAllTypes
+        ? PROPERTY_TYPE_OPTIONS.map((type) => ({ type, percentage: 0 }))
+        : [];
 
   const topListings = rankingsResult.rankings.slice(0, limit).map((entry) => ({
     rank: entry.rank,
@@ -559,6 +601,7 @@ export async function getBuyerMarketTrends(limit = 5) {
     location: entry.location,
     status: entry.status,
     marketScore: entry.marketReadinessScore,
+    ...(entry.priceComparison ? { priceComparison: entry.priceComparison } : {}),
   }));
 
   return {
@@ -566,6 +609,59 @@ export async function getBuyerMarketTrends(limit = 5) {
     topListings,
     totalBuyersWithPreferences: buyerIntelligence.totalBuyersWithPreferences,
   };
+}
+
+export function summarizeSearchEvents(events, now = new Date()) {
+  const windowStart = new Date(now.getTime() - SEARCH_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const recent = events.filter((event) => new Date(event.createdAt) >= windowStart && new Date(event.createdAt) <= now);
+  const typeEvents = recent.filter((event) => typeof event.propertyType === 'string' && event.propertyType.trim());
+  const locationEvents = recent.filter((event) => typeof event.location === 'string' && event.location.trim());
+  const boundedPriceEvents = recent.filter((event) => Number.isFinite(event.minPrice) && Number.isFinite(event.maxPrice));
+
+  const countBy = (items, keyFn) => {
+    const counts = new Map();
+    items.forEach((item) => {
+      const key = keyFn(item);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return counts;
+  };
+  const typeCounts = countBy(typeEvents, (event) => event.propertyType);
+  const locationCounts = countBy(locationEvents, (event) => {
+    const trimmedLocation = event.location.trim();
+    return findBatangasTown(trimmedLocation)?.name ?? trimmedLocation;
+  });
+  const priceCounts = countBy(boundedPriceEvents, (event) => {
+    const midpoint = (event.minPrice + event.maxPrice) / 2;
+    if (midpoint < 1000000) return SEARCH_PRICE_BUCKETS[0].label;
+    if (midpoint < 2000000) return SEARCH_PRICE_BUCKETS[1].label;
+    if (midpoint < 4000000) return SEARCH_PRICE_BUCKETS[2].label;
+    if (midpoint <= 6000000) return SEARCH_PRICE_BUCKETS[3].label;
+    return SEARCH_PRICE_BUCKETS[4].label;
+  });
+  const withMetric = (items, denominator) => ({
+    eligibleSearches: denominator,
+    enoughSearches: denominator >= SEARCH_METRIC_MIN_SAMPLE,
+    smallSample: denominator >= SEARCH_METRIC_MIN_SAMPLE && denominator < SEARCH_METRIC_MIN_SAMPLE * 2,
+    items,
+  });
+
+  return {
+    totalSearches: recent.length,
+    windowStart,
+    threshold: SEARCH_METRIC_MIN_SAMPLE,
+    propertyTypes: withMetric(PROPERTY_TYPE_OPTIONS.map((type) => ({ type, count: typeCounts.get(type) ?? 0 })), typeEvents.length),
+    popularLocations: withMetric([...locationCounts].map(([location, count]) => ({ location, count })).sort((a, b) => b.count - a.count || a.location.localeCompare(b.location)), locationEvents.length),
+    priceRanges: withMetric(SEARCH_PRICE_BUCKETS.map(({ label }) => ({ range: label, count: priceCounts.get(label) ?? 0 })), boundedPriceEvents.length),
+  };
+}
+
+export async function getBuyerSearchMetrics(now = new Date()) {
+  const windowStart = new Date(now.getTime() - SEARCH_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const events = await SearchEvent.find({ createdAt: { $gte: windowStart, $lte: now } })
+    .select('propertyType location minPrice maxPrice createdAt')
+    .lean();
+  return summarizeSearchEvents(events, now);
 }
 
 export async function getBuyerMarketSnapshot() {

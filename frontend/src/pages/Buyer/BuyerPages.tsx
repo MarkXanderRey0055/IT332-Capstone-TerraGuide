@@ -4,6 +4,11 @@ import type { Property as PropertyListing, BuyerPreferences } from '../../types/
 import { PropertyCard } from '../../components/Buyer/PropertyCard';
 import { getRecommendations } from '../../services/RecommendationService';
 import { searchProperties, type PropertySearchResult } from '../../services/PropertyService';
+import {
+  formatPriceInput,
+  formatPriceInputChange,
+  optionalPriceBound,
+} from '../../utils/priceInput.mjs';
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
 
@@ -29,6 +34,8 @@ interface BuyerSearchProps {
   onMaxPriceChange: (value: number | '') => void;
   onMinLotSizeChange: (value: number | '') => void;
   onClearFilters: () => void;
+  recordSearchOnMount?: boolean;
+  onSearchSubmissionConsumed?: () => void;
 }
 
 const PAGE_SIZE = 9;
@@ -49,6 +56,8 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
   onMaxPriceChange,
   onMinLotSizeChange,
   onClearFilters,
+  recordSearchOnMount = false,
+  onSearchSubmissionConsumed,
 }) => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [results, setResults] = useState<PropertyListing[]>([]);
@@ -71,8 +80,13 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
   // Tracks the previous filter values so we can tell "a filter changed"
   // apart from "the page changed" inside the single effect below.
   const prevFiltersRef = useRef({ keyword, location, type, minPrice, maxPrice, minLotSize });
+  const recordNextSearchRef = useRef(false);
 
   useEffect(() => {
+    if (recordSearchOnMount) {
+      recordNextSearchRef.current = true;
+      onSearchSubmissionConsumed?.();
+    }
     const prev = prevFiltersRef.current;
     const filtersChanged =
       prev.keyword !== keyword ||
@@ -97,16 +111,19 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
       setIsLoading(true);
       setLoadError('');
       try {
+        const recordSearch = recordNextSearchRef.current;
+        recordNextSearchRef.current = false;
         const result = await searchProperties({
           search: keyword.trim() || undefined,
           location: location || undefined,
           type: type || undefined,
           status: 'Available',
-          minPrice: minPrice || undefined,
-          maxPrice: maxPrice || undefined,
+          minPrice: optionalPriceBound(minPrice),
+          maxPrice: optionalPriceBound(maxPrice),
           minLotSize: minLotSize || undefined,
           page,
           limit: PAGE_SIZE,
+          recordSearch,
         });
         if (isCancelled) return;
         setResults(result.properties);
@@ -127,8 +144,24 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
       isCancelled = true;
       window.clearTimeout(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyword, location, type, minPrice, maxPrice, minLotSize, page, retryToken]);
+  }, [keyword, location, type, minPrice, maxPrice, minLotSize, page, retryToken, recordSearchOnMount, onSearchSubmissionConsumed]);
+
+  const changeSearchFilter = <T,>(callback: (value: T) => void, value: T, currentValue: T) => {
+    if (value !== currentValue) recordNextSearchRef.current = true;
+    callback(value);
+  };
+
+  const handlePriceInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    callback: (value: number | '') => void,
+    currentValue: number | '',
+  ) => {
+    const input = event.currentTarget;
+    const edit = formatPriceInputChange(input.value, input.selectionStart ?? input.value.length);
+    input.value = edit.displayValue;
+    changeSearchFilter(callback, edit.numericValue, currentValue);
+    requestAnimationFrame(() => input.setSelectionRange(edit.caretPosition, edit.caretPosition));
+  };
 
   const hasActiveFilters = keyword || location || type || minPrice || maxPrice || minLotSize;
 
@@ -197,7 +230,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
                 type="text"
                 placeholder="Search name, location..."
                 value={keyword}
-                onChange={(e) => onKeywordChange(e.target.value)}
+                onChange={(e) => changeSearchFilter(onKeywordChange, e.target.value, keyword)}
                 className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors placeholder:text-[#a89884]"
               />
             </div>
@@ -206,7 +239,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
               <label className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">Location</label>
               <select
                 value={location}
-                onChange={(e) => onLocationChange(e.target.value)}
+                onChange={(e) => changeSearchFilter(onLocationChange, e.target.value, location)}
                 className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors"
               >
                 <option value="">All Locations</option>
@@ -222,7 +255,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
               <label className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">Property Type</label>
               <select
                 value={type}
-                onChange={(e) => onTypeChange(e.target.value)}
+                onChange={(e) => changeSearchFilter(onTypeChange, e.target.value, type)}
                 className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors"
               >
                 <option value="">All Types</option>
@@ -238,20 +271,22 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
               <div className="space-y-1">
                 <label className="text-[9px] font-bold uppercase tracking-wider text-[#7c6a57]">Min Price</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   placeholder="0"
-                  value={minPrice || ''}
-                  onChange={(e) => onMinPriceChange(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                  value={formatPriceInput(minPrice || '')}
+                  onChange={(e) => handlePriceInputChange(e, onMinPriceChange, minPrice)}
                   className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors placeholder:text-[#a89884]"
                 />
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-bold uppercase tracking-wider text-[#7c6a57]">Max Price</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   placeholder="Any"
-                  value={maxPrice || ''}
-                  onChange={(e) => onMaxPriceChange(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                  value={formatPriceInput(maxPrice || '')}
+                  onChange={(e) => handlePriceInputChange(e, onMaxPriceChange, maxPrice)}
                   className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors placeholder:text-[#a89884]"
                 />
               </div>
@@ -265,7 +300,7 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
                 type="number"
                 placeholder="e.g. 500"
                 value={minLotSize || ''}
-                onChange={(e) => onMinLotSizeChange(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                onChange={(e) => changeSearchFilter(onMinLotSizeChange, e.target.value === '' ? '' : parseInt(e.target.value, 10), minLotSize)}
                 className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors placeholder:text-[#a89884]"
               />
             </div>

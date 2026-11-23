@@ -1,6 +1,7 @@
 import type { Property } from '../types/types';
 import { apiRequest } from '../utils/api';
 import { isBuyerVisibleStatus } from '../../../shared/propertyVisibility.mjs';
+import { appendPriceBounds } from '../utils/priceInput.mjs';
 
 // This is the same idea as AuthService and buyerPrefs — instead of the
 // old mockProperties array + propertyStorage.ts localStorage combo, we're
@@ -140,6 +141,7 @@ export interface PropertySearchParams {
   sort?: 'latest' | 'priceAsc' | 'priceDesc';
   page?: number;
   limit?: number;
+  recordSearch?: boolean;
 }
 
 export interface PropertySearchResult {
@@ -161,17 +163,19 @@ export async function searchProperties(
   if (params.location) query.set('location', params.location);
   if (params.type) query.set('type', params.type);
   if (params.status) query.set('status', params.status);
-  if (params.minPrice !== undefined) query.set('minPrice', String(params.minPrice));
-  if (params.maxPrice !== undefined) query.set('maxPrice', String(params.maxPrice));
+  appendPriceBounds(query, params.minPrice, params.maxPrice);
   if (params.minLotSize !== undefined) query.set('minLotSize', String(params.minLotSize));
   if (params.sort) query.set('sort', params.sort);
   if (params.page !== undefined) query.set('page', String(params.page));
   if (params.limit !== undefined) query.set('limit', String(params.limit));
+  if (params.recordSearch) query.set('recordSearch', 'true');
 
   const qs = query.toString();
   const response = (await apiRequest(
     `/properties${qs ? `?${qs}` : ''}`,
-    { omitAuth: true }
+    // Keep the public route usable while allowing optional auth to associate
+    // opted-in searches with a signed-in buyer.
+    {}
   )) as PropertyListResponse;
 
   return {
