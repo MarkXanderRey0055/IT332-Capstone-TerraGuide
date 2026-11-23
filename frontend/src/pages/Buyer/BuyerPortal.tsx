@@ -460,6 +460,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [searchMinPrice, setSearchMinPrice] = useState<number | ''>('');
   const [searchMaxPrice, setSearchMaxPrice] = useState<number | ''>('');
   const [searchMinLotSize, setSearchMinLotSize] = useState<number | ''>('');
+  const [recordHeroSearch, setRecordHeroSearch] = useState(false);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [buyerName, setBuyerName] = useState('Valued Buyer');
   const [buyerUserId, setBuyerUserId] = useState('');
@@ -604,6 +605,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   };
 
   const handleSearchApply = (query: string, loc: string, type: string, maxPrice?: number) => {
+    setRecordHeroSearch(true);
     setSearchKeyword(query);
     setSearchLocation(loc);
     setSearchType(type);
@@ -613,6 +615,8 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     setActiveTab('Search');
     setIsMobileMenuOpen(false);
   };
+
+  const consumeHeroSearchSubmission = useCallback(() => setRecordHeroSearch(false), []);
 
   const handleHeroSearch = () => {
     handleSearchApply(searchTerm, location, mapHomeTypeToFilter(propertyType), priceRange);
@@ -906,6 +910,8 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             onMaxPriceChange={setSearchMaxPrice}
             onMinLotSizeChange={setSearchMinLotSize}
             onClearFilters={handleClearSearchFilters}
+            recordSearchOnMount={recordHeroSearch}
+            onSearchSubmissionConsumed={consumeHeroSearchSubmission}
           />
         );
       case 'Suggested':
@@ -1210,11 +1216,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             </section>
 
             {/* Buyer Decision Analytics — market intelligence */}
-            <BuyerMarketIntelligence
-              properties={properties}
-              onSelectProperty={handleSelectProperty}
-              isAuthenticated={isAuthenticated}
-            />
+            <BuyerMarketIntelligence />
           </>
         );
     }

@@ -6,6 +6,30 @@ import { cleanupCloudinaryAssets, uploadPropertyImagesToCloudinary } from './ima
 import mongoose from 'mongoose';
 import { BUYER_VISIBLE_PROPERTY_STATUS } from '../../../shared/propertyVisibility.mjs';
 import { compareReadinessFreshness } from '../utils/auditReadiness.js';
+import SearchEvent from '../models/SearchEvent.js';
+
+function recordBuyerSearchEvent(queryParams, user, resultCount) {
+  if (queryParams.recordSearch !== 'true' || (user && user.role !== 'buyer')) return;
+  const { search, type, location, minPrice, maxPrice } = queryParams;
+  if (![search, type, location, minPrice, maxPrice].some((value) => value !== undefined && String(value).trim() !== '')) return;
+
+  const event = {
+    ...(user?.role === 'buyer' ? { buyerId: user._id ?? user.id } : {}),
+    ...(type ? { propertyType: String(type).trim() } : {}),
+    ...(location ? { location: String(location) } : {}),
+    ...(minPrice !== undefined && Number.isFinite(Number(minPrice)) ? { minPrice: Number(minPrice) } : {}),
+    ...(maxPrice !== undefined && Number.isFinite(Number(maxPrice)) ? { maxPrice: Number(maxPrice) } : {}),
+    resultCount,
+  };
+
+  try {
+    void SearchEvent.create(event).catch((error) => {
+      console.error('[search-event] best-effort write failed:', error?.message ?? error);
+    });
+  } catch (error) {
+    console.error('[search-event] best-effort write failed:', error?.message ?? error);
+  }
+}
 
 async function getLatestAuditStates(properties) {
   if (properties.length === 0) return new Map();
@@ -116,6 +140,9 @@ export const getAllProperties = async (queryParams = {}, user = null) => {
     .sort(sortOption)
     .skip(skip)
     .limit(limitNum);
+
+  // Search analytics are explicitly opted into and never block discovery.
+  recordBuyerSearchEvent(queryParams, user, total);
 
   let responseProperties = properties;
   if (user?.role === 'admin') {

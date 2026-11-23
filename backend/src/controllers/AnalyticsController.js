@@ -105,9 +105,18 @@ export const generatePortfolioInsights = asyncHandler(async (req, res) => {
 export const getBuyerMarketTrends = asyncHandler(async (req, res) => {
   const limit = req.query.limit ? parseInt(req.query.limit, 10) : 5;
 
-  const trends = await analyticsService.getBuyerMarketTrends(limit);
+  const trends = await analyticsService.getBuyerMarketTrends(limit, {
+    includeAllTypes: true,
+    useComparablePricing: true,
+  });
 
   return sendSuccess(res, 200, 'Buyer market trends retrieved successfully.', trends);
+});
+
+// Aggregated search counts are safe for public buyer discovery surfaces.
+export const getBuyerSearchMetrics = asyncHandler(async (_req, res) => {
+  const metrics = await analyticsService.getBuyerSearchMetrics();
+  return sendSuccess(res, 200, 'Buyer search metrics retrieved successfully.', metrics);
 });
 
 // @desc    Generate an AI buyer market insight report
