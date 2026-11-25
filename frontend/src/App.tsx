@@ -6,13 +6,16 @@ import { AUTH_UNAUTHORIZED_EVENT } from './utils/api';
 import ServerConnectionLoader from './components/ServerConnectionLoader';
 
 type AppView = 'login' | 'buyerPortal';
-type LoginInitialView = 'selection' | 'buyer' | 'admin';
+type LoginInitialView = 'buyer' | 'admin';
 const MIN_LOADING_DURATION_MS = import.meta.env.DEV ? 5000 : 0;
+const STARTED_WITH_ADMIN_HASH = window.location.hash === '#admin';
 
 export default function App() {
-  const [view, setView] = useState<AppView>('login');
+  const [view, setView] = useState<AppView>(STARTED_WITH_ADMIN_HASH ? 'login' : 'buyerPortal');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginInitialView, setLoginInitialView] = useState<LoginInitialView>('selection');
+  const [loginInitialView, setLoginInitialView] = useState<LoginInitialView>(
+    STARTED_WITH_ADMIN_HASH ? 'admin' : 'buyer'
+  );
   // True while we're checking for an existing session on startup, so we
   // don't briefly flash the login screen before an auto-login completes.
   const [isRestoringSession, setIsRestoringSession] = useState(true);
@@ -66,6 +69,12 @@ export default function App() {
         } else {
           setIsAuthenticated(false);
           setSessionVerificationError('');
+          if (window.location.hash === '#admin') {
+            setLoginInitialView('admin');
+            setView('login');
+          } else {
+            setView('buyerPortal');
+          }
         }
         setIsRestoringSession(false);
       }
@@ -86,7 +95,7 @@ export default function App() {
   useEffect(() => {
     const handleUnauthorized = () => {
       setIsAuthenticated(false);
-      setLoginInitialView('selection');
+      setLoginInitialView('buyer');
       setView('login');
     };
 
@@ -94,11 +103,17 @@ export default function App() {
     return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
   }, []);
 
-  const handleBrowse = () => {
-    setIsAuthenticated(false);
-    setPlayPortalEntrance(false);
-    setView('buyerPortal');
-  };
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#admin') {
+        setLoginInitialView('admin');
+        setView('login');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const handleAuthSuccess = () => {
     setIsAuthenticated(true);
@@ -112,17 +127,18 @@ export default function App() {
     setView('login');
   };
 
-  const handleGoToAdminLogin = () => {
-    setLoginInitialView('admin');
-    setView('login');
+  const handleBackToGuest = () => {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    setView('buyerPortal');
   };
 
   const handleSignOut = () => {
     AuthService.logout();
     setIsAuthenticated(false);
-    setLoginInitialView('selection');
+    setLoginInitialView('buyer');
     setSessionVerificationError('');
-    setView('login');
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    setView('buyerPortal');
   };
 
   const handleRetrySessionVerification = () => {
@@ -143,7 +159,6 @@ export default function App() {
     return (
       <BuyerPortal
         onGoToLogin={handleGoToLogin}
-        onGoToAdminLogin={handleGoToAdminLogin}
         onSignOut={handleSignOut}
         isAuthenticated={isAuthenticated}
         playEntranceAnimation={playPortalEntrance}
@@ -153,8 +168,7 @@ export default function App() {
 
   return (
     <MainLoginPortal
-      onBrowse={handleBrowse}
-      onGoToLogin={handleGoToLogin}
+      onBackToGuest={handleBackToGuest}
       onSignOut={handleSignOut}
       onAuthSuccess={handleAuthSuccess}
       initialView={loginInitialView}
