@@ -1,16 +1,16 @@
 
 # AUTHENTICATION
 
-### Register Admin
+### Register Buyer
 POST http://localhost:5000/api/auth/register
 Content-Type: application/json
 
 {
-  "username": "admin1",
-  "email": "admin@terraguide.com",
-  "password": "Password123!",
-  "role": "admin",
-  "fullName": "Admin User",
+  "username": "buyer1",
+  "email": "buyer@terraguide.com",
+  "password": "<password>",
+  "role": "buyer",
+  "fullName": "Buyer User",
   "address": "Balayan, Batangas"
 }
 

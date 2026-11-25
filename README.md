@@ -169,3 +169,18 @@ The diagram illustrates the workflow of the Admin Portal, where the administrato
 -Revenue trend Summary
 
 -Property performance ranking
+
+## Creating an administrator
+
+Administrator accounts are created manually from the command line (public registration always creates buyer accounts):
+
+```bash
+ADMIN_USERNAME=admin1 \
+ADMIN_EMAIL=admin@example.com \
+ADMIN_PASSWORD=<password> \
+ADMIN_FULL_NAME="Admin User" \
+ADMIN_ADDRESS="Balayan, Batangas" \
+node backend/scripts/createAdmin.mjs
+```
+
+Required environment variables: `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_FULL_NAME`, and `ADMIN_ADDRESS`. The password must be at least 8 characters long and is never printed by the script.
