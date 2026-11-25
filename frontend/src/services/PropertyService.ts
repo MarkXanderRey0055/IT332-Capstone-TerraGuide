@@ -192,8 +192,7 @@ export async function searchProperties(
  */
 export async function getPropertyById(id: string): Promise<Property> {
   const response = (await apiRequest(
-    `/properties/${id}`,
-    { omitAuth: true }
+    `/properties/${id}`
   )) as PropertySingleResponse;
 
   return mapToProperty(response.data);

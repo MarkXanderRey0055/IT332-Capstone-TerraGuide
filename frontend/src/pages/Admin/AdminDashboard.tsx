@@ -742,10 +742,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             <span className="text-[#6f604d]">Portfolio Insights</span>
                             <span className="font-semibold text-[#2f2417]">{aiUsage.breakdown.portfolio}</span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[#6f604d]">Market Insights</span>
-                            <span className="font-semibold text-[#2f2417]">{aiUsage.breakdown.market}</span>
-                          </div>
                           <div className="flex items-center justify-between pt-1.5 border-t border-[#d6c7b2] mt-1.5">
                             <span className="text-[#2f2417] font-semibold">Total</span>
                             <span className="font-bold text-[#2f2417]">

@@ -432,7 +432,6 @@ const mapHomeTypeToFilter = (propertyType: string) => {
 
 interface BuyerPortalProps {
   onGoToLogin?: () => void;
-  onGoToAdminLogin?: () => void;
   onSignOut?: () => void;
   isAuthenticated?: boolean;
   /** Fade the portal (header and page content) in, e.g. right after login. */
@@ -441,7 +440,6 @@ interface BuyerPortalProps {
 
 export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   onGoToLogin,
-  onGoToAdminLogin,
   onSignOut,
   isAuthenticated = false,
   playEntranceAnimation = false,
@@ -1305,18 +1303,11 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             )}
             <button
               type="button"
-              onClick={() => onGoToAdminLogin?.()}
-              className="text-xs font-medium text-[#6A9F8A] hover:text-[#E8F5EF] cursor-pointer underline decoration-dotted underline-offset-4 bg-transparent border-none"
-            >
-              Staff Portal
-            </button>
-            <button
-              type="button"
               onClick={handleHeaderAuthClick}
               className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold text-[#FFFFFF] bg-[#285A48] hover:bg-[#408A71] transition-all shadow-md hover:shadow-lg border-none cursor-pointer"
             >
               <LogOut className={`w-3.5 h-3.5 ${isAuthenticated ? '' : 'rotate-180'}`} />
-              <span className="hidden xs:inline">{isAuthenticated ? 'Logout' : 'Sign In'}</span>
+              <span className="hidden sm:inline">{isAuthenticated ? 'Logout' : 'Sign In'}</span>
             </button>
           </div>
         </header>

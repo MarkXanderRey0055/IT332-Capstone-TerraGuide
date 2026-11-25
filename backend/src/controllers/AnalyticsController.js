@@ -119,15 +119,6 @@ export const getBuyerSearchMetrics = asyncHandler(async (_req, res) => {
   return sendSuccess(res, 200, 'Buyer search metrics retrieved successfully.', metrics);
 });
 
-// @desc    Generate an AI buyer market insight report
-// @route   POST /api/analytics/buyer/market-insight
-// @access  Private (Buyer)
-export const generateBuyerMarketInsight = asyncHandler(async (req, res) => {
-  const result = await analyticsService.generateBuyerMarketInsight();
-
-  return sendSuccess(res, 200, 'Buyer market insight generated successfully.', result);
-});
-
 // @desc    Get recent Dashboard activity, derived at read-time from
 //          Property/User/Transaction — no separate activity log
 // @route   GET /api/analytics/activity

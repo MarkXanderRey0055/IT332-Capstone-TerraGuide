@@ -1,82 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import BuyerLogin from './BuyerLogin';
 import AdminLogin from '../Admin/AdminLogin';
-import BuyerPortal from './BuyerPortal';
 import AdminDashboard from '../Admin/AdminDashboard';
 
 type MainLoginPortalProps = {
-  onBrowse?: () => void;
-  onGoToLogin?: () => void;
+  onBackToGuest: () => void;
   onSignOut?: () => void;
   onAuthSuccess?: () => void;
   onAdminLoginSuccess?: () => void;
-  initialView?: 'selection' | 'buyer' | 'admin';
+  initialView?: 'buyer' | 'admin';
 };
 
 const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
-  onBrowse,
-  onGoToLogin,
+  onBackToGuest,
   onSignOut,
   onAuthSuccess,
   onAdminLoginSuccess,
-  initialView = 'selection',
+  initialView = 'buyer',
 }) => {
-  const [currentView, setCurrentView] = useState<'selection' | 'buyer' | 'admin' | 'browse' | 'adminDashboard'>(() => {
-    if (initialView === 'buyer') return 'buyer';
-    if (initialView === 'admin') return 'admin';
-    return 'selection';
-  });
+  const [currentView, setCurrentView] = useState<'buyer' | 'admin' | 'adminDashboard'>(initialView);
 
   useEffect(() => {
-    if (initialView === 'buyer') {
-      setCurrentView('buyer');
-      return;
-    }
-
-    if (initialView === 'admin') {
-      setCurrentView('admin');
-      return;
-    }
-
-    setCurrentView('selection');
+    setCurrentView(initialView);
   }, [initialView]);
 
   const handleLogout = () => {
     if (onSignOut) {
       onSignOut();
     }
-    setCurrentView('selection');
   };
-
-  if (currentView === 'buyer') {
-    return (
-      <BuyerLogin
-        onBack={() => setCurrentView('selection')}
-        onSuccess={() => {
-          if (onAuthSuccess) {
-            onAuthSuccess();
-            return;
-          }
-          setCurrentView('browse');
-        }}
-      />
-    );
-  }
-
-  if (currentView === 'browse') {
-    return (
-      <BuyerPortal
-        onGoToLogin={onGoToLogin}
-        onGoToAdminLogin={() => setCurrentView('admin')}
-        onSignOut={onSignOut}
-      />
-    );
-  }
 
   if (currentView === 'admin') {
     return (
       <AdminLogin
-        onBack={() => setCurrentView('selection')}
+        onBack={onBackToGuest}
         onLogin={() => {
           if (onAdminLoginSuccess) {
             onAdminLoginSuccess();
@@ -93,89 +50,16 @@ const MainLoginPortal: React.FC<MainLoginPortalProps> = ({
   }
 
   return (
-    <div className="login-entrance min-h-screen flex items-center justify-center bg-[#112a1d] p-4 relative overflow-hidden font-sans">
-      <div className="absolute inset-0 opacity-5 pointer-events-none bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]" />
-
-      <div className="login-entrance__card w-full max-w-md p-10 rounded-[2rem] border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-2xl relative z-10">
-        <div className="mb-8">
-          <p className="login-entrance__logo text-emerald-400 font-serif text-sm font-bold tracking-[0.24em] uppercase mb-5">
-            TerraGuide
-          </p>
-          <h1 className="login-entrance__heading text-3xl font-bold tracking-tight text-white font-serif mb-2">
-            Welcome Back
-          </h1>
-          <p className="login-entrance__subtitle text-sm text-gray-400">
-            Sign in to your portal or browse the market as a guest.
-          </p>
-        </div>
-
-        <div className="login-entrance__actions space-y-4">
-          <button
-            type="button"
-            onClick={() => setCurrentView('buyer')}
-            className="w-full flex items-center justify-between p-5 rounded-2xl bg-white/[0.04] border border-white/[0.05] cursor-pointer hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-emerald-400 focus-visible:outline-offset-2 transition duration-200 text-left"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-950/50 text-emerald-400 border border-emerald-500/10 flex items-center justify-center">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-              </div>
-              <div className="text-left">
-                <h3 className="text-white font-semibold text-base">Buyer Portal</h3>
-                <p className="text-gray-400 text-xs mt-0.5">Browse properties & set preferences</p>
-              </div>
-            </div>
-            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCurrentView('admin')}
-            className="w-full flex items-center justify-between p-5 rounded-2xl bg-white/[0.04] border border-white/[0.05] cursor-pointer hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-yellow-400 focus-visible:outline-offset-2 transition duration-200 text-left"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-xl bg-yellow-950/30 text-yellow-600 border border-yellow-500/10 flex items-center justify-center">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <div className="text-left">
-                <h3 className="text-white font-semibold text-base">Admin Dashboard</h3>
-                <p className="text-gray-400 text-xs mt-0.5">Manage listings, buyers & transac...</p>
-              </div>
-            </div>
-            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </button>
- 
-        </div>
-
-        <div className="login-entrance__footer mt-8 pt-6 border-t border-white/[0.05] text-center text-sm text-gray-400">
-          <span>Just looking? </span>
-          <span
-            onClick={() => {
-              if (onBrowse) {
-                onBrowse();
-                return;
-              }
-              setCurrentView('browse');
-            }}
-            className="text-emerald-400 font-medium underline underline-offset-4 cursor-pointer hover:text-emerald-300 transition"
-          >
-            Browse without signing in
-          </span>
-        </div>
-      </div>
-    </div>
+    <BuyerLogin
+      onBack={onBackToGuest}
+      onSuccess={() => {
+        if (onAuthSuccess) {
+          onAuthSuccess();
+          return;
+        }
+        onBackToGuest();
+      }}
+    />
   );
 };
 

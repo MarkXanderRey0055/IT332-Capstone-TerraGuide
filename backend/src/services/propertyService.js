@@ -6,6 +6,7 @@ import { cleanupCloudinaryAssets, uploadPropertyImagesToCloudinary } from './ima
 import mongoose from 'mongoose';
 import { BUYER_VISIBLE_PROPERTY_STATUS } from '../../../shared/propertyVisibility.mjs';
 import { compareReadinessFreshness } from '../utils/auditReadiness.js';
+import { toPublicProperties, toPublicProperty } from '../utils/publicPropertyView.js';
 import SearchEvent from '../models/SearchEvent.js';
 
 function recordBuyerSearchEvent(queryParams, user, resultCount) {
@@ -74,20 +75,21 @@ export const getAllProperties = async (queryParams = {}, user = null) => {
 
   // Build MongoDB query filter dynamically
   const filter = {};
+  const isAdmin = user?.role === 'admin';
 
   // Discovery is always Available-only for buyers and anonymous visitors.
   // Only a verified admin may use an explicit status filter or see all statuses.
-  if (user?.role === 'admin') {
+  if (isAdmin) {
     if (status) filter.status = status;
   } else {
     filter.status = BUYER_VISIBLE_PROPERTY_STATUS;
   }
 
-  // 1. Search filter (matches name, owner, or location)
+  // 1. Search filter (matches name or location; owner matching is admin-only)
   if (search) {
     filter.$or = [
       { name: { $regex: search, $options: 'i' } },
-      { owner: { $regex: search, $options: 'i' } },
+      ...(isAdmin ? [{ owner: { $regex: search, $options: 'i' } }] : []),
       { location: { $regex: search, $options: 'i' } },
     ];
   }
@@ -135,8 +137,11 @@ export const getAllProperties = async (queryParams = {}, user = null) => {
 
   // Execute query with total count
   const total = await Property.countDocuments(filter);
-  const properties = await Property.find(filter)
-    .populate('documentVerificationHistory.changedBy', 'fullName username')
+  let query = Property.find(filter);
+  if (isAdmin) {
+    query = query.populate('documentVerificationHistory.changedBy', 'fullName username');
+  }
+  const properties = await query
     .sort(sortOption)
     .skip(skip)
     .limit(limitNum);
@@ -144,8 +149,8 @@ export const getAllProperties = async (queryParams = {}, user = null) => {
   // Search analytics are explicitly opted into and never block discovery.
   recordBuyerSearchEvent(queryParams, user, total);
 
-  let responseProperties = properties;
-  if (user?.role === 'admin') {
+  let responseProperties = isAdmin ? properties : toPublicProperties(properties);
+  if (isAdmin) {
     const auditStates = await getLatestAuditStates(properties);
     responseProperties = properties.map((property) => ({
       ...(typeof property.toObject === 'function'
@@ -166,12 +171,17 @@ export const getAllProperties = async (queryParams = {}, user = null) => {
   };
 };
 
-export const getPropertyById = async (id) => {
-  const property = await Property.findById(id).populate('documentVerificationHistory.changedBy', 'fullName username');
+export const getPropertyById = async (id, user = null) => {
+  const isAdmin = user?.role === 'admin';
+  let query = Property.findById(id);
+  if (isAdmin && typeof query?.populate === 'function') {
+    query = query.populate('documentVerificationHistory.changedBy', 'fullName username');
+  }
+  const property = await query;
   if (!property) {
     throw new AppError('Property listing not found', 404);
   }
-  return property;
+  return isAdmin ? property : toPublicProperty(property);
 };
 
 const validateRequiredPositivePropertyValues = (values) => {

@@ -1,6 +1,7 @@
 import BuyerPreference from '../models/BuyerPreference.js';
 import Property from '../models/Property.js';
 import AppError from '../utils/errors.js';
+import { toPublicProperties } from '../utils/publicPropertyView.js';
 
 const MINIMUM_ONLY_BUDGET_RANGE = 500_000;
 
@@ -125,7 +126,7 @@ export const getBuyerRecommendations = async (userId) => {
     return idA < idB ? -1 : idA > idB ? 1 : 0;
   });
 
-  const recommendedProperties = scored.map((entry) => entry.property);
+  const recommendedProperties = toPublicProperties(scored.map((entry) => entry.property));
 
   return {
     preferences,

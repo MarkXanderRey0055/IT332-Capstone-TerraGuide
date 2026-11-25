@@ -8,16 +8,12 @@ import { asyncHandler } from '../middleware/errorMiddleware.js';
  * @access  Public
  */
 export const register = asyncHandler(async (req, res) => {
-  console.log("=== REGISTER HIT ===");
-  console.log(req.body);
-
-  const { username, email, password, role, fullName, address } = req.body;
+  const { username, email, password, fullName, address } = req.body;
 
   const result = await authService.registerUser({
     username,
     email,
     password,
-    role,
     fullName,
     address
   });

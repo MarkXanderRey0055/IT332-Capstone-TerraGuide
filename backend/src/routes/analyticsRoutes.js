@@ -10,7 +10,6 @@ import {
   generatePortfolioInsights,
   getBuyerMarketTrends,
   getBuyerSearchMetrics,
-  generateBuyerMarketInsight,
   getRecentActivity,
 } from '../controllers/AnalyticsController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
@@ -28,6 +27,5 @@ router.get('/activity', protect, authorize('admin'), getRecentActivity);
 router.post('/portfolio-insights', protect, authorize('admin'), generatePortfolioInsights);
 router.get('/buyer/market-trends', protect, authorize('buyer'), getBuyerMarketTrends);
 router.get('/buyer/search-metrics', getBuyerSearchMetrics);
-router.post('/buyer/market-insight', protect, authorize('buyer'), generateBuyerMarketInsight);
 
 export default router;

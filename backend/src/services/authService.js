@@ -17,15 +17,10 @@ const generateToken = (userId) => {
 /**
  * Service to register a new user.
  */
-export const registerUser = async ({ username, email, password, role, fullName, address }) => {
+export const registerUser = async ({ username, email, password, fullName, address }) => {
   // Validate input presence
-  if (!username || !email || !password || !role || !fullName || !address) {
-    throw new AppError('Please provide username, email, password, role, fullName, and address.', 400);
-  }
-
-  // Ensure role is either admin or buyer
-  if (!['admin', 'buyer'].includes(role)) {
-    throw new AppError('Role must be either "admin" or "buyer".', 400);
+  if (!username || !email || !password || !fullName || !address) {
+    throw new AppError('Please provide username, email, password, fullName, and address.', 400);
   }
 
   // Check if user already exists
@@ -44,7 +39,7 @@ export const registerUser = async ({ username, email, password, role, fullName, 
     username,
     email,
     password,
-    role,
+    role: 'buyer',
     fullName,
     address
   });
@@ -63,36 +58,21 @@ export const registerUser = async ({ username, email, password, role, fullName, 
 };
 
 export const loginUser = async ({ username, password }) => {
-  console.log("\n========== LOGIN DEBUG ==========");
-  console.log("Input:", username);
-
   const query = username.includes("@")
     ? { email: username.toLowerCase() }
     : { username: username.toLowerCase() };
 
-  console.log("Query:", query);
-
   const user = await User.findOne(query);
-
-  console.log("User found:", !!user);
 
   if (!user) {
     throw new AppError("Invalid credentials.", 401);
   }
 
-  console.log("Stored username:", user.username);
-  console.log("Stored email:", user.email);
-  console.log("Stored hash:", user.password);
-
   const isMatch = await user.comparePassword(password);
-
-  console.log("Password match:", isMatch);
 
   if (!isMatch) {
     throw new AppError("Invalid credentials.", 401);
   }
-
-  console.log("LOGIN SUCCESS");
 
   const token = generateToken(user._id);
 

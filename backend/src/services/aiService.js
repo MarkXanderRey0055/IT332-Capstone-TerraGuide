@@ -108,46 +108,6 @@ export function validatePortfolioNarrative(parsed) {
 }
 
 /**
- * Generates a concise, buyer-facing market summary for the Buyer Home page's
- * "AI Market Insight" widget. Reuses the same NVIDIA NIM call path as
- * compliance insights and the admin portfolio narrative — only the prompt
- * and expected response shape differ.
- */
-export async function generateBuyerMarketNarrative(snapshot) {
-  const apiKey = process.env.NVIDIA_API_KEY;
-
-  if (!apiKey) {
-    throw createAiDiagnosticError(
-      'NVIDIA AI configuration is unavailable.',
-      { code: 'AI_CONFIGURATION_ERROR', category: 'configuration' }
-    );
-  }
-
-  await reserveAiUsage('market');
-
-  const prompt = buildBuyerMarketPrompt(snapshot);
-  const rawText = await callNvidiaModel(apiKey, prompt);
-
-  let parsed;
-  try {
-    parsed = parseJsonResponse(rawText);
-  } catch (err) {
-    throw new Error('Failed to parse AI Market Insight as JSON.');
-  }
-
-  // All three fields are required — if any are missing the response is unusable.
-  if (!parsed.buyerDemand || !parsed.topListings || !parsed.marketContext) {
-    throw new Error('AI response missing one or more required fields (buyerDemand, topListings, marketContext).');
-  }
-
-  return {
-    buyerDemand: parsed.buyerDemand,
-    topListings: parsed.topListings,
-    marketContext: parsed.marketContext,
-  };
-}
-
-/**
  * Helper function to call NVIDIA NIM API and extract clean JSON
  */
 export async function callNvidiaModel(apiKey, prompt, { timeoutMs } = {}) {
@@ -649,81 +609,5 @@ Respond EXACTLY with this JSON structure and nothing else:
   "topPerformingCategories": "...",
   "risks": "...",
   "recommendations": "..."
-}`;
-}
-
-/**
- * Buyer-facing market summary prompt for the Buyer Home page. Advisory in
- * tone, not promotional — this is meant to help a buyer understand the
- * current market, not sell them a listing.
- */
-function buildBuyerMarketPrompt(snapshot) {
-  const {
-    totalProperties,
-    availableProperties,
-    totalBuyersWithPreferences,
-    averageBudget,
-    topPreferredLocation,
-    trendingTypes,
-    topListings,
-  } = snapshot;
-
-  // Only show preference breakdown when we actually have something to show —
-  // if there's no data, tell the model that explicitly so it doesn't guess.
-  const preferenceBreakdown =
-    trendingTypes && trendingTypes.length > 0
-      ? trendingTypes.map((t) => `${t.type} (${t.percentage}% of recorded preferences)`).join(', ')
-      : 'No buyer preference data recorded yet';
-
-  // Same deal for listings — if nothing has been scored yet, say so.
-  const topListingsStr =
-    topListings && topListings.length > 0
-      ? topListings
-          .map((l) => `${l.name} in ${l.location} (market readiness score: ${l.marketScore}/100)`)
-          .join('; ')
-      : 'No market readiness scores available yet';
-
-  // A zero or missing budget means it simply wasn't recorded — label it that
-  // way so the model doesn't try to read meaning into the absence of a number.
-  const budgetLine =
-    averageBudget && averageBudget > 0
-      ? `Average stated budget among buyers who set preferences: ₱${averageBudget.toLocaleString()}`
-      : 'Buyer budget information is currently unavailable';
-
-  const locationLine =
-    topPreferredLocation
-      ? `Most requested location: ${topPreferredLocation}`
-      : 'No location preference data recorded yet';
-
-  return `You are writing a short market data summary for buyers browsing TerraGuide, a real estate platform. Report only what the data shows — nothing more.
-
-GROUND RULES:
-- Every sentence must trace directly to a fact in the DATA section below.
-- Do NOT compare buyer count to listing count to imply competition or pressure.
-- Do NOT invent buyer intent, financial behavior, urgency, or market predictions.
-- If a data point says "unavailable" or "no data recorded yet", say so plainly — do not read meaning into the absence.
-- Do not use "suggests", "may indicate", or "could mean" to smuggle in unsupported conclusions.
-- Top market listings are ranked by document compliance and price competitiveness — not popularity or demand.
-
-DATA:
-- Total listings on the platform: ${totalProperties} (${availableProperties} currently marked Available)
-- Buyers who have saved their preferences: ${totalBuyersWithPreferences}
-- ${budgetLine}
-- ${locationLine}
-- Recorded property type preferences: ${preferenceBreakdown}
-- Top listings by market readiness score: ${topListingsStr}
-
-INSTRUCTIONS:
-Write exactly three fields. Each field is one or two plain sentences — no lists, no bullet points, no markdown.
-
-"buyerDemand" — which property type has the strongest recorded preference and its percentage. If no preference data exists, say so.
-"topListings" — which listings have the highest market readiness scores. Name them and their scores. Clarify the score measures document compliance and price competitiveness, not popularity.
-"marketContext" — plain summary of listing availability. Note any missing data (budget, location, preferences) as limitations for the buyer.
-
-Respond EXACTLY with this JSON and nothing else:
-{
-  "buyerDemand": "...",
-  "topListings": "...",
-  "marketContext": "..."
 }`;
 }
