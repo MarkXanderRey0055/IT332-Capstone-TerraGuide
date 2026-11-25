@@ -251,25 +251,6 @@ export interface BuyerSearchMetrics {
   priceRanges: SearchMetricGroup;
 }
 
-export interface BuyerMarketInsight {
-  buyerDemand: string;
-  topListings: string;
-  marketContext: string;
-}
-
-export interface BuyerMarketInsightResult {
-  snapshot: {
-    totalProperties: number;
-    availableProperties: number;
-    totalBuyersWithPreferences: number;
-    averageBudget: number;
-    topPreferredLocation: string | null;
-    trendingTypes: TrendingType[];
-    topListings: TopTrendingListing[];
-  };
-  insight: BuyerMarketInsight;
-}
-
 export async function getBuyerMarketTrends(limit = 5): Promise<BuyerMarketTrends> {
   const response = (await apiRequest(
     `/analytics/buyer/market-trends?limit=${limit}`
@@ -279,12 +260,5 @@ export async function getBuyerMarketTrends(limit = 5): Promise<BuyerMarketTrends
 
 export async function getBuyerSearchMetrics(): Promise<BuyerSearchMetrics> {
   const response = (await apiRequest('/analytics/buyer/search-metrics')) as ApiEnvelope<BuyerSearchMetrics>;
-  return response.data;
-}
-
-export async function generateBuyerMarketInsight(): Promise<BuyerMarketInsightResult> {
-  const response = (await apiRequest('/analytics/buyer/market-insight', {
-    method: 'POST',
-  })) as ApiEnvelope<BuyerMarketInsightResult>;
   return response.data;
 }

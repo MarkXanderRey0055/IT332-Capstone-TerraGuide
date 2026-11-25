@@ -20,7 +20,7 @@ Content-Type: application/json
 
   {
     "username": "admin1",
-    "password": "Password123!"
+    "password": "<password>"
   }
 
 ### Get Current User Profile

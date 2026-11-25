@@ -6,7 +6,7 @@ import Transaction from '../models/Transaction.js';
 import SearchEvent from '../models/SearchEvent.js';
 import AppError from '../utils/errors.js';
 import { getStartOfManilaMonth, getManilaYearBounds } from '../utils/manilaTime.js';
-import { generatePortfolioNarrative, generateBuyerMarketNarrative } from './aiService.js';
+import { generatePortfolioNarrative } from './aiService.js';
 import { classifyAuditRisk } from '../utils/auditReadiness.js';
 import { BUYER_VISIBLE_PROPERTY_STATUS, isBuyerVisibleStatus } from '../../../shared/propertyVisibility.mjs';
 import { findBatangasTown } from '../../../shared/batangasTownCenters.mjs';
@@ -662,39 +662,4 @@ export async function getBuyerSearchMetrics(now = new Date()) {
     .select('propertyType location minPrice maxPrice createdAt')
     .lean();
   return summarizeSearchEvents(events, now);
-}
-
-export async function getBuyerMarketSnapshot() {
-  const [summary, marketTrends, buyerIntelligence] = await Promise.all([
-    getDashboardSummary(),
-    getBuyerMarketTrends(5),
-    getBuyerIntelligence(),
-  ]);
-
-  const topPreferredLocation = buyerIntelligence.preferredLocations[0]?.label ?? null;
-
-  return {
-    totalProperties: summary.totalProperties,
-    availableProperties: summary.availableProperties,
-    totalBuyersWithPreferences: buyerIntelligence.totalBuyersWithPreferences,
-    averageBudget: buyerIntelligence.averageBudget,
-    topPreferredLocation,
-    trendingTypes: marketTrends.trendingTypes,
-    topListings: marketTrends.topListings,
-  };
-}
-
-export async function generateBuyerMarketInsight() {
-  const snapshot = await getBuyerMarketSnapshot();
-
-  if (snapshot.totalProperties === 0) {
-    throw new AppError(
-      'Not enough listing data yet to generate a market insight.',
-      400
-    );
-  }
-
-  const insight = await generateBuyerMarketNarrative(snapshot);
-
-  return { snapshot, insight };
 }
