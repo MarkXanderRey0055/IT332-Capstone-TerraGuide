@@ -15,7 +15,7 @@ const router = express.Router();
 
 // buyer routes
 router.get('/', optionalProtect, getProperties);
-router.get('/:id', getPropertyById); //search
+router.get('/:id', optionalProtect, getPropertyById); //search
 
 // admin routes
 router.post('/', protect, authorize('admin'), validatePropertyInput, createProperty);

@@ -11,7 +11,7 @@ export const getProperties = asyncHandler(async (req, res) => {
 // fetch single property (fetch by id)
 export const getPropertyById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const property = await propertyService.getPropertyById(id);
+  const property = await propertyService.getPropertyById(id, req.user);
   return sendSuccess(res, 200, 'Property details fetched successfully', property);
 });
 
