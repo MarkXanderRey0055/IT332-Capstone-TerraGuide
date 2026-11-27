@@ -1,19 +1,62 @@
-import { classifyAuditRisk } from './auditReadiness.js';
+import { computeRiskLevel } from './auditReadiness.js';
 
 // PROVISIONAL: pending confirmation from Smart Works.
 export const UNANSWERED_INQUIRY_DAYS = 7;
 
-// PROVISIONAL: uses existing High risk classification from classifyAuditRisk.
+// PROVISIONAL: pending confirmation from Smart Works (derived from UNANSWERED_INQUIRY_DAYS).
+export const ELAPSED_INQUIRY_HOURS = UNANSWERED_INQUIRY_DAYS * 24;
+
+// PROVISIONAL: uses existing High risk classification from computeRiskLevel.
 export const HIGH_RISK_LEVEL = 'High';
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
+export const HIGH_RISK_EVIDENCE_KEYS = [
+  'propertyId',
+  'propertyName',
+  'type',
+  'status',
+  'complianceScore',
+  'riskLevel',
+];
+
+export const STALE_INQUIRY_EVIDENCE_KEYS = [
+  'inquiryId',
+  'propertyId',
+  'propertyName',
+  'createdAtManila',
+  'ageHours',
+];
+
+export const SITE_VISIT_EVIDENCE_KEYS = [
+  'siteVisitId',
+  'propertyId',
+  'propertyName',
+  'preferredDate',
+];
+
+const MS_PER_HOUR = 3600000;
+const MANILA_OFFSET_MS = 8 * MS_PER_HOUR;
 const ACTIVE_LISTING_STATUSES = new Set(['Available', 'Reserved']);
 
+function pickKeys(source, keys) {
+  const picked = {};
+  for (const key of keys) {
+    picked[key] = source[key];
+  }
+  return picked;
+}
+
 function toValidDate(value) {
-  if (!value) return null;
+  if (value === null || value === undefined || value === '') return null;
   const date = value instanceof Date ? value : new Date(value);
   return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function assertValidReferenceDate(referenceDate) {
+  const date = toValidDate(referenceDate);
+  if (!date) {
+    throw new TypeError('referenceDate must be a valid date');
+  }
+  return date;
 }
 
 function lookupById(source, id) {
@@ -24,26 +67,53 @@ function lookupById(source, id) {
   return undefined;
 }
 
-function extractId(value) {
+export function extractId(value) {
   if (!value) return '';
-  if (typeof value === 'object' && value !== null) {
-    return String(value.id ?? value._id ?? '');
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'object') {
+    if (typeof value.toHexString === 'function') {
+      return String(value.toHexString()).trim();
+    }
+    if (value._id !== undefined && value._id !== null && value._id !== value) {
+      return extractId(value._id);
+    }
+    if (typeof value.id === 'string') {
+      return value.id.trim();
+    }
+    if (typeof value.toString === 'function' && value.toString !== Object.prototype.toString) {
+      return String(value.toString()).trim();
+    }
+    return '';
   }
-  return String(value);
+  return String(value).trim();
 }
 
-function formatIsoDate(date) {
-  return date.toISOString().slice(0, 10);
+function pad2(num) {
+  return String(num).padStart(2, '0');
 }
 
-function formatAsiaManilaDate(referenceDate) {
-  const date = toValidDate(referenceDate) ?? new Date();
-  const manilaWall = new Date(date.getTime() + MANILA_OFFSET_MS);
-  return formatIsoDate(manilaWall);
+export function formatManilaDate(date) {
+  const valid = assertValidReferenceDate(date);
+  const manilaWall = new Date(valid.getTime() + MANILA_OFFSET_MS);
+  const year = manilaWall.getUTCFullYear();
+  const month = pad2(manilaWall.getUTCMonth() + 1);
+  const day = pad2(manilaWall.getUTCDate());
+  return `${year}-${month}-${day}`;
+}
+
+export function formatManilaDateTime(date) {
+  const valid = assertValidReferenceDate(date);
+  const manilaWall = new Date(valid.getTime() + MANILA_OFFSET_MS);
+  const year = manilaWall.getUTCFullYear();
+  const month = pad2(manilaWall.getUTCMonth() + 1);
+  const day = pad2(manilaWall.getUTCDate());
+  const hours = pad2(manilaWall.getUTCHours());
+  const minutes = pad2(manilaWall.getUTCMinutes());
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
 export function buildAsiaManilaDayStart(referenceDate) {
-  const date = toValidDate(referenceDate) ?? new Date();
+  const date = assertValidReferenceDate(referenceDate);
   const manilaWall = new Date(date.getTime() + MANILA_OFFSET_MS);
   const manilaMidnightUtcMs =
     Date.UTC(
@@ -67,22 +137,28 @@ export function evaluateHighRiskDocuments({
 
   for (const listing of keptListings) {
     const propertyId = extractId(listing);
+    if (!propertyId) continue;
+
     const audit = lookupById(latestAuditByPropertyId, propertyId);
-    if (!audit) continue;
+    const riskLevel = computeRiskLevel(audit);
+    if (riskLevel === null) continue;
 
     sampleSize += 1;
-    const score = audit.documentCompleteness ?? audit.complianceScore;
-    const riskLevel = classifyAuditRisk(score);
 
     if (riskLevel === HIGH_RISK_LEVEL) {
-      matches.push({
-        propertyId,
-        propertyName: listing.name || 'Unnamed listing',
-        type: listing.type ?? '',
-        status: listing.status,
-        complianceScore: audit.complianceScore ?? score,
-        riskLevel,
-      });
+      matches.push(
+        pickKeys(
+          {
+            propertyId,
+            propertyName: listing.name || 'Unnamed listing',
+            type: listing.type ?? '',
+            status: listing.status,
+            complianceScore: audit.complianceScore ?? audit.documentCompleteness,
+            riskLevel,
+          },
+          HIGH_RISK_EVIDENCE_KEYS
+        )
+      );
     }
   }
 
@@ -128,10 +204,10 @@ export function evaluateHighRiskDocuments({
 export function evaluateStaleInquiries({
   inquiries = [],
   propertyNameById = new Map(),
-  referenceDate = new Date(),
+  referenceDate,
 } = {}) {
-  const refDate = toValidDate(referenceDate) ?? new Date();
-  const cutoffMs = refDate.getTime() - UNANSWERED_INQUIRY_DAYS * MS_PER_DAY;
+  const refDate = assertValidReferenceDate(referenceDate);
+  const thresholdMs = ELAPSED_INQUIRY_HOURS * MS_PER_HOUR;
   const pending = Array.isArray(inquiries)
     ? inquiries.filter((inquiry) => inquiry?.status === 'Pending')
     : [];
@@ -140,21 +216,26 @@ export function evaluateStaleInquiries({
   const matchedPairs = [];
   for (const inquiry of pending) {
     const createdDate = toValidDate(inquiry.createdAt);
-    if (!createdDate || createdDate.getTime() >= cutoffMs) continue;
+    if (!createdDate) continue;
+    const elapsedMs = refDate.getTime() - createdDate.getTime();
+    if (elapsedMs <= thresholdMs) continue;
 
     const propertyId = extractId(inquiry.propertyId);
     const propertyName = lookupById(propertyNameById, propertyId) || 'Unavailable listing';
-    const daysPending = Math.floor((refDate.getTime() - createdDate.getTime()) / MS_PER_DAY);
+    const ageHours = Math.floor(elapsedMs / MS_PER_HOUR);
 
     matchedPairs.push({
       sortMs: createdDate.getTime(),
-      item: {
-        inquiryId: extractId(inquiry),
-        propertyId,
-        propertyName,
-        createdAt: formatIsoDate(createdDate),
-        daysPending,
-      },
+      item: pickKeys(
+        {
+          inquiryId: extractId(inquiry),
+          propertyId,
+          propertyName,
+          createdAtManila: formatManilaDateTime(createdDate),
+          ageHours,
+        },
+        STALE_INQUIRY_EVIDENCE_KEYS
+      ),
     });
   }
 
@@ -183,7 +264,7 @@ export function evaluateStaleInquiries({
 export function evaluateOverdueSiteVisits({
   siteVisits = [],
   propertyNameById = new Map(),
-  referenceDate = new Date(),
+  referenceDate,
 } = {}) {
   const dayStart = buildAsiaManilaDayStart(referenceDate);
   const pending = Array.isArray(siteVisits)
@@ -201,12 +282,15 @@ export function evaluateOverdueSiteVisits({
 
     matchedPairs.push({
       sortMs: preferredDate.getTime(),
-      item: {
-        siteVisitId: extractId(visit),
-        propertyId,
-        propertyName,
-        preferredDate: formatIsoDate(preferredDate),
-      },
+      item: pickKeys(
+        {
+          siteVisitId: extractId(visit),
+          propertyId,
+          propertyName,
+          preferredDate: formatManilaDate(preferredDate),
+        },
+        SITE_VISIT_EVIDENCE_KEYS
+      ),
     });
   }
 
@@ -238,16 +322,18 @@ export function buildPortfolioActions({
   inquiries = [],
   siteVisits = [],
   propertyNameById = new Map(),
-  referenceDate = new Date(),
+  referenceDate,
 } = {}) {
+  const validReferenceDate = assertValidReferenceDate(referenceDate);
   const rulesEvaluated = [
     evaluateHighRiskDocuments({ listings, latestAuditByPropertyId }),
-    evaluateStaleInquiries({ inquiries, propertyNameById, referenceDate }),
-    evaluateOverdueSiteVisits({ siteVisits, propertyNameById, referenceDate }),
+    evaluateStaleInquiries({ inquiries, propertyNameById, referenceDate: validReferenceDate }),
+    evaluateOverdueSiteVisits({ siteVisits, propertyNameById, referenceDate: validReferenceDate }),
   ];
 
   return {
-    referenceDate: formatAsiaManilaDate(referenceDate),
+    referenceDate: formatManilaDate(validReferenceDate),
+    computedAt: validReferenceDate.toISOString(),
     actions: rulesEvaluated.filter((result) => result.fired),
     rulesEvaluated,
   };

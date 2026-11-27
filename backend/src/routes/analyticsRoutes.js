@@ -7,6 +7,7 @@ import {
   getPropertyRankings,
   getBuyerIntelligence,
   getSalesPerformance,
+  getTypeDecisions,
   generatePortfolioInsights,
   getBuyerMarketTrends,
   getBuyerSearchMetrics,
@@ -24,6 +25,7 @@ router.get('/rankings', protect, authorize('admin'), getPropertyRankings);
 router.get('/buyer-intelligence', protect, authorize('admin'), getBuyerIntelligence);
 router.get('/sales-performance', protect, authorize('admin'), getSalesPerformance);
 router.get('/activity', protect, authorize('admin'), getRecentActivity);
+router.get('/type-decisions', protect, authorize('admin'), getTypeDecisions);
 router.post('/portfolio-insights', protect, authorize('admin'), generatePortfolioInsights);
 router.get('/buyer/market-trends', protect, authorize('buyer'), getBuyerMarketTrends);
 router.get('/buyer/search-metrics', getBuyerSearchMetrics);

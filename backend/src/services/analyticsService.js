@@ -4,10 +4,14 @@ import BuyerPreference from '../models/BuyerPreference.js';
 import Audit from '../models/Audit.js';
 import Transaction from '../models/Transaction.js';
 import SearchEvent from '../models/SearchEvent.js';
+import Inquiry from '../models/Inquiry.js';
+import SiteVisit from '../models/SiteVisit.js';
 import AppError from '../utils/errors.js';
 import { getStartOfManilaMonth, getManilaYearBounds } from '../utils/manilaTime.js';
 import { generatePortfolioNarrative } from './aiService.js';
-import { classifyAuditRisk } from '../utils/auditReadiness.js';
+import { computeRiskLevel } from '../utils/auditReadiness.js';
+import { buildPortfolioActions } from '../utils/portfolioRules.js';
+import { evaluateTypeDecisions } from '../utils/typeDecisionRules.js';
 import { BUYER_VISIBLE_PROPERTY_STATUS, isBuyerVisibleStatus } from '../../../shared/propertyVisibility.mjs';
 import { findBatangasTown } from '../../../shared/batangasTownCenters.mjs';
 
@@ -33,11 +37,6 @@ async function getLatestAuditsByProperty() {
     map.set(entry._id.toString(), entry.audit);
   });
   return map;
-}
-
-function computeRiskLevel(audit) {
-  if (!audit) return null;
-  return classifyAuditRisk(audit.documentCompleteness ?? audit.complianceScore);
 }
 
 export function calculatePriceCompetitiveness(price, peerPrices) {
@@ -696,4 +695,85 @@ export async function getBuyerSearchMetrics(now = new Date()) {
     .select('propertyType location minPrice maxPrice createdAt')
     .lean();
   return summarizeSearchEvents(events, now);
+}
+
+export async function getTypeDecisionSnapshot(referenceDate) {
+  const buyers = await User.find({ role: 'buyer' }, { _id: 1 });
+  const buyerIds = buyers.map((buyer) => buyer._id);
+
+  const [preferences, availableListings, latestAuditByPropertyId, pendingInquiries, pendingSiteVisits] =
+    await Promise.all([
+      BuyerPreference.find({ userId: { $in: buyerIds } }, { userId: 1, landType: 1 }),
+      Property.find({ status: 'Available' }, { _id: 1, name: 1, type: 1, price: 1, status: 1 }),
+      getLatestAuditsByProperty(),
+      Inquiry.find({ status: 'Pending' }, { _id: 1, propertyId: 1, createdAt: 1, status: 1 }),
+      SiteVisit.find({ status: 'Pending' }, { _id: 1, propertyId: 1, preferredDate: 1, status: 1 }),
+    ]);
+
+  const buyersByLandType = new Map();
+  let nullDemandCount = 0;
+  for (const pref of preferences) {
+    if (pref.landType === null || pref.landType === undefined) {
+      nullDemandCount += 1;
+      continue;
+    }
+    if (!buyersByLandType.has(pref.landType)) {
+      buyersByLandType.set(pref.landType, new Set());
+    }
+    buyersByLandType.get(pref.landType).add(String(pref.userId));
+  }
+
+  const demandByType = {};
+  for (const [landType, buyerSet] of buyersByLandType.entries()) {
+    demandByType[landType] = buyerSet.size;
+  }
+
+  const pricedAvailableListings = availableListings.filter(
+    (listing) =>
+      listing?.status === 'Available' &&
+      typeof listing.price === 'number' &&
+      Number.isFinite(listing.price) &&
+      listing.price > 0
+  );
+
+  const supplyByType = {};
+  const propertyNameById = new Map();
+  for (const listing of pricedAvailableListings) {
+    const type = listing.type;
+    if (!supplyByType[type]) {
+      supplyByType[type] = { listings: 0, low: 0, medium: 0, high: 0, notAudited: 0 };
+    }
+    supplyByType[type].listings += 1;
+
+    const propertyId = String(listing._id);
+    propertyNameById.set(propertyId, listing.name);
+
+    const audit = latestAuditByPropertyId.get(propertyId);
+    const riskLevel = computeRiskLevel(audit);
+    if (riskLevel === 'Low') supplyByType[type].low += 1;
+    else if (riskLevel === 'Medium') supplyByType[type].medium += 1;
+    else if (riskLevel === 'High') supplyByType[type].high += 1;
+    else supplyByType[type].notAudited += 1;
+  }
+
+  const typeDecisions = evaluateTypeDecisions({
+    supplyByType,
+    demandByType,
+    nullDemandCount,
+  });
+
+  const operationalActions = buildPortfolioActions({
+    listings: pricedAvailableListings,
+    latestAuditByPropertyId,
+    inquiries: pendingInquiries,
+    siteVisits: pendingSiteVisits,
+    propertyNameById,
+    referenceDate,
+  });
+
+  return {
+    referenceDate: operationalActions.referenceDate,
+    typeDecisions,
+    operationalActions,
+  };
 }

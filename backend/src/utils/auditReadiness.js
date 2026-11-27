@@ -410,3 +410,8 @@ export function classifyAuditRisk(documentCompleteness) {
   if (documentCompleteness >= 40) return 'Medium';
   return 'High';
 }
+
+export function computeRiskLevel(audit) {
+  if (!audit) return null;
+  return classifyAuditRisk(audit.documentCompleteness ?? audit.complianceScore);
+}

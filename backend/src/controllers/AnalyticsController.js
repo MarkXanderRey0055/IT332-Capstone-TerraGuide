@@ -84,6 +84,15 @@ export const getSalesPerformance = asyncHandler(async (req, res) => {
   );
 });
 
+// @desc    Get property-type decisions and operational portfolio actions
+// @route   GET /api/analytics/type-decisions
+// @access  Private (Admin)
+export const getTypeDecisions = asyncHandler(async (req, res) => {
+  const result = await analyticsService.getTypeDecisionSnapshot(new Date());
+
+  return sendSuccess(res, 200, 'Type decisions retrieved successfully.', result);
+});
+
 // @desc    Generate the AI Portfolio Insights executive report
 // @route   POST /api/analytics/portfolio-insights
 // @access  Private (Admin)
