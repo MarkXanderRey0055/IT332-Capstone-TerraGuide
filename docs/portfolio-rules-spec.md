@@ -150,15 +150,16 @@ All numeric thresholds introduced by the rules below are **PROVISIONAL** default
   - `Inquiry._id`, `Inquiry.status`, `Inquiry.createdAt`, `Inquiry.propertyId` (`Inquiry.js:14, 41, 47`)
   - Joined `Property.name` (`Property.js:14`) for display only; `Inquiry.buyerId` is **not** exposed.
   - Filter: `Inquiry.status === 'Pending'`.
-- **Named Constant**:
-  - `UNANSWERED_INQUIRY_DAYS = 7` (**PROVISIONAL** — 7 days).
+- **Named Constants**:
+  - `UNANSWERED_INQUIRY_DAYS = 7` (**PROVISIONAL** — 7 days, used in action text).
+  - `ELAPSED_INQUIRY_HOURS = UNANSWERED_INQUIRY_DAYS * 24` (`168` hours, **PROVISIONAL** — elapsed real time between `createdAt` and computation time; because this rule measures elapsed real time against computation time, results can change between requests).
 - **Trigger (Pseudocode)**:
   ```text
-  cutoff = new Date(referenceDate.getTime() - UNANSWERED_INQUIRY_DAYS * 24 * 60 * 60 * 1000)
+  thresholdMs = ELAPSED_INQUIRY_HOURS * 3600000
   matches = inquiries.filter(inq =>
     inq.status === 'Pending' &&
     inq.createdAt instanceof Date &&
-    inq.createdAt.getTime() < cutoff.getTime()
+    (referenceDate.getTime() - inq.createdAt.getTime()) > thresholdMs
   )
   fires = matches.length > 0
   ```
@@ -166,7 +167,9 @@ All numeric thresholds introduced by the rules below are **PROVISIONAL** default
   - Single match: `"Respond to 1 inquiry pending for more than {unansweredInquiryDays} days on {propertyName} (Property ID {propertyId})."`
   - Multiple matches: `"Respond to {count} inquiries pending for more than {unansweredInquiryDays} days, oldest on {propertyName} (Property ID {propertyId})."`
 - **Evidence**:
-  - Array of `{ inquiryId, propertyId, propertyName, createdAt, daysPending }` sorted by `createdAt` ascending (oldest first). No buyer name, email, or inquiry message body.
+  - Array of `{ inquiryId, propertyId, propertyName, createdAtManila, ageHours }` sorted by `createdAt` ascending (oldest first), where `createdAtManila` is formatted as `YYYY-MM-DD HH:mm` in `Asia/Manila` and `ageHours = Math.floor(elapsedMs / 3600000)`. No buyer name, email, or inquiry message body.
+- **Display Rule**:
+  - All dates are shown in `Asia/Manila`; `computedAt` (the ISO computation timestamp) is shown with the list.
 - **Sample Size**:
   - Qualified by `pendingInquiries.length`. If 0 pending inquiries exist, rule does not fire (no sample-size warning needed).
 - **Edge Cases**:
@@ -186,7 +189,7 @@ All numeric thresholds introduced by the rules below are **PROVISIONAL** default
   - Joined `Property.name` (`Property.js:14`) for display only; `SiteVisit.buyerId` is **not** exposed.
   - Filter: `SiteVisit.status === 'Pending'`.
 - **Named Constant**:
-  - None. Rule 4 compares `preferredDate` directly against `referenceDayStart` in `Asia/Manila`.
+  - None. Rule 4 treats `preferredDate` as a calendar date and flags a pending visit as overdue when `preferredDate` is before the start of the current `Asia/Manila` calendar day (`referenceDayStart`).
 - **Trigger (Pseudocode)**:
   ```text
   matches = siteVisits.filter(visit =>
@@ -200,7 +203,9 @@ All numeric thresholds introduced by the rules below are **PROVISIONAL** default
   - Single match: `"Follow up on 1 pending site visit whose preferred date has passed on {propertyName} (Property ID {propertyId})."`
   - Multiple matches: `"Follow up on {count} pending site visits whose preferred dates have passed, earliest on {propertyName} (Property ID {propertyId})."`
 - **Evidence**:
-  - Array of `{ siteVisitId, propertyId, propertyName, preferredDate }` (date formatted `YYYY-MM-DD`) sorted by `preferredDate` ascending. No buyer name, email, or notes.
+  - Array of `{ siteVisitId, propertyId, propertyName, preferredDate }` (`preferredDate` formatted `YYYY-MM-DD` in `Asia/Manila`) sorted by `preferredDate` ascending. No buyer name, email, or notes.
+- **Display Rule**:
+  - All dates are shown in `Asia/Manila`; `computedAt` (the ISO computation timestamp) is shown with the list.
 - **Sample Size**:
   - Qualified by `pendingSiteVisits.length`. If 0 pending site visits exist, rule does not fire.
 - **Edge Cases**:
