@@ -39,7 +39,10 @@ export const getAllSiteVisits = async () => {
   return populateSiteVisit(SiteVisit.find()).sort({ createdAt: -1 });
 };
 
-export const updateSiteVisitStatus = async (visitId, { status, adminResponse, confirmedDate, confirmedTime } = {}) => {
+export const updateSiteVisitStatus = async (
+  visitId,
+  { status, adminResponse, confirmedDate, confirmedTime, missedReason } = {}
+) => {
   if (!mongoose.Types.ObjectId.isValid(visitId)) {
     throw new AppError('Invalid site visit ID.', 400);
   }
@@ -54,8 +57,23 @@ export const updateSiteVisitStatus = async (visitId, { status, adminResponse, co
   const previousConfirmedDate = visit.confirmedDate ? new Date(visit.confirmedDate).getTime() : null;
   const previousConfirmedTime = visit.confirmedTime ?? '';
   const nextStatus = status ?? currentStatus;
-  const allowed = currentStatus === nextStatus || (currentStatus === 'Pending' && nextStatus === 'Scheduled') || (currentStatus === 'Scheduled' && ['Completed', 'Pending'].includes(nextStatus));
+
+  if (currentStatus === 'Missed') {
+    throw new AppError('A missed site visit cannot change status.', 400);
+  }
+
+  const allowed =
+    currentStatus === nextStatus ||
+    (currentStatus === 'Pending' && ['Scheduled', 'Missed'].includes(nextStatus)) ||
+    (currentStatus === 'Scheduled' && ['Completed', 'Pending'].includes(nextStatus));
   if (!allowed) throw new AppError(`Invalid site visit status transition: ${currentStatus} to ${nextStatus}.`, 400);
+
+  if (currentStatus === 'Pending' && nextStatus === 'Missed') {
+    if (typeof missedReason !== 'string' || !missedReason.trim()) {
+      throw new AppError('A reason is required when marking a site visit as missed.', 400);
+    }
+    visit.missedReason = missedReason.trim();
+  }
 
   if (nextStatus === 'Scheduled') {
     const nextDate = confirmedDate === undefined ? visit.confirmedDate : new Date(confirmedDate);

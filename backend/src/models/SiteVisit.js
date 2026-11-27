@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-export const SITE_VISIT_STATUSES = ['Pending', 'Scheduled', 'Completed'];
+export const SITE_VISIT_STATUSES = ['Pending', 'Scheduled', 'Completed', 'Missed'];
 
 const siteVisitSchema = new mongoose.Schema(
   {
@@ -65,6 +65,11 @@ const siteVisitSchema = new mongoose.Schema(
       trim: true,
       maxlength: [2000, 'Admin response cannot exceed 2000 characters'],
       default: '',
+    },
+    missedReason: {
+      type: String,
+      default: null,
+      trim: true,
     },
     status: {
       type: String,
