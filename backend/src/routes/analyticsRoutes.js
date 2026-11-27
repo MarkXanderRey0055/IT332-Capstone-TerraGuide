@@ -8,6 +8,8 @@ import {
   getBuyerIntelligence,
   getSalesPerformance,
   getTypeDecisions,
+  getTypeDecisionsHandler,
+  getOperationalActionsHandler,
   generatePortfolioInsights,
   getBuyerMarketTrends,
   getBuyerSearchMetrics,
@@ -26,6 +28,8 @@ router.get('/buyer-intelligence', protect, authorize('admin'), getBuyerIntellige
 router.get('/sales-performance', protect, authorize('admin'), getSalesPerformance);
 router.get('/activity', protect, authorize('admin'), getRecentActivity);
 router.get('/type-decisions', protect, authorize('admin'), getTypeDecisions);
+router.get('/type-decisions-only', protect, authorize('admin'), getTypeDecisionsHandler);
+router.get('/operational-actions', protect, authorize('admin'), getOperationalActionsHandler);
 router.post('/portfolio-insights', protect, authorize('admin'), generatePortfolioInsights);
 router.get('/buyer/market-trends', protect, authorize('buyer'), getBuyerMarketTrends);
 router.get('/buyer/search-metrics', getBuyerSearchMetrics);

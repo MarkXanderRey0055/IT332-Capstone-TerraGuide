@@ -93,6 +93,24 @@ export const getTypeDecisions = asyncHandler(async (req, res) => {
   return sendSuccess(res, 200, 'Type decisions retrieved successfully.', result);
 });
 
+// @desc    Get property-type decisions only
+// @route   GET /api/analytics/type-decisions-only
+// @access  Private (Admin)
+export const getTypeDecisionsHandler = asyncHandler(async (req, res) => {
+  const result = await analyticsService.getTypeDecisionsOnly(new Date());
+
+  return sendSuccess(res, 200, 'Type decisions retrieved successfully.', result);
+});
+
+// @desc    Get operational portfolio actions only
+// @route   GET /api/analytics/operational-actions
+// @access  Private (Admin)
+export const getOperationalActionsHandler = asyncHandler(async (req, res) => {
+  const result = await analyticsService.getOperationalActionsOnly(new Date());
+
+  return sendSuccess(res, 200, 'Operational actions retrieved successfully.', result);
+});
+
 // @desc    Generate the AI Portfolio Insights executive report
 // @route   POST /api/analytics/portfolio-insights
 // @access  Private (Admin)

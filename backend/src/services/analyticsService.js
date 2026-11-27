@@ -10,7 +10,7 @@ import AppError from '../utils/errors.js';
 import { getStartOfManilaMonth, getManilaYearBounds } from '../utils/manilaTime.js';
 import { generatePortfolioNarrative } from './aiService.js';
 import { computeRiskLevel } from '../utils/auditReadiness.js';
-import { buildPortfolioActions } from '../utils/portfolioRules.js';
+import { buildPortfolioActions, formatManilaDate } from '../utils/portfolioRules.js';
 import { evaluateTypeDecisions } from '../utils/typeDecisionRules.js';
 import { BUYER_VISIBLE_PROPERTY_STATUS, isBuyerVisibleStatus } from '../../../shared/propertyVisibility.mjs';
 import { findBatangasTown } from '../../../shared/batangasTownCenters.mjs';
@@ -697,18 +697,26 @@ export async function getBuyerSearchMetrics(now = new Date()) {
   return summarizeSearchEvents(events, now);
 }
 
-export async function getTypeDecisionSnapshot(referenceDate) {
+function filterPricedAvailableListings(availableListings) {
+  return availableListings.filter(
+    (listing) =>
+      listing?.status === 'Available' &&
+      typeof listing.price === 'number' &&
+      Number.isFinite(listing.price) &&
+      listing.price > 0
+  );
+}
+
+export async function getTypeDecisionsOnly(referenceDate) {
+  const manilaDate = formatManilaDate(referenceDate);
   const buyers = await User.find({ role: 'buyer' }, { _id: 1 });
   const buyerIds = buyers.map((buyer) => buyer._id);
 
-  const [preferences, availableListings, latestAuditByPropertyId, pendingInquiries, pendingSiteVisits] =
-    await Promise.all([
-      BuyerPreference.find({ userId: { $in: buyerIds } }, { userId: 1, landType: 1 }),
-      Property.find({ status: 'Available' }, { _id: 1, name: 1, type: 1, price: 1, status: 1 }),
-      getLatestAuditsByProperty(),
-      Inquiry.find({ status: 'Pending' }, { _id: 1, propertyId: 1, createdAt: 1, status: 1 }),
-      SiteVisit.find({ status: 'Pending' }, { _id: 1, propertyId: 1, preferredDate: 1, status: 1 }),
-    ]);
+  const [preferences, availableListings, latestAuditByPropertyId] = await Promise.all([
+    BuyerPreference.find({ userId: { $in: buyerIds } }, { userId: 1, landType: 1 }),
+    Property.find({ status: 'Available' }, { _id: 1, name: 1, type: 1, price: 1, status: 1 }),
+    getLatestAuditsByProperty(),
+  ]);
 
   const buyersByLandType = new Map();
   let nullDemandCount = 0;
@@ -728,16 +736,9 @@ export async function getTypeDecisionSnapshot(referenceDate) {
     demandByType[landType] = buyerSet.size;
   }
 
-  const pricedAvailableListings = availableListings.filter(
-    (listing) =>
-      listing?.status === 'Available' &&
-      typeof listing.price === 'number' &&
-      Number.isFinite(listing.price) &&
-      listing.price > 0
-  );
+  const pricedAvailableListings = filterPricedAvailableListings(availableListings);
 
   const supplyByType = {};
-  const propertyNameById = new Map();
   for (const listing of pricedAvailableListings) {
     const type = listing.type;
     if (!supplyByType[type]) {
@@ -746,8 +747,6 @@ export async function getTypeDecisionSnapshot(referenceDate) {
     supplyByType[type].listings += 1;
 
     const propertyId = String(listing._id);
-    propertyNameById.set(propertyId, listing.name);
-
     const audit = latestAuditByPropertyId.get(propertyId);
     const riskLevel = computeRiskLevel(audit);
     if (riskLevel === 'Low') supplyByType[type].low += 1;
@@ -762,6 +761,27 @@ export async function getTypeDecisionSnapshot(referenceDate) {
     nullDemandCount,
   });
 
+  return {
+    referenceDate: manilaDate,
+    typeDecisions,
+  };
+}
+
+export async function getOperationalActionsOnly(referenceDate) {
+  const [availableListings, latestAuditByPropertyId, pendingInquiries, pendingSiteVisits] =
+    await Promise.all([
+      Property.find({ status: 'Available' }, { _id: 1, name: 1, type: 1, price: 1, status: 1 }),
+      getLatestAuditsByProperty(),
+      Inquiry.find({ status: 'Pending' }, { _id: 1, propertyId: 1, createdAt: 1, status: 1 }),
+      SiteVisit.find({ status: 'Pending' }, { _id: 1, propertyId: 1, preferredDate: 1, status: 1 }),
+    ]);
+
+  const pricedAvailableListings = filterPricedAvailableListings(availableListings);
+  const propertyNameById = new Map();
+  for (const listing of pricedAvailableListings) {
+    propertyNameById.set(String(listing._id), listing.name);
+  }
+
   const operationalActions = buildPortfolioActions({
     listings: pricedAvailableListings,
     latestAuditByPropertyId,
@@ -773,6 +793,18 @@ export async function getTypeDecisionSnapshot(referenceDate) {
 
   return {
     referenceDate: operationalActions.referenceDate,
+    operationalActions,
+  };
+}
+
+export async function getTypeDecisionSnapshot(referenceDate) {
+  const [{ typeDecisions }, { referenceDate: manilaDate, operationalActions }] = await Promise.all([
+    getTypeDecisionsOnly(referenceDate),
+    getOperationalActionsOnly(referenceDate),
+  ]);
+
+  return {
+    referenceDate: manilaDate,
     typeDecisions,
     operationalActions,
   };

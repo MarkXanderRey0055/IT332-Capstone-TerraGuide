@@ -314,9 +314,26 @@ export interface TypeDecisionsResponse {
   };
 }
 
+export interface OperationalActionsResponse {
+  referenceDate: string;
+  operationalActions: {
+    referenceDate: string;
+    computedAt: string;
+    actions: OperationalAction[];
+    rulesEvaluated: OperationalAction[];
+  };
+}
+
 export async function getTypeDecisions(): Promise<TypeDecisionsResponse> {
   const response = (await apiRequest(
     '/analytics/type-decisions'
   )) as ApiEnvelope<TypeDecisionsResponse>;
+  return response.data;
+}
+
+export async function getOperationalActions(): Promise<OperationalActionsResponse> {
+  const response = (await apiRequest(
+    '/analytics/operational-actions'
+  )) as ApiEnvelope<OperationalActionsResponse>;
   return response.data;
 }
