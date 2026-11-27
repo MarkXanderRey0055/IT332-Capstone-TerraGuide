@@ -316,7 +316,21 @@ export async function getPropertyRankings({ availableOnly = false, useComparable
 }
 
 export async function getBuyerIntelligence() {
-  const preferences = await BuyerPreference.find();
+  const buyers = await User.find({ role: 'buyer' }, { _id: 1 });
+  const buyerIds = buyers.map((buyer) => buyer._id);
+
+  if (buyerIds.length === 0) {
+    return {
+      budgetDistribution: [],
+      preferredTypes: [],
+      preferredLocations: [],
+      averageBudget: 0,
+      totalBuyersWithPreferences: 0,
+      buyersWithBothBudgetBounds: 0,
+    };
+  }
+
+  const preferences = await BuyerPreference.find({ userId: { $in: buyerIds } });
 
   if (preferences.length === 0) {
     return {
@@ -325,6 +339,7 @@ export async function getBuyerIntelligence() {
       preferredLocations: [],
       averageBudget: 0,
       totalBuyersWithPreferences: 0,
+      buyersWithBothBudgetBounds: 0,
     };
   }
 
@@ -364,9 +379,27 @@ export async function getBuyerIntelligence() {
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
 
-  const averageBudget = Math.round(
-    midpoints.reduce((sum, mid) => sum + mid, 0) / midpoints.length
-  );
+  const validBudgetMidpoints = preferences
+    .filter(
+      (pref) =>
+        typeof pref.budgetMin === 'number' &&
+        Number.isFinite(pref.budgetMin) &&
+        pref.budgetMin > 0 &&
+        typeof pref.budgetMax === 'number' &&
+        Number.isFinite(pref.budgetMax) &&
+        pref.budgetMax > 0 &&
+        pref.budgetMin <= pref.budgetMax
+    )
+    .map((pref) => (pref.budgetMin + pref.budgetMax) / 2);
+
+  const buyersWithBothBudgetBounds = validBudgetMidpoints.length;
+  const averageBudget =
+    validBudgetMidpoints.length > 0
+      ? Math.round(
+          validBudgetMidpoints.reduce((sum, mid) => sum + mid, 0) /
+            validBudgetMidpoints.length
+        )
+      : 0;
 
   return {
     budgetDistribution,
@@ -374,6 +407,7 @@ export async function getBuyerIntelligence() {
     preferredLocations,
     averageBudget,
     totalBuyersWithPreferences: preferences.length,
+    buyersWithBothBudgetBounds,
   };
 }
 
