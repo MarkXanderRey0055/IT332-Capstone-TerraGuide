@@ -38,7 +38,7 @@ import { ScrollCue } from '../../components/Admin/ScrollCue';
 import { AdminTransactions } from './AdminTransactions';
 import { AdminProperties } from './AdminProperties';
 import { AdminBuyers } from './AdminBuyers';
-import { AdminAnalytics } from './AdminAnalytics';
+import { AdminAnalytics, type AdminAnalyticsNavigateTarget } from './AdminAnalytics';
 import { AdminSettings } from './AdminSettings';
 import { AdminActivities } from './AdminActivities';
 import type { Property } from '../../types/types';
@@ -113,6 +113,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const aiUsageRefreshInFlightRef = useRef(false);
   const aiUsageRefreshQueuedRef = useRef(false);
   const clearPendingEditProperty = useCallback(() => setPendingEditPropertyId(null), []);
+  const handleAnalyticsNavigate = useCallback((target: AdminAnalyticsNavigateTarget) => {
+    if (target.page === 'activities') {
+      setActivitiesNotificationTab(target.tab);
+      setActivitiesTargetRecordId(target.recordId);
+      setActivitiesNotificationKey((key) => key + 1);
+      setActiveNav('activities');
+      return;
+    }
+    setPendingEditPropertyId(target.propertyId ?? null);
+    setActiveNav('properties');
+  }, []);
 
   const riskStyles: Record<RiskLevel, string> = {
     Low: 'bg-emerald-100 text-emerald-800',
@@ -831,7 +842,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
             {activeNav === 'buyers' && <AdminBuyers onToast={setToast} />}
 
-            {activeNav === 'analytics' && <AdminAnalytics onToast={setToast} />}
+            {activeNav === 'analytics' && (
+              <AdminAnalytics onToast={setToast} onNavigate={handleAnalyticsNavigate} />
+            )}
 
             {activeNav === 'transactions' && <AdminTransactions onToast={setToast} onDataChanged={refreshDashboardCards} targetTransactionId={activitiesTargetTransactionId} onTargetTransactionHandled={() => setActivitiesTargetTransactionId(null)} />}
 

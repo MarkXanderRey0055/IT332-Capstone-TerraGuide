@@ -262,3 +262,61 @@ export async function getBuyerSearchMetrics(): Promise<BuyerSearchMetrics> {
   const response = (await apiRequest('/analytics/buyer/search-metrics')) as ApiEnvelope<BuyerSearchMetrics>;
   return response.data;
 }
+
+export interface TypeDecision {
+  type: string;
+  buyers: number;
+  listings: number;
+  demandShare: { numerator: number; denominator: number };
+  supplyShare: { numerator: number; denominator: number };
+  gapPointsDisplay: number | null;
+  decision:
+    | 'no_records'
+    | 'insufficient_sample'
+    | 'shortage'
+    | 'surplus'
+    | 'within_range'
+    | 'insufficient_data';
+  blockingCount: number;
+  unauditedCount: number;
+  readiness: { low: number; medium: number; high: number; notAudited: number };
+  sentence: string;
+}
+
+// Allowed keys by rule:
+// HIGH_RISK_DOCUMENTS: propertyId, propertyName, type, status, complianceScore, riskLevel
+// STALE_PENDING_INQUIRIES: inquiryId, propertyId, propertyName, createdAt, daysPending
+// OVERDUE_PENDING_SITE_VISITS: siteVisitId, propertyId, propertyName, preferredDate
+export type OperationalEvidence = Record<string, string | number | null>;
+
+export interface OperationalAction {
+  ruleId: string;
+  fired: boolean;
+  matchCount: number;
+  action: string;
+  evidence: OperationalEvidence[];
+  sampleSize: number;
+}
+
+export interface TypeDecisionsResponse {
+  referenceDate: string;
+  typeDecisions: {
+    demandTotal: number;
+    supplyTotal: number;
+    nullDemandCount: number;
+    decisions: TypeDecision[];
+  };
+  operationalActions: {
+    referenceDate: string;
+    computedAt: string;
+    actions: OperationalAction[];
+    rulesEvaluated: OperationalAction[];
+  };
+}
+
+export async function getTypeDecisions(): Promise<TypeDecisionsResponse> {
+  const response = (await apiRequest(
+    '/analytics/type-decisions'
+  )) as ApiEnvelope<TypeDecisionsResponse>;
+  return response.data;
+}

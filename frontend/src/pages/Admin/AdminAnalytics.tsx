@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -37,12 +37,15 @@ import {
   getPropertyRankings,
   getBuyerIntelligence,
   getSalesPerformance,
+  getTypeDecisions,
   generatePortfolioInsights,
   type DashboardSummary,
   type ChartData as AnalyticsChartData,
   type PropertyRankingsResult,
   type BuyerIntelligence,
   type SalesPerformance,
+  type TypeDecision,
+  type TypeDecisionsResponse,
   type PortfolioInsightsResult,
   type RiskLevel,
 } from '../../services/AnalyticsService';
@@ -51,6 +54,7 @@ import {
   type ExportDataset,
   type ExportFormat,
 } from '../../services/ExportService';
+import { updateSiteVisitStatus } from '../../services/SiteVisitService';
 
 ChartJS.register(
   CategoryScale,
@@ -63,8 +67,13 @@ ChartJS.register(
   Legend
 );
 
+export type AdminAnalyticsNavigateTarget =
+  | { page: 'activities'; tab: 'inquiries' | 'sitevisits'; recordId: string }
+  | { page: 'properties'; propertyId?: string };
+
 interface AdminAnalyticsProps {
   onToast?: (message: string) => void;
+  onNavigate?: (target: AdminAnalyticsNavigateTarget) => void;
 }
 
 const AXIS_COLOR = 'rgba(94, 79, 60, 0.8)';
@@ -273,12 +282,100 @@ const MetricTooltip: React.FC<{ tooltip: string }> = ({ tooltip }) => (
   </div>
 );
 
-export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
+const TYPE_DECISION_BADGES: Record<
+  TypeDecision['decision'],
+  { label: string; className: string }
+> = {
+  shortage: {
+    label: 'Source or promote',
+    className: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  },
+  surplus: {
+    label: 'Hold',
+    className: 'bg-amber-50 text-amber-700 border border-amber-200',
+  },
+  insufficient_sample: {
+    label: 'Insufficient sample',
+    className: 'bg-gray-100 text-gray-700 border border-gray-200',
+  },
+  within_range: {
+    label: 'Within range',
+    className: 'bg-gray-100 text-gray-700 border border-gray-200',
+  },
+  no_records: {
+    label: 'No records',
+    className: 'bg-gray-100 text-gray-700 border border-gray-200',
+  },
+  insufficient_data: {
+    label: 'Not enough data',
+    className: 'bg-gray-100 text-gray-700 border border-gray-200',
+  },
+};
+
+// PROVISIONAL: pending Smart Works confirmation (matches MIN_BUYERS_FOR_DECISION).
+const PROVISIONAL_MIN_BUYERS_FOR_DECISION = 5;
+
+function formatTypeDecisionText(item: TypeDecision): string {
+  switch (item.decision) {
+    case 'shortage':
+      if (item.blockingCount > 0) {
+        const listingWord = item.blockingCount === 1 ? 'listing' : 'listings';
+        return `Complete document checks on ${item.blockingCount} existing ${listingWord} first, then source.`;
+      }
+      return 'Source or promote.';
+    case 'surplus':
+      if (item.unauditedCount > 0) {
+        const listingWord = item.unauditedCount === 1 ? 'listing' : 'listings';
+        return `Audit ${item.unauditedCount} unaudited ${listingWord} before any pricing or promotion decision.`;
+      }
+      return 'Hold this type.';
+    case 'insufficient_sample':
+      return `Below the ${PROVISIONAL_MIN_BUYERS_FOR_DECISION} buyer minimum, so no decision is made.`;
+    case 'within_range':
+      return 'Within range; no action.';
+    case 'no_records':
+      return 'No records in the current dataset.';
+    case 'insufficient_data':
+      return 'Not enough records to compute a comparison.';
+  }
+}
+
+function formatComputedAtManila(computedAt?: string): string | null {
+  if (!computedAt) return null;
+  const date = new Date(computedAt);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const getPart = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  const year = getPart('year');
+  const month = getPart('month');
+  const day = getPart('day');
+  const hour = getPart('hour') === '24' ? '00' : getPart('hour');
+  const minute = getPart('minute');
+  if (!year || !month || !day || !hour || !minute) return null;
+  return `${year}-${month}-${day} ${hour}:${minute}`;
+}
+
+export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavigate }) => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [charts, setCharts] = useState<AnalyticsChartData | null>(null);
   const [rankingsResult, setRankingsResult] = useState<PropertyRankingsResult | null>(null);
   const [buyerIntel, setBuyerIntel] = useState<BuyerIntelligence | null>(null);
   const [salesPerf, setSalesPerf] = useState<SalesPerformance | null>(null);
+  const [typeDecisions, setTypeDecisions] = useState<TypeDecisionsResponse | null>(null);
+  const [decisionsError, setDecisionsError] = useState('');
+  const [decisionsLoading, setDecisionsLoading] = useState(true);
+  const [missedFormVisitId, setMissedFormVisitId] = useState<string | null>(null);
+  const [missedReasonDraft, setMissedReasonDraft] = useState('');
+  const [missedSubmitError, setMissedSubmitError] = useState('');
+  const [isSubmittingMissed, setIsSubmittingMissed] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -349,6 +446,47 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const loadTypeDecisions = useCallback(async (isCancelled?: () => boolean) => {
+    setDecisionsLoading(true);
+    setDecisionsError('');
+    try {
+      const data = await getTypeDecisions();
+      if (isCancelled?.()) return;
+      setTypeDecisions(data);
+    } catch {
+      if (isCancelled?.()) return;
+      setDecisionsError('Could not load recommended actions. Try again later.');
+    } finally {
+      if (!isCancelled?.()) setDecisionsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadTypeDecisions(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [loadTypeDecisions]);
+
+  const handleSubmitMissedVisit = async (visitId: string) => {
+    const trimmedReason = missedReasonDraft.trim();
+    if (!trimmedReason || isSubmittingMissed) return;
+    setIsSubmittingMissed(true);
+    setMissedSubmitError('');
+    try {
+      await updateSiteVisitStatus(visitId, 'Missed', '', {}, trimmedReason);
+      setMissedFormVisitId(null);
+      setMissedReasonDraft('');
+      setMissedSubmitError('');
+      await loadTypeDecisions();
+    } catch {
+      setMissedSubmitError('Could not mark this visit as missed. Try again.');
+    } finally {
+      setIsSubmittingMissed(false);
+    }
+  };
+
   const handleGenerateInsights = async () => {
     setIsGeneratingInsights(true);
     setInsightsError('');
@@ -380,6 +518,8 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
       setIsExportingReport(false);
     }
   };
+
+  void LegacyPortfolioNarrative;
 
   if (isLoading) {
     return (
@@ -926,7 +1066,284 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
         )}
       </section>
 
-      {/* 5. AI Portfolio Insights */}
+      {/* 5. Property Type Decisions & Operational Actions */}
+      {decisionsLoading && (
+        <div className="admin-panel rounded-2xl p-6">
+          <p className="text-sm text-[#7c6a57]">Loading recommended actions…</p>
+        </div>
+      )}
+
+      {!decisionsLoading && decisionsError && (
+        <div className="flex items-start gap-2 p-4 rounded-xl bg-rose-50/50 border border-rose-200/30 text-sm text-rose-700">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{decisionsError}</span>
+        </div>
+      )}
+
+      {!decisionsLoading && !decisionsError && typeDecisions && (
+        <>
+          <section className="space-y-4">
+            <SectionHeader
+              icon={Target}
+              title="Property Type Decisions"
+              subtitle="Where buyer demand and available supply point to an action."
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              {typeDecisions.typeDecisions.decisions.map((item) => {
+                const badge = TYPE_DECISION_BADGES[item.decision];
+                const gapText =
+                  item.gapPointsDisplay === null
+                    ? 'n/a'
+                    : `${item.gapPointsDisplay > 0 ? '+' : ''}${item.gapPointsDisplay} pts`;
+
+                return (
+                  <div
+                    key={item.type}
+                    className="admin-panel rounded-2xl p-5 flex flex-col justify-between gap-3"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-sm font-semibold text-[#2f2417]">{item.type}</h3>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium ${badge.className}`}
+                        >
+                          {badge.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#5d503f] leading-relaxed">
+                        {formatTypeDecisionText(item)}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-[#e8e0d5] space-y-1 text-[11px] text-[#7c6a57]">
+                      <p>
+                        Buyers: {item.buyers} &middot; Listings: {item.listings} &middot; Gap:{' '}
+                        {gapText}
+                      </p>
+                      <p>
+                        Ready: low {item.readiness.low}, medium {item.readiness.medium}, high{' '}
+                        {item.readiness.high}, not audited {item.readiness.notAudited}
+                      </p>
+                      {/* The type response has no listing IDs, so no per-listing action is available. */}
+                      {((item.decision === 'shortage' && item.blockingCount > 0) ||
+                        (item.decision === 'surplus' && item.unauditedCount > 0)) && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigate?.({ page: 'properties' })}
+                          className="mt-1 inline-flex items-center text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 underline bg-transparent border-none p-0 cursor-pointer"
+                        >
+                          Open listings of this type
+                        </button>
+                      )}
+                      {item.decision === 'surplus' && item.unauditedCount === 0 && (
+                        <p className="mt-1 text-[11px] italic text-[#7c6a57]">
+                          No action is recorded for hold decisions.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="text-xs text-[#7c6a57]">
+              Demand is stated buyer preference. Supply is Available listings with a valid price.
+              Decisions use provisional thresholds pending confirmation. Null preferences:{' '}
+              {typeDecisions.typeDecisions.nullDemandCount} (excluded from shares).
+            </p>
+          </section>
+
+          <section className="space-y-4">
+            <SectionHeader
+              icon={AlertTriangle}
+              title="Operational Actions"
+              subtitle="Records that need follow-up now."
+            />
+
+            <div className="admin-panel rounded-2xl p-6 space-y-4">
+              {typeDecisions.operationalActions.actions.length === 0 ? (
+                <p className="text-sm text-[#7c6a57]">
+                  No operational actions for the current records.
+                </p>
+              ) : (
+                typeDecisions.operationalActions.actions.map((actionItem) => (
+                  <div
+                    key={actionItem.ruleId}
+                    className="pb-4 border-b border-[#e8e0d5] last:border-none last:pb-0 space-y-2"
+                  >
+                    <p className="text-sm font-medium text-[#2f2417]">{actionItem.action}</p>
+                    {actionItem.ruleId === 'HIGH_RISK_DOCUMENTS' && (
+                      <p className="text-xs text-[#7c6a57]">
+                        This stays on the list until a new audit scores the property above the
+                        threshold.
+                      </p>
+                    )}
+                    {actionItem.evidence.length > 0 && (
+                      <ul className="space-y-2 pl-4 list-disc text-xs text-[#5d503f]">
+                        {actionItem.evidence.map((record, idx) => {
+                          const inquiryId =
+                            typeof record.inquiryId === 'string' ? record.inquiryId : '';
+                          const siteVisitId =
+                            typeof record.siteVisitId === 'string' ? record.siteVisitId : '';
+                          const propertyId =
+                            typeof record.propertyId === 'string' ? record.propertyId : '';
+                          const isMissedFormOpen =
+                            actionItem.ruleId === 'OVERDUE_PENDING_SITE_VISITS' &&
+                            siteVisitId !== '' &&
+                            missedFormVisitId === siteVisitId;
+
+                          return (
+                            <li key={`${actionItem.ruleId}-${idx}`} className="space-y-1.5">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span>
+                                  {Object.entries(record)
+                                    .map(([key, value]) => `${key}: ${value ?? 'n/a'}`)
+                                    .join(' · ')}
+                                </span>
+
+                                {actionItem.ruleId === 'STALE_PENDING_INQUIRIES' && inquiryId && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onNavigate?.({
+                                        page: 'activities',
+                                        tab: 'inquiries',
+                                        recordId: inquiryId,
+                                      })
+                                    }
+                                    className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 cursor-pointer"
+                                  >
+                                    Respond
+                                  </button>
+                                )}
+
+                                {actionItem.ruleId === 'OVERDUE_PENDING_SITE_VISITS' &&
+                                  siteVisitId && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          onNavigate?.({
+                                            page: 'activities',
+                                            tab: 'sitevisits',
+                                            recordId: siteVisitId,
+                                          })
+                                        }
+                                        className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 cursor-pointer"
+                                      >
+                                        Schedule
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setMissedFormVisitId(siteVisitId);
+                                          setMissedReasonDraft('');
+                                          setMissedSubmitError('');
+                                        }}
+                                        className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100 cursor-pointer"
+                                      >
+                                        Mark as missed
+                                      </button>
+                                    </>
+                                  )}
+
+                                {actionItem.ruleId === 'HIGH_RISK_DOCUMENTS' && propertyId && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onNavigate?.({
+                                        page: 'properties',
+                                        propertyId,
+                                      })
+                                    }
+                                    className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 cursor-pointer"
+                                  >
+                                    Review documents
+                                  </button>
+                                )}
+                              </div>
+
+                              {isMissedFormOpen && (
+                                <form
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    handleSubmitMissedVisit(siteVisitId);
+                                  }}
+                                  className="mt-1.5 p-3 rounded-xl bg-white/70 border border-[#d6c7b2] space-y-2 max-w-lg"
+                                >
+                                  <label
+                                    htmlFor={`missed-reason-${siteVisitId}`}
+                                    className="block text-[11px] font-medium text-[#2f2417]"
+                                  >
+                                    Internal reason (not shown to the buyer)
+                                  </label>
+                                  <textarea
+                                    id={`missed-reason-${siteVisitId}`}
+                                    rows={2}
+                                    value={missedReasonDraft}
+                                    onChange={(e) => setMissedReasonDraft(e.target.value)}
+                                    className="w-full rounded-lg border border-[#d6c7b2] bg-white px-2.5 py-1.5 text-xs text-[#2f2417] focus:outline-none focus:border-emerald-600"
+                                  />
+                                  {missedSubmitError && (
+                                    <p className="text-[11px] text-rose-700">{missedSubmitError}</p>
+                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="submit"
+                                      disabled={!missedReasonDraft.trim() || isSubmittingMissed}
+                                      className="px-3 py-1 rounded-lg text-[11px] font-semibold text-white bg-amber-700 hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed border-none cursor-pointer"
+                                    >
+                                      {isSubmittingMissed ? 'Saving…' : 'Confirm missed'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMissedFormVisitId(null);
+                                        setMissedReasonDraft('');
+                                        setMissedSubmitError('');
+                                      }}
+                                      className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#5d503f] bg-transparent border border-[#d6c7b2] hover:bg-white cursor-pointer"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </form>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    <p className="text-[11px] text-[#7c6a57]">
+                      {actionItem.ruleId === 'OVERDUE_PENDING_SITE_VISITS'
+                        ? actionItem.matchCount === actionItem.sampleSize
+                          ? `All ${actionItem.sampleSize} pending site visits are past their preferred date.`
+                          : `${actionItem.matchCount} of ${actionItem.sampleSize} pending site visits are past their preferred date.`
+                        : `Based on ${actionItem.sampleSize} records`}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {(() => {
+              const formatted = formatComputedAtManila(typeDecisions.operationalActions.computedAt);
+              return (
+                <p className="text-xs text-[#7c6a57]">
+                  {formatted ? `Computed ${formatted} Manila time.` : 'Computed time unavailable.'}
+                </p>
+              );
+            })()}
+          </section>
+        </>
+      )}
+    </div>
+  );
+
+  // Legacy: removed in cleanup step. Not rendered.
+  function LegacyPortfolioNarrative() {
+    return (
       <section className="space-y-4">
         <SectionHeader
           icon={Sparkles}
@@ -1033,6 +1450,6 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast }) => {
           </div>
         )}
       </section>
-    </div>
-  );
+    );
+  }
 };
