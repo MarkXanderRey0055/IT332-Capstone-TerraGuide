@@ -135,7 +135,7 @@ export function WelcomeModal({
               className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm"
             >
               <option value="">Select an option</option>
-              <option value="Residential">Residential</option>
+              <option value="Residential">Residential (Lots, House &amp; Lot, Condominium)</option>
               <option value="Commercial">Commercial</option>
               <option value="Agricultural">Agricultural</option>
               <option value="Condominium">Condominium</option>

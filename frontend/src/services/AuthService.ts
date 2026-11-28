@@ -5,6 +5,11 @@ export interface User {
   username: string;
   email: string;
   role: string;
+  fullName?: string | null;
+  address?: string | null;
+  contactNumber?: string | null;
+  profilePictureUrl?: string | null;
+  createdAt?: string;
 }
 
 export type TokenVerificationResult =
@@ -151,4 +156,63 @@ export async function verifyToken(): Promise<TokenVerificationResult> {
   } finally {
     window.clearTimeout(timeoutId);
   }
+}
+
+export async function fetchMe(): Promise<User> {
+  const response = (await apiRequest('/auth/me')) as {
+    success: boolean;
+    message: string;
+    data: User;
+  };
+  localStorage.setItem('terraguide_user', JSON.stringify(response.data));
+  return response.data;
+}
+
+export async function uploadMyProfilePicture(
+  file: File
+): Promise<{ user: User; profilePictureUrl: string | null }> {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const response = (await apiRequest('/auth/me/profile-picture', {
+    method: 'POST',
+    body: formData,
+  })) as {
+    success: boolean;
+    message: string;
+    data: {
+      user: User;
+      profilePictureUrl: string | null;
+    };
+  };
+
+  if (response.data?.user) {
+    localStorage.setItem('terraguide_user', JSON.stringify(response.data.user));
+  }
+
+  return response.data;
+}
+
+export interface UpdateBuyerProfilePayload {
+  fullName: string;
+  username: string;
+  contactNumber?: string | null;
+  address: string;
+}
+
+export async function updateMyProfile(payload: UpdateBuyerProfilePayload): Promise<User> {
+  const response = (await apiRequest('/auth/me/profile', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })) as {
+    success: boolean;
+    message: string;
+    data: User;
+  };
+
+  if (response.data) {
+    localStorage.setItem('terraguide_user', JSON.stringify(response.data));
+  }
+
+  return response.data;
 }

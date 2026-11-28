@@ -360,7 +360,7 @@ async function buildAnalyticsRows() {
     getDashboardSummary(),
     getChartData(),
     getAttentionProperties(),
-    getPropertyRankings(),
+    getPropertyRankings({ useComparablePricing: true }),
     getBuyerIntelligence(),
     getSalesPerformance(),
   ]);

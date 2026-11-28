@@ -9,14 +9,20 @@ import {
   formatPriceInputChange,
   optionalPriceBound,
 } from '../../utils/priceInput.mjs';
+import { isResidentialSubtype } from '../../../../shared/propertyCategories.mjs';
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
 
 const getUniqueLocations = (properties: PropertyListing[]) =>
   [...new Set(properties.map((property) => property.location))].sort();
 
-const getUniqueTypes = (properties: PropertyListing[]) =>
-  [...new Set(properties.map((property) => property.type))].sort();
+const getUniqueTypes = (properties: PropertyListing[]) => {
+  const types = new Set(properties.map((property) => property.type).filter(Boolean));
+  if ([...types].some((propertyType) => isResidentialSubtype(propertyType))) {
+    types.add('Residential');
+  }
+  return [...types].sort();
+};
 
 interface BuyerSearchProps {
   properties: PropertyListing[];
@@ -261,7 +267,9 @@ export const BuyerSearch: React.FC<BuyerSearchProps> = ({
                 <option value="">All Types</option>
                 {typeOptions.map((propertyType) => (
                   <option key={propertyType} value={propertyType}>
-                    {propertyType}
+                    {propertyType === 'Residential'
+                      ? 'Residential (All Residential)'
+                      : propertyType}
                   </option>
                 ))}
               </select>
@@ -691,7 +699,7 @@ export const BuyerPreferencesView: React.FC<BuyerPreferencesViewProps> = ({
               className="w-full p-2.5 bg-[#F5F7F6] border border-[#d6c7b2] rounded-xl text-sm text-[#1C3A27] focus:outline-none focus:border-[#1C3A27] transition-colors"
             >
               <option value="">Any</option>
-              <option value="Residential">Residential</option>
+              <option value="Residential">Residential (Lots, House &amp; Lot, Condominium)</option>
               <option value="Agricultural">Agricultural</option>
               <option value="Commercial">Commercial</option>
               <option value="Condominium">Condominium</option>

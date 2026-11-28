@@ -2,6 +2,7 @@ import BuyerPreference from '../models/BuyerPreference.js';
 import Property from '../models/Property.js';
 import AppError from '../utils/errors.js';
 import { toPublicProperties } from '../utils/publicPropertyView.js';
+import { expandBuyerPropertyTypeFilter } from '../../../shared/propertyCategories.mjs';
 
 const MINIMUM_ONLY_BUDGET_RANGE = 500_000;
 
@@ -85,7 +86,8 @@ export const getBuyerRecommendations = async (userId) => {
   };
 
   if (preferences.landType) {
-    hardFilter.type = preferences.landType;
+    const matchedTypes = expandBuyerPropertyTypeFilter(preferences.landType);
+    hardFilter.type = matchedTypes.length > 1 ? { $in: matchedTypes } : matchedTypes[0];
   }
 
   const candidates = await Property.find(hardFilter);

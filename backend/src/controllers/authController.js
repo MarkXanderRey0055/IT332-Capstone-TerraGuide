@@ -43,5 +43,30 @@ export const login = asyncHandler(async (req, res) => {
  * @access  Private
  */
 export const getMe = asyncHandler(async (req, res) => {
-  return sendSuccess(res, 200, 'User profile fetched successfully', req.user);
+  const userObj = typeof req.user?.toObject === 'function' ? req.user.toObject() : { ...req.user };
+  delete userObj.password;
+  delete userObj.profilePicturePublicId;
+  userObj.profilePictureUrl = userObj.profilePictureUrl ?? null;
+  userObj.contactNumber = userObj.contactNumber ?? null;
+  return sendSuccess(res, 200, 'User profile fetched successfully', userObj);
+});
+
+/**
+ * @desc    Upload or replace the authenticated buyer's profile picture
+ * @route   POST /api/auth/me/profile-picture
+ * @access  Private (Buyer)
+ */
+export const updateMyProfilePicture = asyncHandler(async (req, res) => {
+  const result = await authService.updateMyProfilePicture(req.user._id || req.user.id, req.file);
+  return sendSuccess(res, 200, 'Profile picture updated successfully', result);
+});
+
+/**
+ * @desc    Update the authenticated buyer's editable personal information
+ * @route   PUT /api/auth/me/profile
+ * @access  Private (Buyer)
+ */
+export const updateMyProfile = asyncHandler(async (req, res) => {
+  const updatedUser = await authService.updateMyProfile(req.user._id || req.user.id, req.body);
+  return sendSuccess(res, 200, 'Profile information updated successfully', updatedUser);
 });

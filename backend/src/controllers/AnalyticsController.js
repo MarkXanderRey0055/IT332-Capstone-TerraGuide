@@ -51,7 +51,7 @@ export const getAttentionProperties = asyncHandler(async (req, res) => {
 // @route   GET /api/analytics/rankings
 // @access  Private (Admin)
 export const getPropertyRankings = asyncHandler(async (req, res) => {
-  const rankings = await analyticsService.getPropertyRankings();
+  const rankings = await analyticsService.getPropertyRankings({ useComparablePricing: true });
 
   return sendSuccess(res, 200, 'Property rankings retrieved successfully.', rankings);
 });

@@ -105,6 +105,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [operationalActionsError, setOperationalActionsError] = useState('');
   const [openingAuditPropertyId, setOpeningAuditPropertyId] = useState<string | null>(null);
   const [pendingEditPropertyId, setPendingEditPropertyId] = useState<string | null>(null);
+  const [pendingPropertyTypeFilter, setPendingPropertyTypeFilter] = useState<string | null>(null);
   const [activitiesNotificationTab, setActivitiesNotificationTab] = useState<'inquiries' | 'sitevisits'>('inquiries');
   const [activitiesNotificationKey, setActivitiesNotificationKey] = useState(0);
   const [activitiesTargetRecordId, setActivitiesTargetRecordId] = useState<string | null>(null);
@@ -120,6 +121,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const aiUsageRefreshInFlightRef = useRef(false);
   const aiUsageRefreshQueuedRef = useRef(false);
   const clearPendingEditProperty = useCallback(() => setPendingEditPropertyId(null), []);
+  const clearPendingPropertyTypeFilter = useCallback(
+    () => setPendingPropertyTypeFilter(null),
+    []
+  );
   const handleAnalyticsNavigate = useCallback((target: AdminAnalyticsNavigateTarget) => {
     if (target.page === 'activities') {
       setActivitiesNotificationTab(target.tab);
@@ -129,6 +134,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       return;
     }
     setPendingEditPropertyId(target.propertyId ?? null);
+    setPendingPropertyTypeFilter(target.propertyType ?? null);
     setActiveNav('properties');
   }, []);
 
@@ -553,7 +559,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           </button>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className={`flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 ${activeNav === 'buyers' || activeNav === 'transactions' || activeNav === 'properties' ? 'admin-solid-main' : ''}`}>
           <div className="max-w-7xl mx-auto space-y-6">
             {activeNav === 'dashboard' && (
               <>
@@ -877,6 +883,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 onDataChanged={refreshDashboardCards}
                 pendingEditPropertyId={pendingEditPropertyId}
                 onPendingEditHandled={clearPendingEditProperty}
+                initialTypeFilter={pendingPropertyTypeFilter}
+                onInitialTypeFilterHandled={clearPendingPropertyTypeFilter}
               />
             )}
 

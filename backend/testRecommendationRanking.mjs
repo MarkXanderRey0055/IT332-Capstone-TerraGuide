@@ -17,12 +17,19 @@ const makeProperty = (id, overrides = {}) => ({
 
 let currentPreferences = null;
 let currentCandidates = [];
+let lastPropertyFilter = null;
 BuyerPreference.findOne = async () => currentPreferences;
 Property.find = async (filter) => {
+  lastPropertyFilter = filter;
   assert.equal(filter.status, 'Available', 'recommendations must remain Available-only');
-  return currentCandidates.filter((property) =>
-    property.status === filter.status && (!filter.type || property.type === filter.type)
-  );
+  return currentCandidates.filter((property) => {
+    if (property.status !== filter.status) return false;
+    if (!filter.type) return true;
+    if (typeof filter.type === 'object' && Array.isArray(filter.type.$in)) {
+      return filter.type.$in.includes(property.type);
+    }
+    return property.type === filter.type;
+  });
 };
 
 const getIds = async () =>
@@ -78,4 +85,64 @@ const secondTieOrder = await getIds();
 assert.deepEqual(firstTieOrder, ['property-a', 'property-b']);
 assert.deepEqual(secondTieOrder, firstTieOrder, 'identical score/date ties must be deterministic');
 
-console.log('Recommendation ranking tests passed (minimum-only budget, required fields, intended-use fallback, deterministic ties).');
+// Residential parent-category matching: Residential preference matches all three residential subtypes
+// while preserving each property's exact stored type; specific subtype preferences remain exact.
+currentCandidates = [
+  makeProperty('res-lot', { type: 'Residential' }),
+  makeProperty('house-lot', { type: 'House & Lot' }),
+  makeProperty('condo-unit', { type: 'Condominium' }),
+  makeProperty('farm-lot', { type: 'Agricultural' }),
+  makeProperty('shop-lot', { type: 'Commercial' }),
+];
+
+currentPreferences = {
+  budgetMin: null,
+  budgetMax: null,
+  landType: 'Residential',
+  location: null,
+  minLotSize: null,
+  intendedUse: null,
+};
+const residentialRecs = await getBuyerRecommendations('buyer-test');
+assert.deepEqual(lastPropertyFilter, {
+  status: 'Available',
+  type: { $in: ['Residential', 'House & Lot', 'Condominium'] },
+});
+assert.deepEqual(
+  residentialRecs.properties.map((p) => ({ id: String(p._id), type: p.type })),
+  [
+    { id: 'condo-unit', type: 'Condominium' },
+    { id: 'house-lot', type: 'House & Lot' },
+    { id: 'res-lot', type: 'Residential' },
+  ],
+  'broad Residential preference must match all three residential subtypes and preserve exact stored types'
+);
+
+currentPreferences.landType = 'House & Lot';
+const houseAndLotRecs = await getBuyerRecommendations('buyer-test');
+assert.deepEqual(lastPropertyFilter, { status: 'Available', type: 'House & Lot' });
+assert.deepEqual(
+  houseAndLotRecs.properties.map((p) => ({ id: String(p._id), type: p.type })),
+  [{ id: 'house-lot', type: 'House & Lot' }],
+  'House & Lot preference must remain exact'
+);
+
+currentPreferences.landType = 'Condominium';
+const condoRecs = await getBuyerRecommendations('buyer-test');
+assert.deepEqual(lastPropertyFilter, { status: 'Available', type: 'Condominium' });
+assert.deepEqual(
+  condoRecs.properties.map((p) => ({ id: String(p._id), type: p.type })),
+  [{ id: 'condo-unit', type: 'Condominium' }],
+  'Condominium preference must remain exact'
+);
+
+currentPreferences.landType = 'Agricultural';
+const agriRecs = await getBuyerRecommendations('buyer-test');
+assert.deepEqual(lastPropertyFilter, { status: 'Available', type: 'Agricultural' });
+assert.deepEqual(
+  agriRecs.properties.map((p) => String(p._id)),
+  ['farm-lot'],
+  'Agricultural preference must remain exact'
+);
+
+console.log('Recommendation ranking tests passed (minimum-only budget, required fields, intended-use fallback, deterministic ties, Residential parent-category & subtype matching).');

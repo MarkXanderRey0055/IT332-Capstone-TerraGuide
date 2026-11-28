@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,6 +9,8 @@ import {
   PointElement,
   Tooltip,
   Legend,
+  type ActiveElement,
+  type ChartEvent,
   type Plugin,
 } from 'chart.js';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
@@ -54,6 +56,15 @@ import {
   type ExportDataset,
   type ExportFormat,
 } from '../../services/ExportService';
+import { getBuyers, type AdminBuyerProfile } from '../../services/AdminBuyerService';
+import { getTransactions, type Transaction } from '../../services/TransactionService';
+import { getProperties } from '../../services/PropertyService';
+import type { Property } from '../../types/types';
+import {
+  AnalyticsDrilldownModal,
+  type AnalyticsDrilldownSelection,
+} from '../../components/Admin/AnalyticsDrilldownModal';
+import { TypeDecisionDrilldownModal } from '../../components/Admin/TypeDecisionDrilldownModal';
 
 ChartJS.register(
   CategoryScale,
@@ -68,7 +79,7 @@ ChartJS.register(
 
 export type AdminAnalyticsNavigateTarget =
   | { page: 'activities'; tab: 'inquiries' | 'sitevisits'; recordId: string }
-  | { page: 'properties'; propertyId?: string };
+  | { page: 'properties'; propertyId?: string; propertyType?: string };
 
 interface AdminAnalyticsProps {
   onToast?: (message: string) => void;
@@ -281,6 +292,15 @@ const MetricTooltip: React.FC<{ tooltip: string }> = ({ tooltip }) => (
   </div>
 );
 
+// Matches backend scoreBuckets in analyticsService.js (getChartData)
+const COMPLIANCE_SCORE_BUCKETS: Record<string, { min: number; max: number }> = {
+  '0-20%': { min: 0, max: 20 },
+  '21-40%': { min: 21, max: 40 },
+  '41-60%': { min: 41, max: 60 },
+  '61-80%': { min: 61, max: 80 },
+  '81-100%': { min: 81, max: 100 },
+};
+
 const TYPE_DECISION_BADGES: Record<
   TypeDecision['decision'],
   { label: string; className: string }
@@ -348,6 +368,231 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
   const [typeDecisions, setTypeDecisions] = useState<TypeDecisionsResponse | null>(null);
   const [decisionsError, setDecisionsError] = useState('');
   const [decisionsLoading, setDecisionsLoading] = useState(true);
+  const [selectedComplianceRange, setSelectedComplianceRange] = useState<string | null>(null);
+  const [drilldownSelection, setDrilldownSelection] =
+    useState<AnalyticsDrilldownSelection | null>(null);
+
+  const [buyersCache, setBuyersCache] = useState<AdminBuyerProfile[] | null>(null);
+  const [buyersLoading, setBuyersLoading] = useState(false);
+  const [buyersError, setBuyersError] = useState('');
+  const buyersInFlightRef = useRef(false);
+
+  const [transactionsCache, setTransactionsCache] = useState<Transaction[] | null>(null);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsError, setTransactionsError] = useState('');
+  const transactionsInFlightRef = useRef(false);
+
+  const [propertiesCache, setPropertiesCache] = useState<Property[] | null>(null);
+  const [propertiesLoading, setPropertiesLoading] = useState(false);
+  const [propertiesError, setPropertiesError] = useState('');
+  const propertiesInFlightRef = useRef(false);
+
+  const [selectedTypeDecision, setSelectedTypeDecision] = useState<TypeDecision | null>(null);
+
+  const ensureBuyersLoaded = useCallback(
+    async (force = false) => {
+      if (!force && buyersCache !== null) return;
+      if (buyersInFlightRef.current) return;
+      buyersInFlightRef.current = true;
+      setBuyersLoading(true);
+      setBuyersError('');
+      try {
+        const records = await getBuyers();
+        setBuyersCache(records);
+      } catch {
+        setBuyersError('Could not load buyer preference records. Please try again.');
+      } finally {
+        buyersInFlightRef.current = false;
+        setBuyersLoading(false);
+      }
+    },
+    [buyersCache]
+  );
+
+  const ensureTransactionsLoaded = useCallback(
+    async (force = false) => {
+      if (!force && transactionsCache !== null) return;
+      if (transactionsInFlightRef.current) return;
+      transactionsInFlightRef.current = true;
+      setTransactionsLoading(true);
+      setTransactionsError('');
+      try {
+        const records = await getTransactions({ status: 'Completed' });
+        setTransactionsCache(records);
+      } catch {
+        setTransactionsError('Could not load completed transactions. Please try again.');
+      } finally {
+        transactionsInFlightRef.current = false;
+        setTransactionsLoading(false);
+      }
+    },
+    [transactionsCache]
+  );
+
+  const ensurePropertiesLoaded = useCallback(
+    async (force = false) => {
+      if (!force && propertiesCache !== null) return;
+      if (propertiesInFlightRef.current) return;
+      propertiesInFlightRef.current = true;
+      setPropertiesLoading(true);
+      setPropertiesError('');
+      try {
+        const records = await getProperties({ includeAuth: true });
+        setPropertiesCache(records);
+      } catch {
+        setPropertiesError('Could not load property listings. Please try again.');
+      } finally {
+        propertiesInFlightRef.current = false;
+        setPropertiesLoading(false);
+      }
+    },
+    [propertiesCache]
+  );
+
+  const openTypeDecisionDrilldown = useCallback(
+    (decision: TypeDecision) => {
+      setSelectedTypeDecision(decision);
+      void ensureBuyersLoaded();
+      void ensurePropertiesLoaded();
+    },
+    [ensureBuyersLoaded, ensurePropertiesLoaded]
+  );
+
+  const openDrilldown = useCallback(
+    (selection: AnalyticsDrilldownSelection) => {
+      setDrilldownSelection(selection);
+      if (selection.kind === 'monthly_revenue') {
+        void ensureTransactionsLoaded();
+      } else {
+        void ensureBuyersLoaded();
+      }
+    },
+    [ensureBuyersLoaded, ensureTransactionsLoaded]
+  );
+
+  const toggleComplianceRange = useCallback((label: string) => {
+    setSelectedComplianceRange((current) => (current === label ? null : label));
+  }, []);
+
+  const complianceDistOptions = useMemo(
+    () => ({
+      ...barOptions,
+      onHover: (event: ChartEvent, elements: ActiveElement[]) => {
+        const target = event.native?.target as HTMLElement | null;
+        if (target) {
+          target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        }
+      },
+      onClick: (_event: ChartEvent, elements: ActiveElement[]) => {
+        if (elements.length === 0 || !charts) return;
+        const bucket = charts.complianceScoreDistribution[elements[0].index];
+        if (bucket?.label) {
+          toggleComplianceRange(bucket.label);
+        }
+      },
+    }),
+    [charts, toggleComplianceRange]
+  );
+
+  const salesTrendOptions = useMemo(
+    () => ({
+      ...lineOptions,
+      onHover: (event: ChartEvent, elements: ActiveElement[]) => {
+        const target = event.native?.target as HTMLElement | null;
+        if (target) {
+          target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        }
+      },
+      onClick: (_event: ChartEvent, elements: ActiveElement[]) => {
+        if (elements.length === 0 || !salesPerf) return;
+        const point = salesPerf.monthlyTrend[elements[0].index];
+        if (point) {
+          openDrilldown({
+            kind: 'monthly_revenue',
+            key: point.month,
+            label: formatMonth(point.month),
+            chartRevenue: point.total,
+          });
+        }
+      },
+    }),
+    [openDrilldown, salesPerf]
+  );
+
+  const budgetBarOptions = useMemo(
+    () => ({
+      ...barOptions,
+      onHover: (event: ChartEvent, elements: ActiveElement[]) => {
+        const target = event.native?.target as HTMLElement | null;
+        if (target) {
+          target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        }
+      },
+      onClick: (_event: ChartEvent, elements: ActiveElement[]) => {
+        if (elements.length === 0 || !buyerIntel) return;
+        const bucket = buyerIntel.budgetDistribution[elements[0].index];
+        if (bucket) {
+          openDrilldown({
+            kind: 'budget',
+            key: bucket.label,
+            label: bucket.label,
+            chartCount: bucket.count,
+          });
+        }
+      },
+    }),
+    [buyerIntel, openDrilldown]
+  );
+
+  const preferredTypesDoughnutOptions = useMemo(
+    () => ({
+      ...doughnutOptions,
+      onHover: (event: ChartEvent, elements: ActiveElement[]) => {
+        const target = event.native?.target as HTMLElement | null;
+        if (target) {
+          target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        }
+      },
+      onClick: (_event: ChartEvent, elements: ActiveElement[]) => {
+        if (elements.length === 0 || !buyerIntel) return;
+        const segment = buyerIntel.preferredTypes[elements[0].index];
+        if (segment) {
+          openDrilldown({
+            kind: 'preferred_type',
+            key: segment.label,
+            label: segment.label,
+            chartCount: segment.count,
+          });
+        }
+      },
+    }),
+    [buyerIntel, openDrilldown]
+  );
+
+  const preferredLocationsInteractiveOptions = useMemo(
+    () => ({
+      ...preferredLocationsOptions,
+      onHover: (event: ChartEvent, elements: ActiveElement[]) => {
+        const target = event.native?.target as HTMLElement | null;
+        if (target) {
+          target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        }
+      },
+      onClick: (_event: ChartEvent, elements: ActiveElement[]) => {
+        if (elements.length === 0 || !buyerIntel) return;
+        const loc = buyerIntel.preferredLocations[elements[0].index];
+        if (loc) {
+          openDrilldown({
+            kind: 'preferred_location',
+            key: loc.label,
+            label: loc.label,
+            chartCount: loc.count,
+          });
+        }
+      },
+    }),
+    [buyerIntel, openDrilldown]
+  );
 
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -558,12 +803,29 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
     datasets: [
       {
         data: charts.complianceScoreDistribution.map((p) => p.count),
-        backgroundColor: '#60a5fa',
+        backgroundColor: charts.complianceScoreDistribution.map((p) => {
+          if (!selectedComplianceRange) return '#60a5fa';
+          return p.label === selectedComplianceRange ? '#2563eb' : 'rgba(96, 165, 250, 0.35)';
+        }),
         borderRadius: 6,
         maxBarThickness: 32,
       },
     ],
   };
+
+  const selectedComplianceBucket = selectedComplianceRange
+    ? COMPLIANCE_SCORE_BUCKETS[selectedComplianceRange] ?? null
+    : null;
+  const selectedBucketChartCount = selectedComplianceRange
+    ? charts.complianceScoreDistribution.find((p) => p.label === selectedComplianceRange)?.count ?? null
+    : null;
+  const filteredRankings = selectedComplianceBucket
+    ? rankingsResult.rankings.filter(
+        (entry) =>
+          entry.complianceScore >= selectedComplianceBucket.min &&
+          entry.complianceScore <= selectedComplianceBucket.max
+      )
+    : rankingsResult.rankings;
 
   const budgetChartData = {
     labels: buyerIntel.budgetDistribution.map((p) => p.label),
@@ -755,17 +1017,53 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
             </div>
 
             <div className="admin-panel rounded-2xl p-6">
-              <h4 className="text-[#2f2417] font-semibold text-xs mb-4 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-1 h-4 bg-emerald-500 rounded-full" />
-                Sales Trend
-              </h4>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h4 className="text-[#2f2417] font-semibold text-xs uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-1 h-4 bg-emerald-500 rounded-full" />
+                  Sales Trend
+                </h4>
+                {salesPerf.monthlyTrend.length > 0 && (
+                  <span className="text-[11px] text-[#7c6a57]">
+                    Click a point or select a month below to view completed transactions
+                  </span>
+                )}
+              </div>
               <div className="h-[240px]">
                 {salesPerf.monthlyTrend.length === 0 ? (
                   <EmptyState message="No sold properties yet — sales trend will appear here once listings are marked Sold." icon={DollarSign} />
                 ) : (
-                  <Line data={salesTrendChartData} options={lineOptions} />
+                  <Line data={salesTrendChartData} options={salesTrendOptions} />
                 )}
               </div>
+              {salesPerf.monthlyTrend.length > 0 && (
+                <div
+                  role="group"
+                  aria-label="Inspect completed transactions by month"
+                  className="mt-4 flex flex-wrap items-center gap-2"
+                >
+                  {salesPerf.monthlyTrend.map((point) => {
+                    const monthLabel = formatMonth(point.month);
+                    return (
+                      <button
+                        key={point.month}
+                        type="button"
+                        aria-label={`View completed transactions for ${monthLabel} (${formatCurrency(point.total)})`}
+                        onClick={() =>
+                          openDrilldown({
+                            kind: 'monthly_revenue',
+                            key: point.month,
+                            label: monthLabel,
+                            chartRevenue: point.total,
+                          })
+                        }
+                        className="px-2.5 py-1 rounded-lg text-xs font-medium bg-white/60 text-[#2f2417] border border-[#d6c7b2] hover:bg-white transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                      >
+                        {monthLabel}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </>
         )}
@@ -791,33 +1089,102 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
           <>
             {/* Compliance Score Distribution */}
             <div className="admin-panel rounded-2xl p-6">
-              <h4 className="text-[#2f2417] font-semibold text-xs mb-4 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-1 h-4 bg-emerald-500 rounded-full" />
-                Compliance Score Distribution
-              </h4>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h4 className="text-[#2f2417] font-semibold text-xs uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-1 h-4 bg-emerald-500 rounded-full" />
+                  Compliance Score Distribution
+                </h4>
+                {summary.auditedPropertiesCount > 0 && (
+                  <span className="text-[11px] text-[#7c6a57]">
+                    Click a bar or select a range below to filter rankings
+                  </span>
+                )}
+              </div>
               <div className="h-[200px]">
                 {summary.auditedPropertiesCount === 0 ? (
                   <EmptyState message="Not enough data yet." icon={ShieldCheck} />
                 ) : (
-                  <Bar data={complianceDistData} options={barOptions} />
+                  <Bar data={complianceDistData} options={complianceDistOptions} />
                 )}
               </div>
+              {summary.auditedPropertiesCount > 0 && (
+                <div
+                  role="group"
+                  aria-label="Filter rankings by compliance score range"
+                  className="mt-4 flex flex-wrap items-center gap-2"
+                >
+                  {charts.complianceScoreDistribution.map((bucket) => {
+                    const isSelected = selectedComplianceRange === bucket.label;
+                    return (
+                      <button
+                        key={bucket.label}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => toggleComplianceRange(bucket.label)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
+                          isSelected
+                            ? 'bg-blue-600 text-white border border-blue-600'
+                            : 'bg-white/60 text-[#2f2417] border border-[#d6c7b2] hover:bg-white'
+                        }`}
+                      >
+                        {bucket.label} ({bucket.count})
+                      </button>
+                    );
+                  })}
+                  {selectedComplianceRange && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedComplianceRange(null)}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Performance Rankings */}
             <div className="admin-panel rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                 <h4 className="text-[#2f2417] font-semibold text-sm flex items-center gap-2">
                   <Award className="w-4 h-4 text-amber-500" />
                   Performance Rankings
                 </h4>
-                {rankingsResult.unauditedCount > 0 && (
-                  <span className="text-xs text-[#7c6a57] bg-white/50 px-3 py-1 rounded-full">
-                    {rankingsResult.unauditedCount} property
-                    {rankingsResult.unauditedCount > 1 ? 's' : ''} not yet audited
-                  </span>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedComplianceRange && (
+                    <div className="inline-flex items-center gap-2 text-xs bg-blue-50 text-blue-800 border border-blue-200 px-3 py-1 rounded-full">
+                      <span>
+                        Compliance: <strong>{selectedComplianceRange}</strong> ({filteredRankings.length}{' '}
+                        of {rankingsResult.rankings.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedComplianceRange(null)}
+                        className="font-semibold underline hover:text-blue-950 bg-transparent border-none p-0 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-700"
+                      >
+                        Clear filter
+                      </button>
+                    </div>
+                  )}
+                  {rankingsResult.unauditedCount > 0 && (
+                    <span className="text-xs text-[#7c6a57] bg-white/50 px-3 py-1 rounded-full">
+                      {rankingsResult.unauditedCount} property
+                      {rankingsResult.unauditedCount > 1 ? 's' : ''} not yet audited
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {selectedComplianceRange &&
+                selectedBucketChartCount !== null &&
+                selectedBucketChartCount !== filteredRankings.length && (
+                  <p className="text-xs text-[#7c6a57] mb-3">
+                    Showing {filteredRankings.length} matching ranked{' '}
+                    {filteredRankings.length === 1 ? 'listing' : 'listings'} (chart bucket count:{' '}
+                    {selectedBucketChartCount}).
+                  </p>
+                )}
 
               {rankingsResult.rankings.length === 0 ? (
                 <div className="text-center py-8">
@@ -825,6 +1192,19 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
                   <p className="text-[#7c6a57] text-sm">
                     No audited properties yet — generate an AI Compliance Audit on a property to see it ranked here.
                   </p>
+                </div>
+              ) : filteredRankings.length === 0 ? (
+                <div className="text-center py-8 space-y-2">
+                  <p className="text-[#7c6a57] text-sm">
+                    No ranked properties fall in the {selectedComplianceRange} compliance range.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedComplianceRange(null)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                  >
+                    Clear filter
+                  </button>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -840,12 +1220,44 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
                       </tr>
                     </thead>
                     <tbody>
-                      {rankingsResult.rankings.map((entry, index) => (
+                      {filteredRankings.map((entry, index) => (
                         <tr
                           key={entry.propertyId}
+                          tabIndex={onNavigate ? 0 : undefined}
+                          onClick={
+                            onNavigate
+                              ? () =>
+                                  onNavigate({
+                                    page: 'properties',
+                                    propertyId: entry.propertyId,
+                                  })
+                              : undefined
+                          }
+                          onKeyDown={
+                            onNavigate
+                              ? (e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    onNavigate({
+                                      page: 'properties',
+                                      propertyId: entry.propertyId,
+                                    });
+                                  }
+                                }
+                              : undefined
+                          }
+                          aria-label={
+                            onNavigate
+                              ? `Edit ${entry.name}, rank ${entry.rank}, ${entry.complianceScore}% compliance, ${entry.riskLevel} risk`
+                              : undefined
+                          }
                           className={`border-b border-[#e0d5c3] last:border-none ${
                             index % 2 === 0 ? 'bg-white/20' : ''
-                          } hover:bg-white/40 transition-colors`}
+                          } hover:bg-white/50 transition-colors ${
+                            onNavigate
+                              ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600'
+                              : ''
+                          }`}
                         >
                           <td className="py-3 pr-4">
                             <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
@@ -916,9 +1328,24 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
                                       propertyId: entry.propertyId,
                                     });
                                   }}
-                                  className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 cursor-pointer"
+                                  className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                                 >
                                   Review documents
+                                </button>
+                              )}
+                              {onNavigate && entry.riskLevel !== 'High' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onNavigate({
+                                      page: 'properties',
+                                      propertyId: entry.propertyId,
+                                    });
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#5d503f] bg-white/70 border border-[#d6c7b2] hover:bg-white cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                                >
+                                  Edit property
                                 </button>
                               )}
                             </div>
@@ -992,16 +1419,42 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="admin-panel rounded-2xl p-6">
+                <div className="admin-panel rounded-2xl p-6 flex flex-col">
                   <h4 className="text-[#2f2417] font-semibold text-xs mb-4 uppercase tracking-wider flex items-center gap-2">
                     <span className="w-1 h-4 bg-emerald-500 rounded-full" />
                     Budget Distribution
                   </h4>
                   <div className="h-[220px]">
-                    <Bar data={budgetChartData} options={barOptions} />
+                    <Bar data={budgetChartData} options={budgetBarOptions} />
                   </div>
+                  {buyerIntel.budgetDistribution.length > 0 && (
+                    <div
+                      role="group"
+                      aria-label="Inspect buyers by budget bucket"
+                      className="mt-3 flex flex-wrap gap-1.5"
+                    >
+                      {buyerIntel.budgetDistribution.map((bucket) => (
+                        <button
+                          key={bucket.label}
+                          type="button"
+                          aria-label={`View buyers in budget range ${bucket.label} (${bucket.count})`}
+                          onClick={() =>
+                            openDrilldown({
+                              kind: 'budget',
+                              key: bucket.label,
+                              label: bucket.label,
+                              chartCount: bucket.count,
+                            })
+                          }
+                          className="px-2 py-1 rounded-md text-[11px] font-medium bg-white/60 text-[#2f2417] border border-[#d6c7b2] hover:bg-white transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                        >
+                          {bucket.label} ({bucket.count})
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="admin-panel rounded-2xl p-6">
+                <div className="admin-panel rounded-2xl p-6 flex flex-col">
                   <h4 className="text-[#2f2417] font-semibold text-xs mb-4 uppercase tracking-wider flex items-center gap-2">
                     <span className="w-1 h-4 bg-emerald-500 rounded-full" />
                     Preferred Property Types
@@ -1012,13 +1465,39 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
                     ) : (
                       <Doughnut
                         data={preferredTypesChartData}
-                        options={doughnutOptions}
+                        options={preferredTypesDoughnutOptions}
                         plugins={[preferredTypesSliceLabels]}
                       />
                     )}
                   </div>
+                  {buyerIntel.preferredTypes.length > 0 && (
+                    <div
+                      role="group"
+                      aria-label="Inspect buyers by preferred property type"
+                      className="mt-3 flex flex-wrap gap-1.5"
+                    >
+                      {buyerIntel.preferredTypes.map((segment) => (
+                        <button
+                          key={segment.label}
+                          type="button"
+                          aria-label={`View buyers preferring ${segment.label} (${segment.count})`}
+                          onClick={() =>
+                            openDrilldown({
+                              kind: 'preferred_type',
+                              key: segment.label,
+                              label: segment.label,
+                              chartCount: segment.count,
+                            })
+                          }
+                          className="px-2 py-1 rounded-md text-[11px] font-medium bg-white/60 text-[#2f2417] border border-[#d6c7b2] hover:bg-white transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                        >
+                          {segment.label} ({segment.count})
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="admin-panel rounded-2xl p-6">
+                <div className="admin-panel rounded-2xl p-6 flex flex-col">
                   <h4 className="text-[#2f2417] font-semibold text-xs mb-4 uppercase tracking-wider flex items-center gap-2">
                     <span className="w-1 h-4 bg-emerald-500 rounded-full" />
                     Preferred Locations
@@ -1029,11 +1508,37 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
                     ) : (
                       <Bar
                         data={preferredLocationsChartData}
-                        options={preferredLocationsOptions}
+                        options={preferredLocationsInteractiveOptions}
                         plugins={[preferredLocationsValueLabels]}
                       />
                     )}
                   </div>
+                  {buyerIntel.preferredLocations.length > 0 && (
+                    <div
+                      role="group"
+                      aria-label="Inspect buyers by preferred location"
+                      className="mt-3 flex flex-wrap gap-1.5"
+                    >
+                      {buyerIntel.preferredLocations.map((loc) => (
+                        <button
+                          key={loc.label}
+                          type="button"
+                          aria-label={`View buyers preferring ${loc.label} (${loc.count})`}
+                          onClick={() =>
+                            openDrilldown({
+                              kind: 'preferred_location',
+                              key: loc.label,
+                              label: loc.label,
+                              chartCount: loc.count,
+                            })
+                          }
+                          className="px-2 py-1 rounded-md text-[11px] font-medium bg-white/60 text-[#2f2417] border border-[#d6c7b2] hover:bg-white transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                        >
+                          {loc.label} ({loc.count})
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1072,10 +1577,37 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
                     ? 'n/a'
                     : `${item.gapPointsDisplay > 0 ? '+' : ''}${item.gapPointsDisplay} pts`;
 
+                const isInspectable =
+                  item.decision !== 'no_records' &&
+                  item.decision !== 'insufficient_data' &&
+                  (item.buyers > 0 || item.listings > 0);
+
                 return (
                   <div
                     key={item.type}
-                    className="admin-panel rounded-2xl p-5 flex flex-col justify-between gap-3"
+                    tabIndex={isInspectable ? 0 : undefined}
+                    role={isInspectable ? 'button' : undefined}
+                    aria-label={
+                      isInspectable
+                        ? `Inspect ${item.type} decision details (${badge.label}, ${item.buyers} buyers, ${item.listings} available listings)`
+                        : undefined
+                    }
+                    onClick={isInspectable ? () => openTypeDecisionDrilldown(item) : undefined}
+                    onKeyDown={
+                      isInspectable
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              openTypeDecisionDrilldown(item);
+                            }
+                          }
+                        : undefined
+                    }
+                    className={`admin-panel rounded-2xl p-5 flex flex-col justify-between gap-3 transition-all ${
+                      isInspectable
+                        ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600'
+                        : ''
+                    }`}
                   >
                     <div className="space-y-2.5">
                       <div className="flex items-center justify-between gap-2">
@@ -1101,16 +1633,33 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
                         {item.readiness.high}, not audited {item.readiness.notAudited}
                       </p>
                       {/* The type response has no listing IDs, so no per-listing action is available. */}
-                      {((item.decision === 'shortage' && item.blockingCount > 0) ||
-                        (item.decision === 'surplus' && item.unauditedCount > 0)) && (
-                        <button
-                          type="button"
-                          onClick={() => onNavigate?.({ page: 'properties' })}
-                          className="mt-1 inline-flex items-center text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 underline bg-transparent border-none p-0 cursor-pointer"
-                        >
-                          Open listings of this type
-                        </button>
-                      )}
+                      <div className="pt-1 flex flex-wrap items-center gap-3">
+                        {isInspectable && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openTypeDecisionDrilldown(item);
+                            }}
+                            className="inline-flex items-center text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 underline bg-transparent border-none p-0 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                          >
+                            Inspect details
+                          </button>
+                        )}
+                        {((item.decision === 'shortage' && item.blockingCount > 0) ||
+                          (item.decision === 'surplus' && item.unauditedCount > 0)) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigate?.({ page: 'properties', propertyType: item.type });
+                            }}
+                            className="inline-flex items-center text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 underline bg-transparent border-none p-0 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                          >
+                            Open listings of this type
+                          </button>
+                        )}
+                      </div>
                       {item.decision === 'surplus' && item.unauditedCount === 0 && (
                         <p className="mt-1 text-[11px] italic text-[#7c6a57]">
                           No action is recorded for hold decisions.
@@ -1131,6 +1680,35 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ onToast, onNavig
           </section>
         </>
       )}
+
+      <AnalyticsDrilldownModal
+        selection={drilldownSelection}
+        onClose={() => setDrilldownSelection(null)}
+        buyers={buyersCache}
+        buyersLoading={buyersLoading}
+        buyersError={buyersError}
+        onRetryBuyers={() => void ensureBuyersLoaded(true)}
+        transactions={transactionsCache}
+        transactionsLoading={transactionsLoading}
+        transactionsError={transactionsError}
+        onRetryTransactions={() => void ensureTransactionsLoaded(true)}
+      />
+
+      <TypeDecisionDrilldownModal
+        decision={selectedTypeDecision}
+        nullDemandCount={typeDecisions?.typeDecisions.nullDemandCount ?? 0}
+        onClose={() => setSelectedTypeDecision(null)}
+        buyers={buyersCache}
+        buyersLoading={buyersLoading}
+        buyersError={buyersError}
+        onRetryBuyers={() => void ensureBuyersLoaded(true)}
+        properties={propertiesCache}
+        propertiesLoading={propertiesLoading}
+        propertiesError={propertiesError}
+        onRetryProperties={() => void ensurePropertiesLoaded(true)}
+        rankings={rankingsResult.rankings}
+        onNavigate={onNavigate}
+      />
     </div>
   );
 

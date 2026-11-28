@@ -490,7 +490,7 @@ export async function getSalesPerformance() {
 export async function getPortfolioSnapshot() {
   const [summary, rankingsResult, buyerIntelligence, salesPerformance] = await Promise.all([
     getDashboardSummary(),
-    getPropertyRankings(),
+    getPropertyRankings({ useComparablePricing: true }),
     getBuyerIntelligence(),
     getSalesPerformance(),
   ]);
