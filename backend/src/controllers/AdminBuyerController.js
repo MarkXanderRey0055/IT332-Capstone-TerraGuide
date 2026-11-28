@@ -14,6 +14,17 @@ export const getBuyers = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Get full read-only details for a single buyer (identity, preferences, histories)
+ * @route   GET /api/admin/buyers/:userId/details
+ * @access  Private (Admin)
+ */
+export const getBuyerDetails = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const details = await adminBuyerService.getBuyerDetails(userId);
+  return sendSuccess(res, 200, 'Buyer details fetched successfully', details);
+});
+
+/**
  * @desc    Create a new buyer account (optionally with preferences)
  * @route   POST /api/admin/buyers
  * @access  Private (Admin)

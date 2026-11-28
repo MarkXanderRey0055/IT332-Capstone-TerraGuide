@@ -102,6 +102,39 @@ export async function uploadPropertyImagesToCloudinary(propertyId, files) {
   }
 }
 
+export async function uploadBuyerProfilePictureToCloudinary(userId, file) {
+  const detected = await validateImageBuffer(file);
+  const cloudinary = getCloudinary();
+  const folder = `terraguide/profiles/${userId}`;
+
+  try {
+    const result = await uploadBuffer(
+      cloudinary,
+      file.buffer,
+      folder,
+      `avatar-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    );
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+      format: detected.ext,
+      bytes: file.size,
+    };
+  } catch (error) {
+    if (!(error instanceof AppError)) {
+      const diagnostics = getCloudinaryDiagnostics(error);
+      console.error('Cloudinary profile picture upload failed', {
+        operation: 'uploadBuyerProfilePictureToCloudinary',
+        userId,
+        ...diagnostics,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    if (error instanceof AppError) throw error;
+    throw new AppError('Cloudinary could not store the uploaded profile picture.', 502);
+  }
+}
+
 export async function cleanupCloudinaryAssets(assets, cloudinary = getCloudinary()) {
   await Promise.all(
     assets.map(async (asset) => {

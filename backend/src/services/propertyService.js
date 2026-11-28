@@ -5,6 +5,7 @@ import AppError from '../utils/errors.js';
 import { cleanupCloudinaryAssets, uploadPropertyImagesToCloudinary } from './imageStorageService.js';
 import mongoose from 'mongoose';
 import { BUYER_VISIBLE_PROPERTY_STATUS } from '../../../shared/propertyVisibility.mjs';
+import { expandBuyerPropertyTypeFilter } from '../../../shared/propertyCategories.mjs';
 import { compareReadinessFreshness } from '../utils/auditReadiness.js';
 import { toPublicProperties, toPublicProperty } from '../utils/publicPropertyView.js';
 import SearchEvent from '../models/SearchEvent.js';
@@ -99,9 +100,15 @@ export const getAllProperties = async (queryParams = {}, user = null) => {
     filter.location = { $regex: location, $options: 'i' };
   }
 
-  // 3. Exact Property Type filter
+  // 3. Property Type filter (buyers expand Residential to all residential subtypes;
+  // admins retain exact subtype filtering)
   if (type) {
-    filter.type = type;
+    if (!isAdmin) {
+      const matchedTypes = expandBuyerPropertyTypeFilter(type);
+      filter.type = matchedTypes.length > 1 ? { $in: matchedTypes } : matchedTypes[0];
+    } else {
+      filter.type = type;
+    }
   }
 
   // 5. Price Range filter

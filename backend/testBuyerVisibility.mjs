@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import Property from './src/models/Property.js';
 import Audit from './src/models/Audit.js';
 import BuyerPreference from './src/models/BuyerPreference.js';
+import User from './src/models/User.js';
 import Inquiry from './src/models/Inquiry.js';
 import { getAllProperties } from './src/services/propertyService.js';
 import { getBuyerMarketTrends } from './src/services/analyticsService.js';
@@ -59,6 +60,7 @@ Audit.aggregate = async () => fixtures.map((property) => ({
   _id: property._id,
   audit: { complianceScore: 80, comparisonAverage: 1000000 },
 }));
+User.find = async () => [];
 BuyerPreference.find = async () => [];
 const trends = await getBuyerMarketTrends(10);
 assert.deepEqual(trends.topListings.map((item) => item.status), ['Available']);

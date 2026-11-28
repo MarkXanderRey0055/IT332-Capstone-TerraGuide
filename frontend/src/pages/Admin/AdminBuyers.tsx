@@ -9,6 +9,8 @@ import {
 import type { AdminBuyerProfile } from '../../services/AdminBuyerService';
 import { getBuyers } from '../../services/AdminBuyerService';
 import { ApiError } from '../../utils/api';
+import { UserAvatar } from '../../components/Shared/UserAvatar';
+import { ViewBuyerModal } from '../../components/Admin/ViewBuyerModal';
 
 interface AdminBuyersProps {
   onToast?: (message: string) => void;
@@ -28,6 +30,7 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBuyer, setSelectedBuyer] = useState<AdminBuyerProfile | null>(null);
 
   const showToast = (message: string) => onToast?.(message);
 
@@ -88,7 +91,7 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
         ].map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="admin-panel rounded-2xl p-5">
+            <div key={stat.label} className="admin-buyers-surface rounded-2xl p-5">
               <div className="flex items-center justify-between">
                 <p className="text-[#7c6a57] text-xs uppercase tracking-wider">{stat.label}</p>
                 <Icon className="w-4 h-4 text-emerald-700/70" />
@@ -124,7 +127,7 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
         </div>
       </div>
 
-      <div className="admin-panel rounded-2xl overflow-hidden">
+      <div className="admin-buyers-surface rounded-2xl overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center">
             <p className="text-[#7c6a57] text-sm">Loading buyer accounts...</p>
@@ -151,7 +154,7 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="admin-table w-full text-left border-collapse text-xs">
+            <table className="admin-table admin-buyers-table w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-[#d6c7b2] text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">
                   <th className="p-4">Buyer Full Name</th>
@@ -165,12 +168,29 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
                 {filteredBuyers.map((buyer) => (
                   <tr key={buyer.userId} className="transition-colors">
                     <td className="p-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-[#2f2417] text-sm">{buyer.fullName}</span>
-                        {!buyer.preferences && <span className="status-neutral inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold">No preferences</span>}
-                      </div>
-                      <div className="text-[10px] text-[#7c6a57] mt-0.5">
-                        @{buyer.username} · Registered {formatDate(buyer.registeredAt)}
+                      <div className="flex items-start gap-2.5">
+                        <UserAvatar
+                          src={buyer.profilePictureUrl}
+                          name={buyer.fullName || buyer.username}
+                          size="xs"
+                          className="mt-0.5"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBuyer(buyer)}
+                              aria-label={`View details for ${buyer.fullName || buyer.username}`}
+                              className="cursor-pointer bg-transparent border-none p-0 text-left font-bold text-[#2f2417] text-sm leading-snug hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand)]"
+                            >
+                              {buyer.fullName || buyer.username}
+                            </button>
+                            {!buyer.preferences && <span className="status-neutral inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold">No preferences</span>}
+                          </div>
+                          <div className="text-[10px] text-[#7c6a57] mt-0.5">
+                            @{buyer.username} · Registered {formatDate(buyer.registeredAt)}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td className="p-4 text-[#5d503f] break-all">{buyer.email}</td>
@@ -199,6 +219,11 @@ export const AdminBuyers: React.FC<AdminBuyersProps> = ({ onToast }) => {
         )}
       </div>
 
+      <ViewBuyerModal
+        isOpen={Boolean(selectedBuyer)}
+        buyer={selectedBuyer}
+        onClose={() => setSelectedBuyer(null)}
+      />
     </>
   );
 };

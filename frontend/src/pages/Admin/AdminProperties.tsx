@@ -42,6 +42,8 @@ interface AdminPropertiesProps {
   onDataChanged?: () => void;
   pendingEditPropertyId?: string | null;
   onPendingEditHandled?: () => void;
+  initialTypeFilter?: string | null;
+  onInitialTypeFilterHandled?: () => void;
 }
 
 const formatPrice = (num: number) => '₱' + Math.round(num).toLocaleString();
@@ -88,6 +90,8 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
   onDataChanged,
   pendingEditPropertyId,
   onPendingEditHandled,
+  initialTypeFilter,
+  onInitialTypeFilterHandled,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -163,6 +167,12 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
     setIsPropertyModalOpen(true);
     onPendingEditHandled?.();
   }, [pendingEditPropertyId, isLoading, properties, onPendingEditHandled, onToast]);
+
+  useEffect(() => {
+    if (!initialTypeFilter) return;
+    setTypeFilter(initialTypeFilter);
+    onInitialTypeFilterHandled?.();
+  }, [initialTypeFilter, onInitialTypeFilterHandled]);
 
   const handleAuditPropertyClick = (property: Property) => {
     setAuditProperty(property);
@@ -467,8 +477,8 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
         </button>
       </div>
 
-      <div className="admin-panel admin-properties-listings rounded-2xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-[#d6c7b2] bg-[#faf6ef]/50">
+      <div className="admin-solid-surface admin-properties-listings rounded-2xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-[#d6c7b2] bg-[#faf6ef]">
           <p className="text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">
             {selectedFilter === 'all' && 'All registered land listings'}
             {selectedFilter === 'unassigned' && 'Unassigned records — needs filing'}
@@ -494,7 +504,7 @@ export const AdminProperties: React.FC<AdminPropertiesProps> = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="admin-table admin-properties-table w-full text-left border-collapse text-xs">
+            <table className="admin-table admin-solid-table admin-properties-table w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-[#d6c7b2] text-[10px] font-bold uppercase tracking-wider text-[#4d5e4d]">
                   <th className="p-4 min-w-[13rem]">Property</th>

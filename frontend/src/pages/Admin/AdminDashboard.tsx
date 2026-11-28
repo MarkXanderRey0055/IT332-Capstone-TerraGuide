@@ -26,19 +26,22 @@ import {
   getSalesPerformance,
   getRecentActivity,
   getAttentionProperties,
+  getOperationalActions,
   type DashboardSummary,
   type SalesPerformance,
   type RecentActivityItem,
   type RecentActivityType,
   type AttentionProperty,
+  type OperationalActionsResponse,
   type RiskLevel,
 } from '../../services/AnalyticsService';
 import { AuditModal } from '../../components/Admin/AuditModal';
+import { OperationalActionsPanel } from '../../components/Admin/OperationalActionsPanel';
 import { ScrollCue } from '../../components/Admin/ScrollCue';
 import { AdminTransactions } from './AdminTransactions';
 import { AdminProperties } from './AdminProperties';
 import { AdminBuyers } from './AdminBuyers';
-import { AdminAnalytics } from './AdminAnalytics';
+import { AdminAnalytics, type AdminAnalyticsNavigateTarget } from './AdminAnalytics';
 import { AdminSettings } from './AdminSettings';
 import { AdminActivities } from './AdminActivities';
 import type { Property } from '../../types/types';
@@ -96,8 +99,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [isLoadingAttention, setIsLoadingAttention] = useState(true);
   const [attentionError, setAttentionError] = useState('');
   const [attentionRefreshToken, setAttentionRefreshToken] = useState(0);
+  const [operationalActionsData, setOperationalActionsData] =
+    useState<OperationalActionsResponse | null>(null);
+  const [isLoadingOperationalActions, setIsLoadingOperationalActions] = useState(true);
+  const [operationalActionsError, setOperationalActionsError] = useState('');
   const [openingAuditPropertyId, setOpeningAuditPropertyId] = useState<string | null>(null);
   const [pendingEditPropertyId, setPendingEditPropertyId] = useState<string | null>(null);
+  const [pendingPropertyTypeFilter, setPendingPropertyTypeFilter] = useState<string | null>(null);
   const [activitiesNotificationTab, setActivitiesNotificationTab] = useState<'inquiries' | 'sitevisits'>('inquiries');
   const [activitiesNotificationKey, setActivitiesNotificationKey] = useState(0);
   const [activitiesTargetRecordId, setActivitiesTargetRecordId] = useState<string | null>(null);
@@ -113,6 +121,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const aiUsageRefreshInFlightRef = useRef(false);
   const aiUsageRefreshQueuedRef = useRef(false);
   const clearPendingEditProperty = useCallback(() => setPendingEditPropertyId(null), []);
+  const clearPendingPropertyTypeFilter = useCallback(
+    () => setPendingPropertyTypeFilter(null),
+    []
+  );
+  const handleAnalyticsNavigate = useCallback((target: AdminAnalyticsNavigateTarget) => {
+    if (target.page === 'activities') {
+      setActivitiesNotificationTab(target.tab);
+      setActivitiesTargetRecordId(target.recordId);
+      setActivitiesNotificationKey((key) => key + 1);
+      setActiveNav('activities');
+      return;
+    }
+    setPendingEditPropertyId(target.propertyId ?? null);
+    setPendingPropertyTypeFilter(target.propertyType ?? null);
+    setActiveNav('properties');
+  }, []);
 
   const riskStyles: Record<RiskLevel, string> = {
     Low: 'bg-emerald-100 text-emerald-800',
@@ -248,6 +272,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       .then(setPendingTransactionCount)
       .catch(() => setPendingTransactionCount(null));
   }, [dashboardRefreshToken]);
+
+  const loadOperationalActions = useCallback(async (isCancelled?: () => boolean) => {
+    setIsLoadingOperationalActions(true);
+    setOperationalActionsError('');
+    try {
+      const data = await getOperationalActions();
+      if (isCancelled?.()) return;
+      setOperationalActionsData(data);
+    } catch {
+      if (isCancelled?.()) return;
+      setOperationalActionsError('Could not load recommended actions. Try again later.');
+    } finally {
+      if (!isCancelled?.()) setIsLoadingOperationalActions(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadOperationalActions(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [loadOperationalActions]);
 
   const handleRefreshAiUsage = () => {
     void fetchAiUsage();
@@ -512,7 +559,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           </button>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className={`flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 ${activeNav === 'buyers' || activeNav === 'transactions' || activeNav === 'properties' ? 'admin-solid-main' : ''}`}>
           <div className="max-w-7xl mx-auto space-y-6">
             {activeNav === 'dashboard' && (
               <>
@@ -549,6 +596,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     </div>
                   ))}
                 </div>
+
+                <OperationalActionsPanel
+                  data={operationalActionsData}
+                  loading={isLoadingOperationalActions}
+                  error={operationalActionsError}
+                  title="Follow-ups due"
+                  subtitle="Records that need follow-up now."
+                  onNavigate={handleAnalyticsNavigate}
+                  onMissedSubmitted={() => loadOperationalActions()}
+                />
 
                 <section
                   className="admin-panel rounded-2xl p-6"
@@ -826,12 +883,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 onDataChanged={refreshDashboardCards}
                 pendingEditPropertyId={pendingEditPropertyId}
                 onPendingEditHandled={clearPendingEditProperty}
+                initialTypeFilter={pendingPropertyTypeFilter}
+                onInitialTypeFilterHandled={clearPendingPropertyTypeFilter}
               />
             )}
 
             {activeNav === 'buyers' && <AdminBuyers onToast={setToast} />}
 
-            {activeNav === 'analytics' && <AdminAnalytics onToast={setToast} />}
+            {activeNav === 'analytics' && (
+              <AdminAnalytics onToast={setToast} onNavigate={handleAnalyticsNavigate} />
+            )}
 
             {activeNav === 'transactions' && <AdminTransactions onToast={setToast} onDataChanged={refreshDashboardCards} targetTransactionId={activitiesTargetTransactionId} onTargetTransactionHandled={() => setActivitiesTargetTransactionId(null)} />}
 

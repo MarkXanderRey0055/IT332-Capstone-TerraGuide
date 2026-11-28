@@ -152,6 +152,10 @@ export const notifyBuyerOfSiteVisitUpdate = async ({ siteVisit, statusChanged, r
     type = 'site_visit_completed';
     title = 'Site visit completed';
     message = 'Your site visit request has been marked Completed.';
+  } else if (siteVisit.status === 'Missed') {
+    type = 'site_visit_responded';
+    title = 'Site visit update';
+    message = 'Your site visit was not completed.';
   } else if (statusChanged) {
     message = 'Your site visit request status was updated to Pending.';
   }

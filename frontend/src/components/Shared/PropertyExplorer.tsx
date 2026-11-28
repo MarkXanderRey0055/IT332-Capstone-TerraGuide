@@ -8,6 +8,7 @@ import {
 import L from 'leaflet';
 import type { Property } from '../../types/types';
 import { isBuyerVisibleStatus } from '../../../../shared/propertyVisibility.mjs';
+import { isResidentialSubtype } from '../../../../shared/propertyCategories.mjs';
 import {
   MapPin,
   Eye,
@@ -123,11 +124,18 @@ export const PropertyExplorer: React.FC<PropertyExplorerProps> = ({ properties, 
   const [mapZoom, setMapZoom] = useState<number>(16);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredProperties = properties.filter((p) => {
+    const matchesResidentialCategory =
+      normalizedQuery.length >= 3 &&
+      'residential'.startsWith(normalizedQuery) &&
+      isResidentialSubtype(p.type);
     const matchesSearch =
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.type.toLowerCase().includes(searchQuery.toLowerCase());
+      !normalizedQuery ||
+      p.name.toLowerCase().includes(normalizedQuery) ||
+      p.location.toLowerCase().includes(normalizedQuery) ||
+      p.type.toLowerCase().includes(normalizedQuery) ||
+      matchesResidentialCategory;
     return matchesSearch && isBuyerVisibleStatus(p.status);
   });
 

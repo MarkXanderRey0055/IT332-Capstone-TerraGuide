@@ -307,7 +307,7 @@
 }
 
 .admin-properties-listings {
-  background: linear-gradient(180deg, #fcfaf5 0%, #f7f4ed 78%, #eef3ea 100%);
+  background: #ffffff;
 }
 
 .admin-properties-filter-section {
@@ -450,11 +450,38 @@
 }
 
 .admin-properties-table tbody tr {
-  background: rgba(252, 250, 245, 0.82);
+  background: #ffffff;
 }
 
 .admin-properties-table tbody tr:hover {
-  background: rgba(219, 228, 214, 0.46);
+  background: #f7f4ee;
+}
+
+.admin-buyers-main,
+.admin-solid-main {
+  background: #f8f6f1;
+}
+
+.admin-buyers-surface,
+.admin-solid-surface {
+  background: #ffffff;
+  border: 1px solid var(--admin-border);
+  box-shadow: 0 4px 14px rgba(92, 108, 88, 0.08);
+}
+
+.admin-buyers-table thead tr,
+.admin-solid-table thead tr {
+  background: #f5f1ea;
+}
+
+.admin-buyers-table tbody tr,
+.admin-solid-table tbody tr {
+  background: #ffffff;
+}
+
+.admin-buyers-table tbody tr:hover,
+.admin-solid-table tbody tr:hover {
+  background: #f7f4ee;
 }
 
 .admin-properties-table .admin-icon-btn {

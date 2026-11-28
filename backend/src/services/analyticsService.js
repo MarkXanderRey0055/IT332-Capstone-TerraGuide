@@ -4,10 +4,14 @@ import BuyerPreference from '../models/BuyerPreference.js';
 import Audit from '../models/Audit.js';
 import Transaction from '../models/Transaction.js';
 import SearchEvent from '../models/SearchEvent.js';
+import Inquiry from '../models/Inquiry.js';
+import SiteVisit from '../models/SiteVisit.js';
 import AppError from '../utils/errors.js';
 import { getStartOfManilaMonth, getManilaYearBounds } from '../utils/manilaTime.js';
 import { generatePortfolioNarrative } from './aiService.js';
-import { classifyAuditRisk } from '../utils/auditReadiness.js';
+import { computeRiskLevel } from '../utils/auditReadiness.js';
+import { buildPortfolioActions, formatManilaDate } from '../utils/portfolioRules.js';
+import { evaluateTypeDecisions } from '../utils/typeDecisionRules.js';
 import { BUYER_VISIBLE_PROPERTY_STATUS, isBuyerVisibleStatus } from '../../../shared/propertyVisibility.mjs';
 import { findBatangasTown } from '../../../shared/batangasTownCenters.mjs';
 
@@ -33,11 +37,6 @@ async function getLatestAuditsByProperty() {
     map.set(entry._id.toString(), entry.audit);
   });
   return map;
-}
-
-function computeRiskLevel(audit) {
-  if (!audit) return null;
-  return classifyAuditRisk(audit.documentCompleteness ?? audit.complianceScore);
 }
 
 export function calculatePriceCompetitiveness(price, peerPrices) {
@@ -316,7 +315,21 @@ export async function getPropertyRankings({ availableOnly = false, useComparable
 }
 
 export async function getBuyerIntelligence() {
-  const preferences = await BuyerPreference.find();
+  const buyers = await User.find({ role: 'buyer' }, { _id: 1 });
+  const buyerIds = buyers.map((buyer) => buyer._id);
+
+  if (buyerIds.length === 0) {
+    return {
+      budgetDistribution: [],
+      preferredTypes: [],
+      preferredLocations: [],
+      averageBudget: 0,
+      totalBuyersWithPreferences: 0,
+      buyersWithBothBudgetBounds: 0,
+    };
+  }
+
+  const preferences = await BuyerPreference.find({ userId: { $in: buyerIds } });
 
   if (preferences.length === 0) {
     return {
@@ -325,6 +338,7 @@ export async function getBuyerIntelligence() {
       preferredLocations: [],
       averageBudget: 0,
       totalBuyersWithPreferences: 0,
+      buyersWithBothBudgetBounds: 0,
     };
   }
 
@@ -364,9 +378,27 @@ export async function getBuyerIntelligence() {
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
 
-  const averageBudget = Math.round(
-    midpoints.reduce((sum, mid) => sum + mid, 0) / midpoints.length
-  );
+  const validBudgetMidpoints = preferences
+    .filter(
+      (pref) =>
+        typeof pref.budgetMin === 'number' &&
+        Number.isFinite(pref.budgetMin) &&
+        pref.budgetMin > 0 &&
+        typeof pref.budgetMax === 'number' &&
+        Number.isFinite(pref.budgetMax) &&
+        pref.budgetMax > 0 &&
+        pref.budgetMin <= pref.budgetMax
+    )
+    .map((pref) => (pref.budgetMin + pref.budgetMax) / 2);
+
+  const buyersWithBothBudgetBounds = validBudgetMidpoints.length;
+  const averageBudget =
+    validBudgetMidpoints.length > 0
+      ? Math.round(
+          validBudgetMidpoints.reduce((sum, mid) => sum + mid, 0) /
+            validBudgetMidpoints.length
+        )
+      : 0;
 
   return {
     budgetDistribution,
@@ -374,6 +406,7 @@ export async function getBuyerIntelligence() {
     preferredLocations,
     averageBudget,
     totalBuyersWithPreferences: preferences.length,
+    buyersWithBothBudgetBounds,
   };
 }
 
@@ -457,7 +490,7 @@ export async function getSalesPerformance() {
 export async function getPortfolioSnapshot() {
   const [summary, rankingsResult, buyerIntelligence, salesPerformance] = await Promise.all([
     getDashboardSummary(),
-    getPropertyRankings(),
+    getPropertyRankings({ useComparablePricing: true }),
     getBuyerIntelligence(),
     getSalesPerformance(),
   ]);
@@ -662,4 +695,117 @@ export async function getBuyerSearchMetrics(now = new Date()) {
     .select('propertyType location minPrice maxPrice createdAt')
     .lean();
   return summarizeSearchEvents(events, now);
+}
+
+function filterPricedAvailableListings(availableListings) {
+  return availableListings.filter(
+    (listing) =>
+      listing?.status === 'Available' &&
+      typeof listing.price === 'number' &&
+      Number.isFinite(listing.price) &&
+      listing.price > 0
+  );
+}
+
+export async function getTypeDecisionsOnly(referenceDate) {
+  const manilaDate = formatManilaDate(referenceDate);
+  const buyers = await User.find({ role: 'buyer' }, { _id: 1 });
+  const buyerIds = buyers.map((buyer) => buyer._id);
+
+  const [preferences, availableListings, latestAuditByPropertyId] = await Promise.all([
+    BuyerPreference.find({ userId: { $in: buyerIds } }, { userId: 1, landType: 1 }),
+    Property.find({ status: 'Available' }, { _id: 1, name: 1, type: 1, price: 1, status: 1 }),
+    getLatestAuditsByProperty(),
+  ]);
+
+  const buyersByLandType = new Map();
+  let nullDemandCount = 0;
+  for (const pref of preferences) {
+    if (pref.landType === null || pref.landType === undefined) {
+      nullDemandCount += 1;
+      continue;
+    }
+    if (!buyersByLandType.has(pref.landType)) {
+      buyersByLandType.set(pref.landType, new Set());
+    }
+    buyersByLandType.get(pref.landType).add(String(pref.userId));
+  }
+
+  const demandByType = {};
+  for (const [landType, buyerSet] of buyersByLandType.entries()) {
+    demandByType[landType] = buyerSet.size;
+  }
+
+  const pricedAvailableListings = filterPricedAvailableListings(availableListings);
+
+  const supplyByType = {};
+  for (const listing of pricedAvailableListings) {
+    const type = listing.type;
+    if (!supplyByType[type]) {
+      supplyByType[type] = { listings: 0, low: 0, medium: 0, high: 0, notAudited: 0 };
+    }
+    supplyByType[type].listings += 1;
+
+    const propertyId = String(listing._id);
+    const audit = latestAuditByPropertyId.get(propertyId);
+    const riskLevel = computeRiskLevel(audit);
+    if (riskLevel === 'Low') supplyByType[type].low += 1;
+    else if (riskLevel === 'Medium') supplyByType[type].medium += 1;
+    else if (riskLevel === 'High') supplyByType[type].high += 1;
+    else supplyByType[type].notAudited += 1;
+  }
+
+  const typeDecisions = evaluateTypeDecisions({
+    supplyByType,
+    demandByType,
+    nullDemandCount,
+  });
+
+  return {
+    referenceDate: manilaDate,
+    typeDecisions,
+  };
+}
+
+export async function getOperationalActionsOnly(referenceDate) {
+  const [availableListings, latestAuditByPropertyId, pendingInquiries, pendingSiteVisits] =
+    await Promise.all([
+      Property.find({ status: 'Available' }, { _id: 1, name: 1, type: 1, price: 1, status: 1 }),
+      getLatestAuditsByProperty(),
+      Inquiry.find({ status: 'Pending' }, { _id: 1, propertyId: 1, createdAt: 1, status: 1 }),
+      SiteVisit.find({ status: 'Pending' }, { _id: 1, propertyId: 1, preferredDate: 1, status: 1 }),
+    ]);
+
+  const pricedAvailableListings = filterPricedAvailableListings(availableListings);
+  const propertyNameById = new Map();
+  for (const listing of pricedAvailableListings) {
+    propertyNameById.set(String(listing._id), listing.name);
+  }
+
+  const operationalActions = buildPortfolioActions({
+    listings: pricedAvailableListings,
+    latestAuditByPropertyId,
+    inquiries: pendingInquiries,
+    siteVisits: pendingSiteVisits,
+    propertyNameById,
+    referenceDate,
+  });
+
+  return {
+    referenceDate: operationalActions.referenceDate,
+    operationalActions,
+  };
+}
+
+export async function getTypeDecisionSnapshot(referenceDate) {
+  const [{ typeDecisions }, { referenceDate: manilaDate, operationalActions }] = await Promise.all([
+    getTypeDecisionsOnly(referenceDate),
+    getOperationalActionsOnly(referenceDate),
+  ]);
+
+  return {
+    referenceDate: manilaDate,
+    typeDecisions,
+    operationalActions,
+  };
 }

@@ -16,6 +16,9 @@ import {
   Trees,
   Building2,
   Landmark,
+  ChevronDown,
+  User as UserIcon,
+  Settings,
 } from 'lucide-react';
 import type { BuyerPreferences, Property } from '../../types/types';
 import { WelcomeModal } from '../../components/Buyer/WelcomeModal';
@@ -30,7 +33,10 @@ import {
 } from '../../services/buyerPrefs';
 import { getProperties, getPropertyById } from '../../services/PropertyService';
 import { isBuyerVisibleStatus } from '../../../../shared/propertyVisibility.mjs';
-import { getCurrentUser } from '../../services/AuthService';
+import { getCurrentUser, fetchMe } from '../../services/AuthService';
+import type { User as AuthUser } from '../../services/AuthService';
+import { UserAvatar } from '../../components/Shared/UserAvatar';
+import { BuyerProfileView } from '../../components/Buyer/BuyerProfileView';
 import { submitInquiry, getMyInquiries } from '../../services/InquiryService';
 import type { Inquiry } from '../../services/InquiryService';
 import { submitSiteVisit, getMySiteVisits } from '../../services/SiteVisitService';
@@ -414,12 +420,13 @@ const LogoutConfirmModal: React.FC<{
 // MAIN BUYER PORTAL COMPONENT
 // ============================================================
 
-const AUTH_REQUIRED_TABS = ['Suggested', 'Preferences', 'Inquiries', 'Site Visits'];
+const AUTH_REQUIRED_TABS = ['Suggested', 'Preferences', 'Inquiries', 'Site Visits', 'Profile'];
 const RESTRICTED_TAB_LABELS: Record<string, string> = {
   Suggested: 'Suggested Properties',
   Preferences: 'Preferences',
   Inquiries: 'My Inquiries',
   'Site Visits': 'My Site Visits',
+  Profile: 'My Profile',
 };
 
 const mapHomeTypeToFilter = (propertyType: string) => {
@@ -462,6 +469,9 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [buyerName, setBuyerName] = useState('Valued Buyer');
   const [buyerUserId, setBuyerUserId] = useState('');
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [buyerPrefs, setBuyerPrefs] = useState<BuyerPreferences | null>(null);
   const [isPreferencesLoading, setIsPreferencesLoading] = useState(true);
@@ -767,8 +777,30 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
   }, [loadProperties]);
 
   useEffect(() => {
+    if (!isProfileMenuOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isProfileMenuOpen]);
+
+  useEffect(() => {
     if (!isAuthenticated) {
       setIsWelcomeModalOpen(false);
+      setIsProfileMenuOpen(false);
+      setCurrentUser(null);
       setBuyerPrefs(null);
       setIsPreferencesLoading(false);
       setPreferencesLoadError('');
@@ -783,11 +815,12 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
     const syncBuyerSession = async () => {
       let currentBuyerName = 'Valued Buyer';
       let currentUserId = 'guest';
+      let resolvedUser: AuthUser | null = null;
       try {
-        const currentUser = getCurrentUser();
-        if (currentUser) {
-          currentBuyerName = currentUser.username || currentUser.email || currentBuyerName;
-          currentUserId = currentUser.username || currentUser.email || currentUserId;
+        resolvedUser = getCurrentUser();
+        if (resolvedUser) {
+          currentBuyerName = resolvedUser.fullName || resolvedUser.username || resolvedUser.email || currentBuyerName;
+          currentUserId = resolvedUser.username || resolvedUser.email || currentUserId;
         }
       } catch {
         currentBuyerName = 'Valued Buyer';
@@ -795,8 +828,20 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
       }
 
       if (isCancelled) return;
+      setCurrentUser(resolvedUser);
       setBuyerName(currentBuyerName);
       setBuyerUserId(currentUserId);
+
+      // Refresh profile fields (fullName, address, profilePictureUrl, createdAt) from /auth/me
+      fetchMe()
+        .then((freshUser) => {
+          if (isCancelled) return;
+          setCurrentUser(freshUser);
+          setBuyerName(freshUser.fullName || freshUser.username || freshUser.email || 'Valued Buyer');
+        })
+        .catch(() => {
+          // Keep cached user from localStorage if /auth/me is temporarily unavailable
+        });
 
       try {
         const prefs = await loadBuyerPreferences(currentUserId);
@@ -917,6 +962,19 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
           <BuyerSuggestions
             buyerPrefs={buyerPrefs}
             onSelectProperty={handleSelectProperty}
+          />
+        );
+      case 'Profile':
+        return (
+          <BuyerProfileView
+            user={currentUser}
+            buyerPrefs={buyerPrefs}
+            isPreferencesLoading={isPreferencesLoading}
+            onProfileUpdated={(updatedUser) => {
+              setCurrentUser(updatedUser);
+              setBuyerName(updatedUser.fullName || updatedUser.username || updatedUser.email || 'Valued Buyer');
+            }}
+            onEditPreferences={() => setActiveTab('Preferences')}
           />
         );
       case 'Preferences':
@@ -1293,7 +1351,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
             })}
           </nav>
 
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
             {isAuthenticated && (
               <NotificationBell
                 enabled={isAuthenticated}
@@ -1301,14 +1359,97 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                 onNavigate={(notification) => setActiveTab(notification.type.startsWith('site_visit_') ? 'Site Visits' : 'Inquiries')}
               />
             )}
-            <button
-              type="button"
-              onClick={handleHeaderAuthClick}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold text-[#FFFFFF] bg-[#285A48] hover:bg-[#408A71] transition-all shadow-md hover:shadow-lg border-none cursor-pointer"
-            >
-              <LogOut className={`w-3.5 h-3.5 ${isAuthenticated ? '' : 'rotate-180'}`} />
-              <span className="hidden sm:inline">{isAuthenticated ? 'Logout' : 'Sign In'}</span>
-            </button>
+            {isAuthenticated ? (
+              <div ref={profileMenuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileMenuOpen((open) => !open)}
+                  aria-haspopup="menu"
+                  aria-expanded={isProfileMenuOpen}
+                  aria-label="Open buyer profile menu"
+                  className="flex items-center gap-2 rounded-xl border border-[rgba(176,228,204,0.2)] bg-[#122A20] px-2 sm:px-3 py-1.5 text-xs font-semibold text-[#E8F5EF] hover:bg-[#193A2C] transition-colors cursor-pointer"
+                >
+                  <UserAvatar
+                    src={currentUser?.profilePictureUrl}
+                    name={currentUser?.fullName || buyerName}
+                    size="xs"
+                  />
+                  <span className="hidden sm:inline max-w-[130px] truncate">
+                    {currentUser?.fullName || buyerName}
+                  </span>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 text-[#B0E4CC] transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {isProfileMenuOpen && (
+                  <div
+                    role="menu"
+                    aria-label="Buyer account menu"
+                    className="absolute right-0 mt-2 w-56 rounded-xl border border-[#d6c7b2] bg-white py-1.5 shadow-xl z-50"
+                  >
+                    <div className="px-3.5 py-2 border-b border-[#eee7dd]">
+                      <p className="text-xs font-bold text-[#1C3A27] truncate">
+                        {currentUser?.fullName || buyerName}
+                      </p>
+                      {currentUser?.username && (
+                        <p className="text-[11px] text-[#7c6a57] truncate">@{currentUser.username}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        handleTabChange('Profile');
+                      }}
+                      className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-xs font-medium text-[#1C3A27] hover:bg-[#F5F7F6] transition-colors bg-transparent border-none cursor-pointer"
+                    >
+                      <UserIcon className="h-3.5 w-3.5 text-[#285A48]" aria-hidden="true" />
+                      My Profile
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled
+                      aria-disabled="true"
+                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left text-xs font-medium text-[#9ca3af] bg-transparent border-none cursor-not-allowed"
+                    >
+                      <span className="inline-flex items-center gap-2.5">
+                        <Settings className="h-3.5 w-3.5" aria-hidden="true" />
+                        Account Settings
+                      </span>
+                      <span className="rounded-full bg-[#f3efe8] px-2 py-0.5 text-[10px] font-semibold text-[#7c6a57]">
+                        Soon
+                      </span>
+                    </button>
+                    <div className="my-1 border-t border-[#eee7dd]" />
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        handleHeaderAuthClick();
+                      }}
+                      className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors bg-transparent border-none cursor-pointer"
+                    >
+                      <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleHeaderAuthClick}
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold text-[#FFFFFF] bg-[#285A48] hover:bg-[#408A71] transition-all shadow-md hover:shadow-lg border-none cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5 rotate-180" />
+                <span className="hidden sm:inline">Sign In</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -1323,6 +1464,7 @@ export const BuyerPortal: React.FC<BuyerPortalProps> = ({
                 { id: 'Preferences', label: 'Preferences', icon: SlidersHorizontal },
                 { id: 'Inquiries', label: 'Inquiries', icon: Mail },
                 { id: 'Site Visits', label: 'Site Visits', icon: Calendar },
+                { id: 'Profile', label: 'My Profile', icon: UserIcon },
               ].map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;

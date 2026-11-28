@@ -230,7 +230,7 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
         ))}
       </div>
 
-      <div className="admin-panel rounded-2xl overflow-hidden">
+      <div className="admin-solid-surface rounded-2xl overflow-hidden">
         {isLoading && transactions.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-[#7c6a57] text-sm">Loading transactions...</p>
@@ -277,7 +277,7 @@ export const AdminTransactions: React.FC<AdminTransactionsProps> = ({ onToast, o
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="admin-table w-full text-left border-collapse text-xs">
+                <table className="admin-table admin-solid-table w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="border-b border-[#d6c7b2] text-[10px] font-bold uppercase tracking-wider text-[#7c6a57]">
                       <th className="p-4">Reference</th>

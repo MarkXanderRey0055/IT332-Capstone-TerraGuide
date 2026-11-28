@@ -1,5 +1,8 @@
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import BuyerPreference from '../models/BuyerPreference.js';
+import Inquiry from '../models/Inquiry.js';
+import SiteVisit from '../models/SiteVisit.js';
 import Transaction, { ACTIVE_TRANSACTION_STATUSES } from '../models/Transaction.js';
 import AppError from '../utils/errors.js';
 import { registerUser } from './authService.js';
@@ -33,7 +36,7 @@ export const listBuyers = async (search) => {
     query.$or = [{ username: regex }, { email: regex }, { fullName: regex }];
   }
 
-  const buyers = await User.find(query).select('-password').sort({ createdAt: -1 });
+  const buyers = await User.find(query).select('-password -profilePicturePublicId').sort({ createdAt: -1 });
 
   if (buyers.length === 0) {
     return [];
@@ -47,10 +50,12 @@ export const listBuyers = async (search) => {
     const pref = preferencesByUserId.get(buyer._id.toString()) || null;
     return {
       userId: buyer._id,
-      fullName: buyer.fullName,
+      fullName: buyer.fullName ?? '',
       username: buyer.username,
       email: buyer.email,
-      address: buyer.address,
+      contactNumber: buyer.contactNumber ?? buyer.phone ?? null,
+      address: buyer.address ?? '',
+      profilePictureUrl: buyer.profilePictureUrl ?? null,
       registeredAt: buyer.createdAt,
       preferences: pref
         ? {
@@ -65,6 +70,89 @@ export const listBuyers = async (search) => {
         : null,
     };
   });
+};
+
+function formatRelatedProperty(propertyDoc) {
+  if (!propertyDoc || typeof propertyDoc !== 'object') return null;
+  return {
+    id: String(propertyDoc._id),
+    name: propertyDoc.name || null,
+    location: propertyDoc.location || null,
+    type: propertyDoc.type || null,
+    status: propertyDoc.status || null,
+    price: propertyDoc.price ?? null,
+  };
+}
+
+export const getBuyerDetails = async (userId) => {
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    throw new AppError('Invalid buyer ID.', 400);
+  }
+
+  const buyer = await User.findOne({ _id: userId, role: 'buyer' }).select('-password -profilePicturePublicId');
+  if (!buyer) {
+    throw new AppError('Buyer account not found.', 404);
+  }
+
+  const [pref, inquiries, siteVisits, transactions] = await Promise.all([
+    BuyerPreference.findOne({ userId: buyer._id }),
+    Inquiry.find({ buyerId: buyer._id })
+      .populate('propertyId', 'name location type status price')
+      .sort({ createdAt: -1 }),
+    SiteVisit.find({ buyerId: buyer._id })
+      .populate('propertyId', 'name location type status')
+      .sort({ createdAt: -1 }),
+    Transaction.find({ buyerId: buyer._id })
+      .populate('propertyId', 'name location type status price')
+      .sort({ createdAt: -1 }),
+  ]);
+
+  return {
+    userId: buyer._id,
+    fullName: buyer.fullName ?? '',
+    username: buyer.username,
+    email: buyer.email,
+    contactNumber: buyer.contactNumber ?? buyer.phone ?? null,
+    address: buyer.address ?? '',
+    profilePictureUrl: buyer.profilePictureUrl ?? null,
+    registeredAt: buyer.createdAt,
+    preferences: pref
+      ? {
+          landType: pref.landType,
+          intendedUse: pref.intendedUse,
+          budgetMin: pref.budgetMin,
+          budgetMax: pref.budgetMax,
+          location: pref.location,
+          minLotSize: pref.minLotSize,
+          updatedAt: pref.updatedAt,
+        }
+      : null,
+    inquiries: inquiries.map((item) => ({
+      id: String(item._id),
+      property: formatRelatedProperty(item.propertyId),
+      status: item.status,
+      message: item.message || '',
+      createdAt: item.createdAt,
+    })),
+    siteVisits: siteVisits.map((item) => ({
+      id: String(item._id),
+      property: formatRelatedProperty(item.propertyId),
+      preferredDate: item.preferredDate,
+      preferredTime: item.preferredTime || '',
+      status: item.status,
+      notes: item.notes || '',
+      createdAt: item.createdAt,
+    })),
+    transactions: transactions.map((item) => ({
+      id: String(item._id),
+      reference: item.reference || '',
+      property: formatRelatedProperty(item.propertyId),
+      amount: item.amount ?? null,
+      status: item.status,
+      createdAt: item.createdAt,
+      completedAt: item.completedAt ?? null,
+    })),
+  };
 };
 
 

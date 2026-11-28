@@ -25,7 +25,7 @@ export interface SiteVisit {
   confirmedTime?: string;
   notes: string;
   adminResponse: string;
-  status: 'Pending' | 'Scheduled' | 'Completed';
+  status: 'Pending' | 'Scheduled' | 'Completed' | 'Missed';
   createdAt: string;
   updatedAt: string;
 }
@@ -61,13 +61,18 @@ export async function getAllSiteVisits(): Promise<SiteVisit[]> {
 
 export async function updateSiteVisitStatus(
   id: string,
-  status: 'Pending' | 'Scheduled' | 'Completed',
+  status: 'Pending' | 'Scheduled' | 'Completed' | 'Missed',
   adminResponse: string,
-  schedule: { confirmedDate?: string; confirmedTime?: string } = {}
+  schedule: { confirmedDate?: string; confirmedTime?: string } = {},
+  missedReason?: string
 ): Promise<SiteVisit> {
+  const payload: Record<string, unknown> = { status, adminResponse, ...schedule };
+  if (status === 'Missed' && missedReason !== undefined) {
+    payload.missedReason = missedReason.trim();
+  }
   const res = await apiRequest(`/site-visits/admin/${id}`, {
     method: 'PUT',
-    body: JSON.stringify({ status, adminResponse, ...schedule }),
+    body: JSON.stringify(payload),
   });
   return { ...(res.data as SiteVisit), adminResponse: res.data.adminResponse ?? '' };
 }
